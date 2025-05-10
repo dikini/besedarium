@@ -5,19 +5,3 @@ version = 4
 [[package]]
 name = "playground"
 version = "0.0.0"
-dependencies = [
- "static_assertions",
- "tlist",
-]
-
-[[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "tlist"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29f2f38a4c63f50b053d953f9736d58fc3336749447fbdaf77da2a9254bdeb4e"
