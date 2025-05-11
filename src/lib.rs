@@ -13,15 +13,15 @@ macro_rules! tlist {
 
 #[macro_export]
 macro_rules! tchoice {
-    ($($branch:ty),+ $(,)?) => {
-        <tlist!($($branch),+ ) as ToTChoice>::Output
+    ($io:ty; $($branch:ty),+ $(,)?) => {
+        <tlist!($($branch),*) as ToTChoice<$io>>::Output
     };
 }
 
 #[macro_export]
 macro_rules! tpar {
-    ($($branch:ty),+ $(,)?) => {
-        <tlist!($($branch),+ ) as ToTPar>::Output
+    ($io:ty; $($branch:ty),+ $(,)?) => {
+        <tlist!($($branch),*) as ToTPar<$io>>::Output
     };
 }
 
@@ -29,7 +29,10 @@ macro_rules! tpar {
 macro_rules! assert_type_eq {
     ($A:ty, $B:ty) => {
         const _: fn() = || {
-            fn assert_eq_types(_: $A, _: $B) {}
+            fn _assert_type_eq()
+            where
+                $A: $crate::TypeEq<$B>
+            {}
         };
     };
 }
@@ -59,80 +62,68 @@ use sealed::Sealed;
 pub struct Nil;
 pub struct Cons<H, T>(PhantomData<(H, T)>);
 
-pub trait TSession: Sealed {
-    type Compose<Rhs: TSession>: TSession;
+pub trait TSession<IO>: Sealed {
+    type Compose<Rhs: TSession<IO>>: TSession<IO>;
     const IS_EMPTY: bool;
 }
 
 // The empty TSession.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TEnd;
+pub struct TEnd<IO>(PhantomData<IO>);
 
-impl Sealed for TEnd {}
-impl TSession for TEnd {
-    type Compose<Rhs: TSession> = Rhs;
+impl<IO> Sealed for TEnd<IO> {}
+impl<IO> TSession<IO> for TEnd<IO> {
+    type Compose<Rhs: TSession<IO>> = Rhs;
     const IS_EMPTY: bool = true;
 }
 
 // An interaction TSession for role R.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TInteract<R, H, T: TSession>(PhantomData<(R, H, T)>);
+pub struct TInteract<IO, R, H, T: TSession<IO>>(PhantomData<(IO, R, H, T)>);
 
-impl<R, H, T: TSession> Sealed for TInteract<R, H, T> {}
-impl<R, H, T: TSession> TSession for TInteract<R, H, T> {
-    type Compose<Rhs: TSession> = TInteract<R, H, T::Compose<Rhs>>;
+impl<IO, R, H, T: TSession<IO>> Sealed for TInteract<IO, R, H, T> {}
+impl<IO, R, H, T: TSession<IO>> TSession<IO> for TInteract<IO, R, H, T> {
+    type Compose<Rhs: TSession<IO>> = TInteract<IO, R, H, T::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 // Recursive session type
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRec<S: TSession>(PhantomData<S>);
+pub struct TRec<IO, S: TSession<IO>>(PhantomData<(IO, S)>);
 
-impl<S: TSession> Sealed for TRec<S> {}
-impl<S: TSession> TSession for TRec<S> {
-    type Compose<Rhs: TSession> = TRec<S::Compose<Rhs>>;
+impl<IO, S: TSession<IO>> Sealed for TRec<IO, S> {}
+impl<IO, S: TSession<IO>> TSession<IO> for TRec<IO, S> {
+    type Compose<Rhs: TSession<IO>> = TRec<IO, S::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 // Binary choice
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TChoice<L: TSession, R: TSession>(PhantomData<(L, R)>);
+pub struct TChoice<IO, L: TSession<IO>, R: TSession<IO>>(PhantomData<(IO, L, R)>);
 
-impl<L: TSession, R: TSession> Sealed for TChoice<L, R> {}
-impl<L: TSession, R: TSession> TSession for TChoice<L, R> {
-    type Compose<Rhs: TSession> = TChoice<L::Compose<Rhs>, R::Compose<Rhs>>;
+impl<IO, L: TSession<IO>, R: TSession<IO>> Sealed for TChoice<IO, L, R> {}
+impl<IO, L: TSession<IO>, R: TSession<IO>> TSession<IO> for TChoice<IO, L, R> {
+    type Compose<Rhs: TSession<IO>> = TChoice<IO, L::Compose<Rhs>, R::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 // Map type-level list to nested TChoice
-pub trait ToTChoice {
-    type Output: TSession;
-}
-impl<H: TSession> ToTChoice for Cons<H, Nil> {
-    type Output = H;
-}
-impl<H: TSession, T: ToTChoice> ToTChoice for Cons<H, T> {
-    type Output = TChoice<H, <T as ToTChoice>::Output>;
+pub trait ToTChoice<IO> {
+    type Output: TSession<IO>;
 }
 
 // Branded parallel composition
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TPar<L: TSession, R: TSession, IsDisjoint>(PhantomData<(L, R, IsDisjoint)>);
+pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
 
-impl<L: TSession, R: TSession, IsDisjoint> Sealed for TPar<L, R, IsDisjoint> {}
-impl<L: TSession, R: TSession, IsDisjoint> TSession for TPar<L, R, IsDisjoint> {
-    type Compose<Rhs: TSession> = TPar<L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
+impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> Sealed for TPar<IO, L, R, IsDisjoint> {}
+impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO, L, R, IsDisjoint> {
+    type Compose<Rhs: TSession<IO>> = TPar<IO, L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
     const IS_EMPTY: bool = false;
 }
 
-pub trait ToTPar {
-    type Output: TSession;
-}
-impl<H: TSession> ToTPar for Cons<H, Nil> {
-    type Output = H;
-}
-impl<H: TSession, T: ToTPar> ToTPar for Cons<H, T> {
-    type Output = TPar<H, <T as ToTPar>::Output, FalseB>;
+pub trait ToTPar<IO> {
+    type Output: TSession<IO>;
 }
 
 // Type-level booleans for branding
@@ -143,19 +134,19 @@ pub struct FalseB;
 pub trait RolesOf {
     type Roles;
 }
-impl RolesOf for TEnd {
+impl<IO> RolesOf for TEnd<IO> {
     type Roles = Nil;
 }
-impl<R, H, T: TSession + RolesOf> RolesOf for TInteract<R, H, T> {
+impl<IO, R, H, T: TSession<IO> + RolesOf> RolesOf for TInteract<IO, R, H, T> {
     type Roles = Cons<R, <T as RolesOf>::Roles>;
 }
-impl<L: TSession + RolesOf, R: TSession + RolesOf> RolesOf for TChoice<L, R> {
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> RolesOf for TChoice<IO, L, R> {
     type Roles = <L as RolesOf>::Roles;
 }
-impl<L: TSession + RolesOf, R: TSession + RolesOf, IsDisjoint> RolesOf for TPar<L, R, IsDisjoint> {
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf, IsDisjoint> RolesOf for TPar<IO, L, R, IsDisjoint> {
     type Roles = <L as RolesOf>::Roles;
 }
-impl<S: TSession + RolesOf> RolesOf for TRec<S> {
+impl<IO, S: TSession<IO> + RolesOf> RolesOf for TRec<IO, S> {
     type Roles = <S as RolesOf>::Roles;
 }
 
@@ -200,13 +191,58 @@ where
 pub trait AssertDisjoint {
     type Output;
 }
-impl<L: TSession + RolesOf, R: TSession + RolesOf> AssertDisjoint for TPar<L, R, FalseB>
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> AssertDisjoint for TPar<IO, L, R, FalseB>
 where
     (): Disjoint<<L as RolesOf>::Roles, <R as RolesOf>::Roles>,
     (): Disjoint<<R as RolesOf>::Roles, <L as RolesOf>::Roles>,
 {
-    type Output = TPar<L, R, TrueB>;
+    type Output = TPar<IO, L, R, TrueB>;
 }
-impl<L: TSession, R: TSession> AssertDisjoint for TPar<L, R, TrueB> {
-    type Output = TPar<L, R, TrueB>;
+impl<IO, L: TSession<IO>, R: TSession<IO>> AssertDisjoint for TPar<IO, L, R, TrueB> {
+    type Output = TPar<IO, L, R, TrueB>;
+}
+
+/// Type-level equality trait for compile-time assertions.
+///
+/// This trait is implemented only when `A` and `B` are the same type.
+/// If you see an error involving `TypeEq`, it means the types you are comparing are not equal.
+/// Double-check your type parameters and protocol structure.
+pub trait TypeEq<B> {}
+impl<A> TypeEq<A> for A {}
+
+// --- Type-level list kind markers for trait overlap resolution ---
+pub trait ListKind {}
+pub struct NilType;
+pub struct ConsType;
+impl ListKind for NilType {}
+impl ListKind for ConsType {}
+
+pub trait ListKindOf {
+    type Kind: ListKind;
+}
+impl ListKindOf for Nil {
+    type Kind = NilType;
+}
+impl<H, T> ListKindOf for Cons<H, T> {
+    type Kind = ConsType;
+}
+
+// --- ToTChoice trait, base case for Nil ---
+impl<IO> ToTChoice<IO> for Nil {
+    type Output = TEnd<IO>;
+}
+
+// --- ToTChoice trait, recursive case ---
+impl<IO, H: TSession<IO>, T: ToTChoice<IO>> ToTChoice<IO> for Cons<H, T> {
+    type Output = TChoice<IO, H, <T as ToTChoice<IO>>::Output>;
+}
+
+// --- ToTPar trait, base case for Nil ---
+impl<IO> ToTPar<IO> for Nil {
+    type Output = TEnd<IO>;
+}
+
+// --- ToTPar trait, recursive case ---
+impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
+    type Output = TPar<IO, H, <T as ToTPar<IO>>::Output, FalseB>;
 }
