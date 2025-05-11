@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 type MixedIOChoice = tchoice!(Http;
     TInteract<Http, TClient, Message, TEnd<Http>>,

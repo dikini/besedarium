@@ -1,10 +1,10 @@
 [package]
-name = "playground"
+name = "besedarium"
 version = "0.0.0"
 edition = "2021"
 
 [lib]
-name = "playground"
+name = "besedarium"
 path = "src/lib.rs"
 
 # No [[bin]] section, as we are removing main.rs and do not want an executable artifact

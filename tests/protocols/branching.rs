@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Protocol with branching (login vs. register)
 pub type LoginOrRegister = tchoice!(Http;

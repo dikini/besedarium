@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Should fail: tchoice! and tpar! with no branches
 // These should not compile, as empty protocols are not allowed.

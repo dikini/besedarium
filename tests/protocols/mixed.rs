@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Protocol using Mixed marker for informational use
 pub type MixedExample = tpar!(Mixed;

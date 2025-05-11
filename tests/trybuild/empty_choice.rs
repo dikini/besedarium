@@ -1,3 +1,3 @@
-use playground::*;
+use besedarium::*;
 
 type EmptyChoice = tchoice!(Http;);

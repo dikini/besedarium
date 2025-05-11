@@ -1,8 +1,8 @@
 //! Compile-time tests and examples for the session types library.
 //! This module uses concrete roles and types to exercise all combinators and disjointness machinery.
 
-use playground::*;
-use playground::{assert_type_eq, assert_disjoint, tpar};
+use besedarium::*;
+use besedarium::{assert_type_eq, assert_disjoint, tpar};
 
 mod protocols;
 

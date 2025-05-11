@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Multi-party workflow (client, server, broker, worker)
 pub type Workflow = tpar!(Http;

@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 type DupRolePar = tpar!(Http;
     TInteract<Http, TClient, Message, TEnd<Http>>,

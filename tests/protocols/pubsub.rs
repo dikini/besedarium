@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Publish/subscribe (MQTT)
 pub type MqttPubSub = TChoice<Mqtt,

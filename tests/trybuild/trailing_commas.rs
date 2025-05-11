@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 type TrailingCommaChoice = tchoice!(Http;
     TInteract<Http, TClient, Message, TEnd<Http>>,

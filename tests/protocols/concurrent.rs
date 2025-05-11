@@ -1,4 +1,4 @@
-use playground::*;
+use besedarium::*;
 
 // Protocol with concurrency (parallel downloads)
 pub type ParallelDownloads = tpar!(Http;

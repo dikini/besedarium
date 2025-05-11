@@ -1,4 +1,4 @@
-# Session Types Playground
+# Besedarium
 
 Welcome to the Session Types Playground! This project is a Rust library for building, composing, and verifying communication protocols at the type level. If you’ve ever wanted to make sure your distributed systems or networked applications follow the right message flow—at compile time—this is for you.
 
@@ -22,7 +22,7 @@ Session types let you describe the structure of conversations between different 
 
 ## Example: Client-Server Handshake
 ```rust
-use playground::*;
+use besedarium::*;
 type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
 ```
 
@@ -36,7 +36,7 @@ sequenceDiagram
 
 ## Example: N-ary Choice
 ```rust
-use playground::*;
+use besedarium::*;
 type Choice = tchoice!(Http;
     TInteract<Http, TClient, Message, TEnd<Http>>,
     TInteract<Http, TServer, Response, TEnd<Http>>,
@@ -56,7 +56,7 @@ flowchart TD
 
 ## Example: Parallel Composition
 ```rust
-use playground::*;
+use besedarium::*;
 type Par = tpar!(Http;
     TInteract<Http, TClient, Message, TEnd<Http>>,
     TInteract<Http, TServer, Response, TEnd<Http>>,
