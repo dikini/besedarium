@@ -1,0 +1,8 @@
+# Ignore build artifacts
+/target/
+
+# Local IDE settings
+.vscode/
+
+#OS files
+.DS_Store
