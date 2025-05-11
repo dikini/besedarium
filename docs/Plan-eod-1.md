@@ -52,46 +52,44 @@
 ---
 
 ## 4. Documentation (**Important**)
-- [ ] **Comprehensive documentation**
-    - [ ] Module-level and item-level doc comments
-    - [ ] Design patterns, safety guarantees, and usage examples
-    - [ ] Seek AI assistance for drafting and refining documentation
-    - [x] **README.md added with approachable, non-academic documentation and mermaid diagrams for all main protocol examples.**
-    - [x] **README.md is now included as module-level documentation via `#![doc = include_str!("../README.md")]` for docs.rs and cargo doc.**
+- [ ] **Document design patterns and advanced usage (open task).**
+- [x] **All other documentation tasks (module-level, item-level, safety guarantees, usage examples, macro docs) are complete.**
 
 ---
 
 ## 5. Library Structure and Modularization (**Extras**)
-- [ ] **Review and improve library structure**
-    - [ ] Keep in a single file for now
-    - [ ] After API is stable, review for further modularization
-        - [ ] Make constructors private to prevent invalid protocols
-        - [ ] Separate core traits, combinators, and utilities into modules if needed
+- [x] **Review and improve library structure** (closed: structure is optimal for now, further review deferred until needed)
+- [x] **Keep in a single file for now** (core API is in lib.rs, test/example types in test_types.rs)
+- [x] **After API is stable, review for further modularization** (closed: deferred until needed)
+    - [x] Make constructors private to prevent invalid protocols (closed: not needed for current API)
+    - [x] Separate core traits, combinators, and utilities into modules if needed (closed: not needed for current API)
+- [x] **Concrete roles, messages, and IO marker types moved to `src/test_types.rs` for clarity and reuse in tests/examples.**
+- [x] **Library structure reviewed: simple, single-file core with a dedicated module for test/example types. No further modularization for now.**
+- [x] **Library structure review complete: further modularization is deferred. Current structure (single-file core + test_types.rs) is optimal for now.**
 
 ---
 
 ## 6. Macros for Ergonomics and Safety (**New Section**)
-- [ ] **Add macros to improve ergonomics and code quality**
-    - [ ] **Type-level list construction macro**
-        - [ ] `tlist!` macro for building type-level lists
-    - [ ] **N-ary choice/par construction macros**
-        - [ ] `tchoice!` and `tpar!` macros for n-ary combinators
-    - [ ] **Compile-time assertion macros**
-        - [ ] `assert_type_eq!` for type equality
-        - [ ] `assert_disjoint!` for disjointness checks
+- [x] **Add macros to improve ergonomics and code quality**
+    - [x] **Type-level list construction macro**
+        - [x] `tlist!` macro for building type-level lists
+    - [x] **N-ary choice/par construction macros**
+        - [x] `tchoice!` and `tpar!` macros for n-ary combinators
+    - [x] **Compile-time assertion macros**
+        - [x] `assert_type_eq!` for type equality
+        - [x] `assert_disjoint!` for disjointness checks
+    - [x] **Helper macros for role extraction/disjointness**
+        - [x] `extract_roles!` macro for compile-time role extraction
+    - [x] **Document macros with examples.**
     - [ ] **Attribute/proc macros for protocol definitions (future/optional)**
-        - [ ] Explore attribute macros for protocol DSLs or runtime representations
-    - [ ] **Helper macros for role extraction/disjointness**
-        - [ ] Macros to extract roles or assert disjointness
-    - [ ] **Document macros with examples.**
+        - [ ] Explore attribute macros for protocol DSLs or runtime representations (deferred)
 
 ---
 
 ## 7. Additional Considerations
-- [ ] **Duality:** Consider adding duality checks for endpoint compatibility in the future
-- [ ] **Labelled Ends:** Plan for labelled ends and plug traits if advanced recursion/scatter-gather is needed
-- [ ] **Multiparty Extensions:** Plan for global type/projected type machinery if targeting multiparty protocols
-
+- [ ] **Duality:** Deferred. Only relevant for binary session types; revisit if/when endpoint compatibility is targeted.
+- [ ] **Labelled Ends:** Deferred until after release. Complex feature, may or may not be practical for this library.
+- [ ] **Multiparty Extensions (Projections):** Deferred. Plan and implement in a separate stream/plan if/when multiparty protocols are in scope.
 
 # End-of-Day Codebase Snapshot: main.rs
 

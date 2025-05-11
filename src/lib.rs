@@ -1,7 +1,51 @@
 #![doc = include_str!("../README.md")]
 
-//! Session types core library: abstract types, traits, combinators, and macros.
-//! No concrete roles or example/test code.
+//! # Session Types Playground
+//!
+//! Welcome to the Session Types Playground! This crate lets you build, compose, and verify communication protocols at the type level in Rust.
+//!
+//! - **Catch protocol mistakes early:** Get compile-time errors for protocol mismatches.
+//! - **Readable and reusable:** Protocols are just Rust types—easy to read, share, and reuse.
+//! - **Great for learning:** See real-world protocol examples in `tests/protocols/`.
+//!
+//! ## Main Concepts
+//! - **Session combinators:** Compose protocols from simple building blocks.
+//! - **Macros:** Ergonomic construction of n-ary choices and parallel branches.
+//! - **Disjointness checks:** Ensure parallel branches do not overlap roles.
+//!
+//! ## Example: Client-Server Handshake
+//! ```rust
+//! use playground::*;
+//! type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
+//! ```
+//!
+//! ## Example: N-ary Choice
+//! ```rust
+//! use playground::*;
+//! type Choice = tchoice!(Http;
+//!     TInteract<Http, TClient, Message, TEnd<Http>>,
+//!     TInteract<Http, TServer, Response, TEnd<Http>>,
+//! );
+//! ```
+//!
+//! ## Example: Parallel Composition
+//! ```rust
+//! use playground::*;
+//! type Par = tpar!(Http;
+//!     TInteract<Http, TClient, Message, TEnd<Http>>,
+//!     TInteract<Http, TServer, Response, TEnd<Http>>,
+//! );
+//! ```
+//!
+//! ## Safety Guarantees
+//! - Protocols are checked at compile time.
+//! - Parallel branches must be disjoint (no overlapping roles).
+//! - Macros and traits prevent invalid protocol construction.
+//!
+//! ## See Also
+//! - Protocol examples: `tests/protocols/`
+//! - Negative/compile-fail tests: `tests/trybuild/`
+//! - More docs: `README.md`, `docs/`
 
 use core::marker::PhantomData;
 
@@ -13,6 +57,16 @@ macro_rules! tlist {
     };
 }
 
+/// Macro for building n-ary protocol choices.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Choice = tchoice!(Http;
+///     TInteract<Http, TClient, Message, TEnd<Http>>,
+///     TInteract<Http, TServer, Response, TEnd<Http>>,
+/// );
+/// ```
 #[macro_export]
 macro_rules! tchoice {
     ($io:ty; $($branch:ty),+ $(,)?) => {
@@ -20,6 +74,16 @@ macro_rules! tchoice {
     };
 }
 
+/// Macro for building n-ary protocol parallel compositions.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Par = tpar!(Http;
+///     TInteract<Http, TClient, Message, TEnd<Http>>,
+///     TInteract<Http, TServer, Response, TEnd<Http>>,
+/// );
+/// ```
 #[macro_export]
 macro_rules! tpar {
     ($io:ty; $($branch:ty),+ $(,)?) => {
@@ -54,6 +118,20 @@ macro_rules! assert_disjoint {
     };
 }
 
+/// Macro to extract the set of roles from a protocol type as a type-level list.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Roles = extract_roles!(TInteract<Http, TClient, Message, TEnd<Http>>);
+/// ```
+#[macro_export]
+macro_rules! extract_roles {
+    ($T:ty) => {
+        <$T as $crate::RolesOf>::Roles
+    };
+}
+
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
@@ -69,7 +147,15 @@ pub trait TSession<IO>: Sealed {
     const IS_EMPTY: bool;
 }
 
-// The empty TSession.
+/// Marker for the end of a protocol session.
+///
+/// This type is used to indicate that a protocol branch or sequence has finished.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type End = TEnd<Http>;
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TEnd<IO>(PhantomData<IO>);
 
@@ -79,7 +165,15 @@ impl<IO> TSession<IO> for TEnd<IO> {
     const IS_EMPTY: bool = true;
 }
 
-// An interaction TSession for role R.
+/// Represents a single interaction in a protocol session.
+///
+/// `TInteract<IO, R, H, T>` means role `R` sends or receives message `H` over IO, then continues as `T`.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Step = TInteract<Http, TClient, Message, TEnd<Http>>;
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TInteract<IO, R, H, T: TSession<IO>>(PhantomData<(IO, R, H, T)>);
 
@@ -89,7 +183,15 @@ impl<IO, R, H, T: TSession<IO>> TSession<IO> for TInteract<IO, R, H, T> {
     const IS_EMPTY: bool = false;
 }
 
-// Recursive session type
+/// Recursive session type for repeating protocol fragments.
+///
+/// `TRec<IO, S>` means repeat the protocol `S` (which may refer to itself).
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Streaming = TRec<Http, TInteract<Http, TClient, Message, TEnd<Http>>>;
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TRec<IO, S: TSession<IO>>(PhantomData<(IO, S)>);
 
@@ -99,7 +201,15 @@ impl<IO, S: TSession<IO>> TSession<IO> for TRec<IO, S> {
     const IS_EMPTY: bool = false;
 }
 
-// Binary choice
+/// Binary protocol choice between two branches.
+///
+/// `TChoice<IO, L, R>` means the protocol can proceed as either `L` or `R`.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Choice = TChoice<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>>;
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TChoice<IO, L: TSession<IO>, R: TSession<IO>>(PhantomData<(IO, L, R)>);
 
@@ -110,11 +220,28 @@ impl<IO, L: TSession<IO>, R: TSession<IO>> TSession<IO> for TChoice<IO, L, R> {
 }
 
 // Map type-level list to nested TChoice
+/// Trait for mapping a type-level list to a nested `TChoice`.
+///
+/// Used by the `tchoice!` macro for n-ary protocol branching.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Choice = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTChoice<Http>>::Output;
+/// ```
 pub trait ToTChoice<IO> {
     type Output: TSession<IO>;
 }
 
-// Branded parallel composition
+/// Branded parallel composition of two protocol branches.
+///
+/// `TPar<IO, L, R, IsDisjoint>` means run `L` and `R` in parallel, with a marker for disjointness.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Par = TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB>;
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
 
@@ -124,6 +251,15 @@ impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO,
     const IS_EMPTY: bool = false;
 }
 
+/// Trait for mapping a type-level list to a nested `TPar`.
+///
+/// Used by the `tpar!` macro for n-ary protocol parallel composition.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Par = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTPar<Http>>::Output;
+/// ```
 pub trait ToTPar<IO> {
     type Output: TSession<IO>;
 }
@@ -133,6 +269,15 @@ pub struct TrueB;
 pub struct FalseB;
 
 // --- Role Extraction Machinery ---
+/// Extracts the set of roles used in a protocol type as a type-level list.
+///
+/// Used for disjointness checks and compile-time assertions.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Roles = <TInteract<Http, TClient, Message, TEnd<Http>> as RolesOf>::Roles;
+/// ```
 pub trait RolesOf {
     type Roles;
 }
@@ -190,6 +335,15 @@ where
 {}
 
 // --- Compile-time Disjointness Assertion Machinery ---
+/// Compile-time assertion that a parallel protocol is disjoint.
+///
+/// Used by the `assert_disjoint!` macro to rebrand a `TPar` as disjoint.
+///
+/// # Example
+/// ```rust
+/// use playground::*;
+/// type Checked = <TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB> as AssertDisjoint>::Output;
+/// ```
 pub trait AssertDisjoint {
     type Output;
 }
@@ -268,3 +422,5 @@ pub struct Db;
 pub struct Mqtt;
 pub struct Cache;
 pub struct Mixed;
+
+pub mod test_types;
