@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Library structure reviewed: simple, single-file core with a dedicated module for test/example types. No further modularization for now.
 - All macro ergonomics and safety tasks are now complete, with only attribute/proc macros deferred for future consideration.
 - Plan updated: Duality, Labelled Ends, and Multiparty Extensions (Projections) are deferred/future, with rationale for each.
+- Renamed crate from `playground` to `besedarium` (package and library names).
+- Updated imports and module references from `playground::` to `besedarium::` across code, tests, examples, and documentation.
+- Updated README title, headings, and docs to reflect the new project name "Besedarium".
 
 ### Removed
 - Removed main.rs and moved all logic to lib.rs for a library-only crate structure.
