@@ -1,0 +1,5 @@
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/trybuild/trailing_commas.rs:11:3
+   |
+11 | );
+   |   ^ consider adding a `main` function to `$DIR/tests/trybuild/trailing_commas.rs`

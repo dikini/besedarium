@@ -1,0 +1,5 @@
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/trybuild/mixed_io_choice.rs:6:3
+  |
+6 | );
+  |   ^ consider adding a `main` function to `$DIR/tests/trybuild/mixed_io_choice.rs`

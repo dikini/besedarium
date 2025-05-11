@@ -1,0 +1,13 @@
+warning: unused import: `playground::*`
+ --> tests/trybuild/empty_protocols_should_fail.rs:1:5
+  |
+1 | use playground::*;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/trybuild/empty_protocols_should_fail.rs:1:19
+  |
+1 | use playground::*;
+  |                   ^ consider adding a `main` function to `$DIR/tests/trybuild/empty_protocols_should_fail.rs`

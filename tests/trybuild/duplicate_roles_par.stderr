@@ -1,0 +1,5 @@
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/trybuild/duplicate_roles_par.rs:7:34
+  |
+7 | assert_disjoint!(par DupRolePar);
+  |                                  ^ consider adding a `main` function to `$DIR/tests/trybuild/duplicate_roles_par.rs`

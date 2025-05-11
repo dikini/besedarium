@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 //! Session types core library: abstract types, traits, combinators, and macros.
 //! No concrete roles or example/test code.
 
@@ -246,3 +248,23 @@ impl<IO> ToTPar<IO> for Nil {
 impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
     type Output = TPar<IO, H, <T as ToTPar<IO>>::Output, FalseB>;
 }
+
+// --- Concrete Roles for Testing and Protocol Examples ---
+pub struct TClient;
+pub struct TServer;
+pub struct TBroker;
+pub struct TWorker;
+
+// --- Example Messages ---
+pub struct Message;
+pub struct Response;
+pub struct Publish;
+pub struct Notify;
+pub struct Subscribe;
+
+// --- IO protocol marker types for mixed-protocol tests ---
+pub struct Http;
+pub struct Db;
+pub struct Mqtt;
+pub struct Cache;
+pub struct Mixed;
