@@ -4,9 +4,21 @@
 
 ## 1. Disjointness Checks (**Highest Priority**)
 - [ ] **Implement type-level enforcement of disjointness for `TPar` branches**
-    - [ ] Add type-level role extraction and disjointness traits
-    - [ ] Brand `TPar` with a type-level boolean for safety status
-    - [ ] Provide ergonomic compile-time assertions or traits for explicit disjointness checks
+    - [ ] **Step 1: Role Extraction**
+        - [ ] Define a `RolesOf` trait for all session combinators to extract a type-level list of roles used in a session.
+        - [ ] Implement `RolesOf` for `TInteract`, `TChoice`, `TPar`, `TRec`, and `TEnd`.
+    - [ ] **Step 2: Disjointness Traits**
+        - [ ] Define a type-level list trait `Contains<X>` and `Disjoint<A, B>` to check if two role lists are disjoint.
+        - [ ] Implement supporting traits like `NotContains<X>`, `NotSame<X>`, and `NotEqual<X>`.
+    - [ ] **Step 3: Branding TPar**
+        - [ ] Add a type-level boolean parameter to `TPar` (e.g., `TPar<L, R, IsDisjoint>`) to indicate if disjointness is guaranteed.
+        - [ ] By default, mark as `False` (unchecked); after explicit check, rebrand as `True`.
+    - [ ] **Step 4: Ergonomic Compile-Time Assertions**
+        - [ ] Provide a trait or macro (e.g., `AssertDisjoint<TPar>`) to check and rebrand a `TPar` as disjoint.
+        - [ ] Update the `assert_disjoint!` macro to use the new traits.
+    - [ ] **Step 5: Documentation and Examples**
+        - [ ] Add doc comments and usage examples for all new traits and macros.
+        - [ ] Add compile-time tests for both successful and failing disjointness checks.
 
 ---
 

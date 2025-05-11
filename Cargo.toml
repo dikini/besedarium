@@ -1,5 +1,12 @@
 [package]
-name="playground"
-edition="2024"
+name = "playground"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "playground"
+path = "src/lib.rs"
+
+# No [[bin]] section, as we are removing main.rs and do not want an executable artifact
 
 [dependencies]
