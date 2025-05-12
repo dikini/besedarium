@@ -11,6 +11,10 @@ pub struct TClient;
 pub struct TServer;
 pub struct TBroker;
 pub struct TWorker;
+impl ProtocolLabel for TClient {}
+impl ProtocolLabel for TServer {}
+impl ProtocolLabel for TBroker {}
+impl ProtocolLabel for TWorker {}
 
 // --- Example Messages ---
 pub struct Message;
@@ -33,8 +37,9 @@ mod par_disjoint_test {
     use super::*;
     type ParDisjoint = TPar<
         Http,
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TServer, Response, TEnd<Http>>,
+        EmptyLabel,
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
         FalseB,
     >;
     assert_disjoint!(par ParDisjoint);
@@ -53,17 +58,24 @@ mod long_disjoint_test {
     use super::*;
     type LongDisjoint = TPar<
         Http,
+        EmptyLabel,
         TInteract<
             Http,
+            EmptyLabel,
             TClient,
             Message,
             TChoice<
                 Http,
-                TInteract<Http, TServer, Response, TEnd<Http>>,
-                TRec<Http, TInteract<Http, TBroker, Publish, TEnd<Http>>>,
+                EmptyLabel,
+                TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+                TRec<
+                    Http,
+                    EmptyLabel,
+                    TInteract<Http, EmptyLabel, TBroker, Publish, TEnd<Http, EmptyLabel>>,
+                >,
             >,
         >,
-        TInteract<Http, TWorker, Notify, TEnd<Http>>,
+        TInteract<Http, EmptyLabel, TWorker, Notify, TEnd<Http, EmptyLabel>>,
         FalseB,
     >;
     assert_disjoint!(par LongDisjoint);
@@ -84,9 +96,9 @@ mod long_disjoint_test {
 mod nary_disjoint_test {
     use super::*;
     type NaryDisjoint = tpar!(Http;
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TWorker, Notify, TEnd<Http>>,
-        TInteract<Http, TBroker, Subscribe, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TWorker, Notify, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TBroker, Subscribe, TEnd<Http, EmptyLabel>>
     );
     assert_disjoint!(par NaryDisjoint);
 }
@@ -104,17 +116,17 @@ mod nary_disjoint_test {
 
 // --- Choice/Equality Example ---
 type PlainFourWayChoice = tchoice!(Http;
-    TInteract<Http, TClient, Message, TEnd<Http>>,
-    TInteract<Http, TClient, Publish, TEnd<Http>>,
-    TInteract<Http, TServer, Notify, TEnd<Http>>,
-    TInteract<Http, TWorker, Subscribe, TEnd<Http>>
+    TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TServer, Notify, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TWorker, Subscribe, TEnd<Http, EmptyLabel>>
 );
 
 type NaryChoice = tlist!(
-    TInteract<Http, TClient, Message, TEnd<Http>>,
-    TInteract<Http, TClient, Publish, TEnd<Http>>,
-    TInteract<Http, TServer, Notify, TEnd<Http>>,
-    TInteract<Http, TWorker, Subscribe, TEnd<Http>>
+    TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TServer, Notify, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TWorker, Subscribe, TEnd<Http, EmptyLabel>>
 );
 
 type FourWayChoice = <NaryChoice as ToTChoice<Http>>::Output;
@@ -126,10 +138,10 @@ assert_type_eq!(FourWayChoice, PlainFourWayChoice);
 mod mixed_protocol_interact {
     use super::*;
     // Single protocol
-    type HttpSession = TInteract<Http, TClient, Message, TEnd<Http>>;
-    type DbSession = TInteract<Db, TServer, Response, TEnd<Db>>;
+    type HttpSession = TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>;
+    type DbSession = TInteract<Db, EmptyLabel, TServer, Response, TEnd<Db, EmptyLabel>>;
     // Compose them in a choice (no type equality assertion, as IO markers differ)
-    type MixedChoice = TChoice<Http, HttpSession, HttpSession>;
+    type MixedChoice = TChoice<Http, EmptyLabel, HttpSession, HttpSession>;
     // This is just to show the pattern; do not assert_type_eq! across IO markers.
 }
 
@@ -138,8 +150,9 @@ mod mixed_protocol_par {
     // Parallel composition of different protocol branches
     type ParMixed = TPar<
         Http,
-        TInteract<Http, TClient, Message, TEnd<Http>>, // HTTP
-        TInteract<Mqtt, TBroker, Publish, TEnd<Mqtt>>, // MQTT
+        EmptyLabel,
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>, // HTTP
+        TInteract<Mqtt, EmptyLabel, TBroker, Publish, TEnd<Mqtt, EmptyLabel>>, // MQTT
         FalseB,
     >;
     assert_disjoint!(par ParMixed);
@@ -150,37 +163,40 @@ mod nary_macro_tests {
     // 2-way tpar
     mod two_way {
         use super::*;
-        type TwoWay = tpar!(Http; TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>);
+        type TwoWay = tpar!(Http; TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>, TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>);
         assert_disjoint!(par TwoWay);
     }
     // 3-way tpar
     mod three_way {
         use super::*;
         type ThreeWay = tpar!(Http;
-            TInteract<Http, TClient, Message, TEnd<Http>>,
-            TInteract<Http, TServer, Response, TEnd<Http>>,
-            TInteract<Http, TBroker, Publish, TEnd<Http>>
+            TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+            TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+            TInteract<Http, EmptyLabel, TBroker, Publish, TEnd<Http, EmptyLabel>>
         );
         assert_disjoint!(par ThreeWay);
     }
     // 4-way tchoice
     type FourWay = tchoice!(Http;
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TServer, Response, TEnd<Http>>,
-        TInteract<Http, TBroker, Publish, TEnd<Http>>,
-        TInteract<Http, TWorker, Notify, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TBroker, Publish, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TWorker, Notify, TEnd<Http, EmptyLabel>>
     );
     // Type equality check for n-ary macro
     type ManualFourWay = TChoice<
         Http,
-        TInteract<Http, TClient, Message, TEnd<Http>>,
+        EmptyLabel,
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
         TChoice<
             Http,
-            TInteract<Http, TServer, Response, TEnd<Http>>,
+            EmptyLabel,
+            TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
             TChoice<
                 Http,
-                TInteract<Http, TBroker, Publish, TEnd<Http>>,
-                TInteract<Http, TWorker, Notify, TEnd<Http>>,
+                EmptyLabel,
+                TInteract<Http, EmptyLabel, TBroker, Publish, TEnd<Http, EmptyLabel>>,
+                TInteract<Http, EmptyLabel, TWorker, Notify, TEnd<Http, EmptyLabel>>,
             >,
         >,
     >;
@@ -209,22 +225,28 @@ mod nary_macro_tests {
 
 // --- Example Protocols ---
 // Client-server handshake (HTTP request/response)
-type HttpHandshake =
-    TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
+type HttpHandshake = TInteract<
+    Http,
+    EmptyLabel,
+    TClient,
+    Message,
+    TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+>;
 
 // Publish/subscribe (MQTT)
 type MqttPubSub = TChoice<
     Mqtt,
-    TInteract<Mqtt, TClient, Publish, TEnd<Mqtt>>,
-    TInteract<Mqtt, TClient, Subscribe, TEnd<Mqtt>>,
+    EmptyLabel,
+    TInteract<Mqtt, EmptyLabel, TClient, Publish, TEnd<Mqtt, EmptyLabel>>,
+    TInteract<Mqtt, EmptyLabel, TClient, Subscribe, TEnd<Mqtt, EmptyLabel>>,
 >;
 
 mod workflow_disjoint_test {
     use super::*;
     type Workflow = tpar!(Http;
-        TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>,
-        TInteract<Http, TBroker, Publish, TEnd<Http>>,
-        TInteract<Http, TWorker, Notify, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>>,
+        TInteract<Http, EmptyLabel, TBroker, Publish, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TWorker, Notify, TEnd<Http, EmptyLabel>>
     );
     assert_disjoint!(par Workflow);
 }
@@ -232,8 +254,8 @@ mod workflow_disjoint_test {
 mod parallel_downloads_disjoint_test {
     use super::*;
     type ParallelDownloads = tpar!(Http;
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TClient, Publish, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>
     );
     assert_disjoint!(par ParallelDownloads);
 }
@@ -241,26 +263,27 @@ mod parallel_downloads_disjoint_test {
 mod mixed_example_disjoint_test {
     use super::*;
     type MixedExample = tpar!(Mixed;
-        TInteract<Mixed, TClient, Message, TEnd<Mixed>>,
-        TInteract<Mixed, TBroker, Publish, TEnd<Mixed>>
+        TInteract<Mixed, EmptyLabel, TClient, Message, TEnd<Mixed, EmptyLabel>>,
+        TInteract<Mixed, EmptyLabel, TBroker, Publish, TEnd<Mixed, EmptyLabel>>
     );
     assert_disjoint!(par MixedExample);
 }
 
 // Recursive/streaming protocol
-type Streaming = TRec<Http, TInteract<Http, TClient, Message, TEnd<Http>>>;
+type Streaming =
+    TRec<Http, EmptyLabel, TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>>;
 
 // Protocol with branching (login vs. register)
 type LoginOrRegister = tchoice!(Http;
-    TInteract<Http, TClient, Message, TEnd<Http>>,
-    TInteract<Http, TClient, Publish, TEnd<Http>>
+    TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+    TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>
 );
 
 mod parallel_downloads_disjoint_test_top {
     use super::*;
     type ParallelDownloads = tpar!(Http;
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TClient, Publish, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>
     );
     assert_disjoint!(par ParallelDownloads);
 }
@@ -268,8 +291,8 @@ mod parallel_downloads_disjoint_test_top {
 mod mixed_example_disjoint_test_top {
     use super::*;
     type MixedExample = tpar!(Mixed;
-        TInteract<Mixed, TClient, Message, TEnd<Mixed>>,
-        TInteract<Mixed, TBroker, Publish, TEnd<Mixed>>
+        TInteract<Mixed, EmptyLabel, TClient, Message, TEnd<Mixed, EmptyLabel>>,
+        TInteract<Mixed, EmptyLabel, TBroker, Publish, TEnd<Mixed, EmptyLabel>>
     );
     assert_disjoint!(par MixedExample);
 }
@@ -278,8 +301,8 @@ mod mixed_example_disjoint_test_top {
 mod parallel_downloads_disjoint_test_final {
     use super::*;
     type ParallelDownloads = tpar!(Http;
-        TInteract<Http, TClient, Message, TEnd<Http>>,
-        TInteract<Http, TClient, Publish, TEnd<Http>>
+        TInteract<Http, EmptyLabel, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, EmptyLabel, TClient, Publish, TEnd<Http, EmptyLabel>>
     );
     assert_disjoint!(par ParallelDownloads);
 }
@@ -288,10 +311,26 @@ mod parallel_downloads_disjoint_test_final {
 mod mixed_example_disjoint_test_final {
     use super::*;
     type MixedExample = tpar!(Mixed;
-        TInteract<Mixed, TClient, Message, TEnd<Mixed>>,
-        TInteract<Mixed, TBroker, Publish, TEnd<Mixed>>
+        TInteract<Mixed, EmptyLabel, TClient, Message, TEnd<Mixed, EmptyLabel>>,
+        TInteract<Mixed, EmptyLabel, TBroker, Publish, TEnd<Mixed, EmptyLabel>>
     );
     assert_disjoint!(par MixedExample);
+}
+
+// --- Label Uniqueness Positive Test ---
+mod label_uniqueness_positive {
+    use super::*;
+    struct L1;
+    impl ProtocolLabel for L1 {}
+    struct L2;
+    impl ProtocolLabel for L2 {}
+    type UniqueLabels = TChoice<
+        Http,
+        L1,
+        TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
+        TInteract<Http, L2, TServer, Response, TEnd<Http, EmptyLabel>>,
+    >;
+    assert_unique_labels!(UniqueLabels);
 }
 
 // --- Intentional compile-fail tests for error message demonstration ---
@@ -370,6 +409,8 @@ mod runtime_tests {
         struct Bob;
         impl Role for Alice {}
         impl Role for Bob {}
+        impl ProtocolLabel for Alice {}
+        impl ProtocolLabel for Bob {}
         impl RoleEq<Alice> for Alice {
             type Output = True;
         }
@@ -383,7 +424,13 @@ mod runtime_tests {
             type Output = True;
         }
 
-        type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+        type Global = TInteract<
+            Http,
+            EmptyLabel,
+            Alice,
+            Message,
+            TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>,
+        >;
         type AliceLocalExpected =
             EpSend<Http, Alice, Message, EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>>;
         assert_type_eq!(
