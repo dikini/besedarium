@@ -23,9 +23,11 @@ This document summarizes the key points from our discussion on implementing sess
 - **Choice Combinator (`TChoice`):**  
   Represents a branching point in the protocol, similar to sum types or protocol choices.  
   Example implementation:
+
   ```rust
   pub struct TChoice<L: TSession, R: TSession>(PhantomData<(L, R)>);
   ```
+
   This allows the protocol to proceed along one of several possible branches.
 
 ```rust
@@ -93,6 +95,7 @@ impl<C, S: TSession> TSession for TShared<C, S> {
 
 - **Runtime Handling:**  
   In practice, shared channels are often managed at runtime (e.g., using `Arc<Mutex<...>>` or async channels), with the type system ensuring protocol correctness.
+
 ---
 
 ## Summary Table
@@ -113,7 +116,9 @@ impl<C, S: TSession> TSession for TShared<C, S> {
 ```rust
 type Chain = Compose<Compose<ClientServer, ServerBroker>, TRec<BrokerWorker>>;
 ```
+
 This represents a protocol where:
+
 1. `ClientServer` session runs,
 2. followed by `ServerBroker`,
 3. followed by a recursive wrapper around `BrokerWorker`.

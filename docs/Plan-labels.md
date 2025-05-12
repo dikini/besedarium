@@ -10,7 +10,8 @@ This document outlines the plan for adding user-definable labels to protocol com
 
 - **Marker Types (Implemented):**
   - Use Rust marker types (structs implementing `ProtocolLabel`) for labels.
-  - Users define their own label types, e.g. `struct MyLabel; impl ProtocolLabel for MyLabel {}`
+  - Users define their own label types, e.g.
+    `struct MyLabel; impl ProtocolLabel for MyLabel {}`
   - Const generics are not used, as they are not feasible on stable Rust for this use case.
 
 ## 2. Placeholder/Empty Labels
@@ -71,12 +72,12 @@ type MyProtocol = TRec<Http, StartLabel, ...>;
 
 ## Summary Table
 
-| Step                        | Choice/Option                | User-definable? | Notes                        |
-|-----------------------------|------------------------------|-----------------|------------------------------|
-| Label representation        | Marker types (structs)       | Yes             | Users define their own       |
-| Placeholder labels          | EmptyLabel                   | Yes             | Convention, not enforced     |
-| Uniqueness enforcement      | Traits/macros                | Yes             | Works with user labels       |
-| Test/dev labels             | Temporary, separate module   | Yes             | Remove before release        |
+| Step                     | Choice/Option              | User-definable? | Notes                     |
+|--------------------------|----------------------------|-----------------|---------------------------|
+| Label representation     | Marker types (structs)     | Yes             | Users define their own    |
+| Placeholder labels       | EmptyLabel                 | Yes             | Convention, not enforced  |
+| Uniqueness enforcement   | Traits/macros              | Yes             | Works with user labels    |
+| Test/dev labels          | Temporary, separate module | Yes             | Remove before release     |
 
 ---
 

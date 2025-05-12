@@ -96,7 +96,7 @@ Besedarium models protocols as global types (describing the whole protocol) and 
       B --> End2((End))
   ```
 
-##@ 3. `TPar`
+### 3. `TPar`
 
 - **Purpose:** Models parallel (concurrent) composition of protocol branches.
 - **Implementation:**
@@ -154,10 +154,13 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 - **Properties Ensured:**
   - Well-formedness of recursive protocols.
 - **Example:**
+
   ```rust
   type Streaming = TRec<Http, TInteract<Http, TClient, Message, TEnd<Http>>>;
   ```
+
 - **Diagram:**
+
   ```mermaid
   flowchart TD
       Start((Start))
@@ -174,6 +177,7 @@ Besedarium models protocols as global types (describing the whole protocol) and 
   ```rust
   pub struct TEnd<IO>(PhantomData<IO>);
   ```
+
 - **Pros:**
   - Simple, unambiguous protocol termination.
 - **Cons:**
@@ -219,6 +223,38 @@ type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEn
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 // AliceLocal = EpSend<Http, Alice, Message, EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>>
 ```
+
+---
+
+## Discussion: EpSkip (Silent/No-op) Combinator
+
+### What is EpSkip?
+
+EpSkip (also called EpSilent or EpNoOp) is a local endpoint combinator representing a "do nothing" or silent step in a protocol. It is used in session type systems to indicate that a role is uninvolved in a particular protocol fragment (e.g., not present in any branch of a parallel composition).
+
+#### Pros of EpSkip
+
+- **Type-level precision:** Clearly indicates uninvolved roles in the local type, improving protocol clarity and correctness.
+- **Simplifies endpoint code:** Allows endpoint interpreters to treat uninvolved roles as true no-ops, potentially reducing boilerplate.
+- **Explicit intent:** Makes the protocol structure and role participation explicit in the type system.
+
+#### Cons of EpSkip
+
+- **Increased runtime complexity:** The endpoint state machine must recognize and handle EpSkip states, even though they do nothing.
+- **More verbose state machines:** The presence of explicit no-op states can make the runtime control flow harder to follow, especially in complex protocols.
+- **Potential confusion:** Developers may not immediately distinguish between EpSkip (no-op) and EpEnd (termination), leading to ambiguity if not documented and handled carefully.
+- **Maintenance burden:** All endpoint interpreters, code generators, and runtime systems must consistently handle EpSkip, increasing the surface area for bugs or inconsistencies.
+
+### Rationale for Not Implementing EpSkip (for Now)
+
+While EpSkip improves type-level expressiveness, we have decided not to implement it at this stage due to the increased costs at runtime. The main reasons are:
+
+- **State machine complexity:** Every endpoint runtime must implement and handle EpSkip states, which adds to the number of possible states and transitions, even though most are no-ops.
+- **Control flow clarity:** The presence of explicit skip states can make the runtime logic more verbose and harder to reason about, especially when debugging or tracing protocol execution.
+- **Potential for confusion:** Without careful documentation and discipline, EpSkip may be mistaken for protocol termination (EpEnd), leading to subtle bugs.
+- **Implementation overhead:** All endpoint interpreters and code generators must be updated to recognize and correctly process EpSkip, increasing maintenance and testing effort.
+
+For these reasons, the current design omits EpSkip and instead allows uninvolved roles to project to simple terminal or empty endpoint types (e.g., EpEnd), accepting some loss of type-level precision in favor of runtime simplicity and maintainability.
 
 ---
 
@@ -281,4 +317,4 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ---
 
-*Prepared by GitHub Copilot, 2025*
+Prepared by GitHub Copilot, 2025

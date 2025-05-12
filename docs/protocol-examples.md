@@ -11,6 +11,7 @@ This document reviews the protocol examples from the classic session types liter
 ### 1.1. Simple Protocol (No Recursion)
 
 **Protocol Steps:**
+
 1. Customer sends an order to the agency (e.g., a travel destination).
 2. Agency replies with a quote (a price).
 3. Customer decides to accept or reject the offer:
@@ -18,6 +19,7 @@ This document reviews the protocol examples from the classic session types liter
    - If rejected: Protocol ends immediately.
 
 **Global Protocol (from the paper):**
+
 ```ignore
 Customer → Agency : order(Hawaii).
 Agency → Customer : quote(nat).
@@ -30,10 +32,12 @@ Customer → Agency : {
 ```
 
 **Modeling in Besedarium:**
+
 - This protocol can be modeled using a sequence of `TInteract` (for messages) and `TChoice` (for the accept/reject decision).
 - Each branch of the choice is a sequence of further interactions, ending with `TEnd`.
 
 **Projection to Local Types:**
+
 - Each role (Customer, Agency) gets a local protocol, where choices and message directions are preserved.
 - The choice is made by the Customer, and the Agency offers the corresponding branches.
 
@@ -42,6 +46,7 @@ Customer → Agency : {
 ### 1.2. Protocol with Recursion (Retry)
 
 **Global Protocol:**
+
 ```ignore
 rec {
     Customer → Agency : order(place).
@@ -58,19 +63,23 @@ rec {
 ```
 
 **Key Point:**
+
 - The `retry` branch allows the protocol to loop back and start over.
 - This is a classic use of recursion in session types.
 
 **Modeling in Besedarium:**
+
 - Recursion is modeled with `TRec` (for the recursive block).
 - The `retry` branch should loop back to the start of the recursion.
 - The current library uses a simple `TRec`, but does not have explicit recursion variables or a way to "break out" of recursion in a type-safe way.
 
 **Projection to Local Types:**
+
 - The Customer and Agency both see the recursion, but the decision to retry is made by the Customer and communicated explicitly.
 - This ensures both roles are synchronized and prevents protocol divergence.
 
 **Example Local Projection (Customer):**
+
 ```ignore
 rec {
     send Agency : order(place);
@@ -90,6 +99,7 @@ rec {
 ```
 
 **Example Local Projection (Agency):**
+
 ```ignore
 rec {
     receive Customer : order(place);
@@ -113,6 +123,7 @@ rec {
 ## 2. Web Service with Proxy
 
 **Protocol Description:**
+
 - A client, proxy, and web service interact.
 - The client sends a request to the proxy.
 - The proxy chooses to either forward the request or audit it.
@@ -120,6 +131,7 @@ rec {
 - In the audit case, the web service sends details to the proxy, which then resumes the session, and finally the web service replies to the client.
 
 **Global Protocol:**
+
 ```ignore
 Client → Proxy : request {
     forward. 
@@ -134,13 +146,16 @@ Client → Proxy : request {
 ```
 
 **Modeling in Besedarium:**
+
 - The protocol is modeled as a sequence of `TInteract` and a `TChoice` (for the proxy's decision).
 - Each branch is a sequence of further interactions, ending with `TEnd`.
 
 **Projection to Local Types:**
+
 - Each role gets a local protocol, with the proxy making the choice and the others offering the corresponding branches.
 
 **Example Local Projection (Client):**
+
 ```ignore
 send Proxy : request;
 offer {
@@ -154,6 +169,7 @@ offer {
 ```
 
 **Example Local Projection (Proxy):**
+
 ```ignore
 receive Client : request;
 choose {
@@ -173,6 +189,7 @@ choose {
 ```
 
 **Example Local Projection (Web Service):**
+
 ```ignore
 offer {
     forward:
@@ -193,26 +210,31 @@ offer {
 ## 3. Modeling Challenges and Limitations
 
 ### 3.1. Recursion and Control Flow
+
 - The current Besedarium library models recursion with `TRec`, but lacks explicit recursion variables (like Mu/De Bruijn indices).
 - This means you cannot precisely control where to break out of recursion or refer to a specific recursion point.
 - Infinite loops are possible if recursion is not properly controlled by explicit protocol actions.
 
 ### 3.2. Synchronization of Recursion
+
 - Recursion control (break/continue) must always be driven by explicit protocol messages or choices, not by local-only control flow.
 - If one role decides to break/continue locally, but the others do not, the protocol can diverge or deadlock.
 - The recommended approach is to always synchronize recursion control via explicit messages, as shown in the examples above.
 
 ### 3.3. Labels and Choices
+
 - Adding labels to choices, recursion, and ends improves clarity and helps with code generation and projection.
 - However, labels alone do not synchronize protocol control flow; explicit messages are still required.
 
 ### 3.4. Projection Safety
+
 - The projection algorithm must ensure that all roles are synchronized, especially around choices and recursion.
 - All break/continue decisions must be protocol-driven, not local-only.
 
 ---
 
 ## 4. References
+
 - [A Very Gentle Introduction to Multiparty Session Types](http://mrg.doc.ic.ac.uk/publications/a-very-gentle-introduction-to-multiparty-session-types/main.pdf)
 - [Comprehensive Multiparty Session Types](https://arxiv.org/pdf/1902.00544)
 
@@ -238,6 +260,7 @@ Rec<"main_loop",
     >
 >
 ```
+
 - Here, `Rec<"main_loop">` introduces a recursion point with a globally unique label.
 - `Break<"main_loop">` refers unambiguously to that point, looping back.
 - This is equivalent to `Mu(X) ... Var(X)` in classic session types.
@@ -245,11 +268,13 @@ Rec<"main_loop",
 ### 5.2. Flat Namespace: Simplicity and Limitations
 
 By enforcing a single global namespace for recursion labels (i.e., all labels must be unique within a protocol), we:
+
 - **Avoid Scoping Complexity:** No need for nested scopes, shadowing, or stack-based resolution. Label lookup is always global.
 - **Simplify Implementation:** Projection, type-checking, and code generation are straightforward—just match labels globally.
 - **Catch Errors Early:** Duplicate or ambiguous labels are caught at protocol definition time.
 
 #### Limitations
+
 - **No Mutual Recursion:** You cannot have two recursion points with the same label, so mutual recursion (where two or more recursion points refer to each other) is not possible.
 - **Flat Namespace:** All labels must be unique, which could be a minor inconvenience in very large or generated protocols.
 - **Expressiveness:** For most practical protocols, this is not a problem, but it does restrict the theoretical expressiveness compared to full Mu/Var with scoping.
@@ -257,6 +282,7 @@ By enforcing a single global namespace for recursion labels (i.e., all labels mu
 #### Example: What You Cannot Do
 
 Suppose you want two mutually recursive blocks:
+
 ```ignore
 Rec<"A",
     ... Break<"B"> ...
@@ -265,11 +291,13 @@ Rec<"B",
     ... Break<"A"> ...
 >
 ```
+
 With a flat namespace, you cannot have both "A" and "B" in scope at the same time, so this pattern is not supported.
 
 ### 5.3. Higher-Level Protocol Languages
 
 The flat label approach can serve as a substrate for higher-level protocol languages or libraries. For example:
+
 - A macro or code generator could manage unique label generation and simulate mutual recursion by flattening or inlining protocol fragments.
 - A more advanced protocol language could introduce scoped labels or variables, compiling down to the flat-label substrate for execution or type-checking.
 
@@ -298,11 +326,13 @@ The flat label approach can serve as a substrate for higher-level protocol langu
 ### 6.1. Modeling Mutual Recursion with Par and Rec
 
 It is possible to encode certain forms of mutual recursion by combining `Par` (parallel composition) and `Rec` (recursion), provided the restriction that Par branches must have disjoint sets of roles is relaxed. In this approach:
+
 - Each `Rec` block represents a protocol state or phase.
 - `Par` allows these states to be "active" in parallel.
 - Shared roles can coordinate transitions between these states by sending/receiving messages that trigger a jump from one Rec block to another.
 
 #### Example: Two-State Mutual Recursion
+
 ```ignore
 Par(
   Rec<"A",
@@ -313,39 +343,47 @@ Par(
   >
 )
 ```
+
 Here, both Rec blocks are live, and transitions between A and B are coordinated by explicit protocol actions.
 
 ### 6.2. Dangers and Caveats
 
 #### a. **Synchronization Complexity**
+
 - When roles are shared between Par branches, transitions between states must be carefully synchronized by explicit messages.
 - If one role transitions but another does not, the protocol can deadlock or diverge.
 - The projection algorithm and runtime must ensure that all roles agree on the current state.
 
 #### b. **State Explosion and Reasoning**
+
 - Multiple Rec blocks running in parallel can lead to a state explosion, making the protocol harder to reason about, verify, and maintain.
 - Deadlock-freedom and progress become much harder to check, as the number of possible interleavings increases.
 
 #### c. **Expressiveness vs. Safety**
+
 - While this approach increases expressiveness (allowing more complex, interleaved, or stateful protocols), it also increases the risk of subtle bugs, such as unsynchronized transitions, livelocks, or unreachable states.
 - The lack of disjointness means that the same role may have to "choose" between multiple possible actions at the same time, which can be ambiguous or ill-defined.
 
 #### d. **Tooling and Implementation Burden**
+
 - Projection, type-checking, and code generation become significantly more complex.
 - Runtime implementations must track and synchronize state across all roles, which may require additional protocol messages or coordination logic.
 
 ### 6.3. Exploring the Options
 
 #### Option 1: **Keep Disjointness Restriction**
+
 - Simpler, safer, and easier to reason about.
 - No mutual recursion, but protocols are easier to verify and implement.
 
 #### Option 2: **Relax Disjointness for Advanced Users**
+
 - Allows mutual recursion and more expressive protocols.
 - Must be accompanied by strong warnings, advanced static analysis, and possibly runtime checks to prevent deadlocks and divergence.
 - Best suited for protocol designers who understand the risks and are willing to invest in careful design and verification.
 
 #### Option 3: **Higher-Level Abstractions**
+
 - Provide macros, code generators, or higher-level protocol languages that can safely encode mutual recursion patterns, compiling down to safe, well-formed Par/Rec combinations.
 - This can hide complexity from most users while still allowing advanced expressiveness when needed.
 
@@ -358,6 +396,7 @@ Here, both Rec blocks are live, and transitions between A and B are coordinated 
 | Macro/codegen abstraction     | User-friendly, safe         | Tooling required            | Large/generated protocols |
 
 ### 6.5. Guidance
+
 - **Default to safety:** Keep the disjointness restriction unless there is a compelling need for mutual recursion.
 - **Document risks:** If relaxing the restriction, clearly document the dangers and require explicit opt-in.
 - **Invest in tooling:** If supporting advanced patterns, provide static analysis and runtime checks to help users avoid common pitfalls.

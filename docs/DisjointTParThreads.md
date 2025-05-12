@@ -10,19 +10,15 @@ This is crucial for protocol safety: if two parallel threads share a role, that 
 
 ## Considerations for Disjointness Checks
 
-- **Role Extraction:**  
+- **Role Extraction:**
   Each session type (`TSession`) must be able to expose the set of roles it uses, typically as a type-level list.
-
-- **Disjointness Checking:**  
+- **Disjointness Checking:**
   There must be a way to check, at the type level, that two (or more) sets of roles are disjoint.
-
-- **Compositionality:**  
+- **Compositionality:**
   Disjointness must be preserved or re-checked after composing sessions, whether by composing two `TPar`s or by composing a branch of a `TPar` with an arbitrary `TSession`.
-
-- **Ergonomics:**  
+- **Ergonomics:**
   The API should be ergonomic for users, with compile-time errors when disjointness is violated and minimal boilerplate for common cases.
-
-- **Default Safety:**  
+- **Default Safety:**
   By default, `TPar` branches are **not safe**. Only after an explicit check should a `TPar` be considered safe.
 
 ---
@@ -31,9 +27,10 @@ This is crucial for protocol safety: if two parallel threads share a role, that 
 
 ### 1. Composing Two TPar Sessions
 
-- **Issue:**  
+- **Issue:**
   Composing two `TPar` sessions may introduce overlapping roles if not checked.
-- **Example:**  
+- **Example:**
+
   ```rust
   type Par1 = TPar<A, B, False>;
   type Par2 = TPar<C, D, False>;
@@ -42,9 +39,10 @@ This is crucial for protocol safety: if two parallel threads share a role, that 
 
 ### 2. Composing a Branch of TPar with a TSession
 
-- **Issue:**  
+- **Issue:**
   Composing a branch (e.g., the left thread) of a `TPar` with a new session may introduce new roles, potentially violating disjointness.
-- **Example:**  
+- **Example:**
+
   ```rust
   type Par = TPar<A, B, False>;
   type NewPar = TPar<A::Compose<C>, B, False>;
@@ -111,9 +109,9 @@ pub struct False;
 pub struct TPar<L: TSession, R: TSession, IsDisjoint>(PhantomData<(L, R, IsDisjoint)>);
 ```
 
-- **After composition:**  
+- **After composition:**
   Mark as `False` (unknown/disjointness not guaranteed).
-- **After explicit check:**  
+- **After explicit check:**
   Provide a trait or function to check and rebrand as `True`.
 
 **Example:**

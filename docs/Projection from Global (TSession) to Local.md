@@ -1,10 +1,10 @@
-## Projection from Global (TSession) to Local Session Types
+# Projection from Global (TSession) to Local Session Types
 
 This document summarizes the discussion on implementing a type-level fold to project a global session (`TSession`) onto local session types for each role. It outlines the necessary traits, type-level lists, and the technique to avoid overlapping trait implementations.
 
 ---
 
-### 1. Type-Level List of Roles (HList)
+## 1. Type-Level List of Roles (HList)
 
 ```rust
 pub struct Nil;

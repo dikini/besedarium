@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README title, headings, and docs to reflect the new project name "Besedarium".
 - Refactored combinator projection logic to use helper traits and avoid overlapping trait impls, improving maintainability and extensibility.
 - Updated documentation and README to include a dedicated section on projection from global to local session types.
+- All documentation files in `docs/` have been reformatted for markdownlint compliance: long lines wrapped, spacing and heading issues fixed, and style improved for readability and consistency. No content changes were made.
 
 ### Removed
 

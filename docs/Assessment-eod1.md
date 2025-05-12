@@ -12,7 +12,6 @@
 - Macros improve ergonomics.
 - Minor improvements possible in constructor privacy and error reporting.
 
-
 ---
 
 ## Completeness of Implementation (MPST Features & Protocol Correctness)
@@ -30,7 +29,6 @@
 
 **Tags:** ergonomic, clean, maintainable, macro-powered, safe  
 **Score:** 8/10
-
 
 - Macros and type-level lists make n-ary combinators ergonomic.
 - Compile-time assertions for type equality.
@@ -55,7 +53,7 @@
 
 ## Additional Notes
 
-- **Global/Projection Machinery:**  
+- **Global/Projection Machinery:**
   - The current codebase is focused on global protocol specification only (purely declarative, no runtime).
   - When adding projections, care must be taken to balance DX and the integration of generated vs. handwritten code.
   - Binary types and duality are straightforward; local runtime choreography will be the main challenge.
@@ -63,9 +61,11 @@
 
 ---
 
-**Overall:**  
-A strong and extensible foundation for global session types in Rust.  
-**Highest priorities:**  
+**Overall:**
+A strong and extensible foundation for global session types in Rust.
+
+**Highest priorities:**
+
 - Improve documentation and examples for real-world developers.
 - Plan and implement global-to-local projection machinery with careful attention to developer experience.
 

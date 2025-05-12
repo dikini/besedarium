@@ -80,4 +80,4 @@ type MySession = SessionCell<Client, Read, u8, SessionCell<Server, Write, String
 - Always ensure recursive types implement the required traits for trait-bound satisfaction.
 
 ---
-*Prepared by GitHub Copilot, 2025*
+Prepared by GitHub Copilot, 2025
