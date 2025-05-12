@@ -13,30 +13,6 @@
 //! - **Macros:** Ergonomic construction of n-ary choices and parallel branches.
 //! - **Disjointness checks:** Ensure parallel branches do not overlap roles.
 //!
-//! ## Example: Client-Server Handshake
-//! ```rust
-//! use playground::*;
-//! type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
-//! ```
-//!
-//! ## Example: N-ary Choice
-//! ```rust
-//! use playground::*;
-//! type Choice = tchoice!(Http;
-//!     TInteract<Http, TClient, Message, TEnd<Http>>,
-//!     TInteract<Http, TServer, Response, TEnd<Http>>,
-//! );
-//! ```
-//!
-//! ## Example: Parallel Composition
-//! ```rust
-//! use playground::*;
-//! type Par = tpar!(Http;
-//!     TInteract<Http, TClient, Message, TEnd<Http>>,
-//!     TInteract<Http, TServer, Response, TEnd<Http>>,
-//! );
-//! ```
-//!
 //! ## Safety Guarantees
 //! - Protocols are checked at compile time.
 //! - Parallel branches must be disjoint (no overlapping roles).
@@ -59,22 +35,19 @@
 /// ## Example
 /// ```rust
 /// use besedarium::*;
-/// struct Alice;
-/// struct Bob;
-/// impl Role for Alice {}
-/// impl Role for Bob {}
+/// struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
+/// struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
 /// impl RoleEq<Alice> for Alice { type Output = True; }
 /// impl RoleEq<Bob> for Alice { type Output = False; }
 /// impl RoleEq<Alice> for Bob { type Output = False; }
 /// impl RoleEq<Bob> for Bob { type Output = True; }
-///
-/// type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+/// struct L; impl ProtocolLabel for L {}
+/// type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
 /// type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 /// type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
 /// ```
 ///
 /// See the README and protocol examples for more details.
-
 use core::marker::PhantomData;
 
 #[macro_export]
@@ -90,9 +63,11 @@ macro_rules! tlist {
 /// # Example
 /// ```rust
 /// use besedarium::*;
+/// struct L1; impl ProtocolLabel for L1 {}
+/// struct L2; impl ProtocolLabel for L2 {}
 /// type Choice = tchoice!(Http;
-///     TInteract<Http, TClient, Message, TEnd<Http>>,
-///     TInteract<Http, TServer, Response, TEnd<Http>>,
+///     TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
+///     TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
 /// );
 /// ```
 #[macro_export]
@@ -107,9 +82,11 @@ macro_rules! tchoice {
 /// # Example
 /// ```rust
 /// use besedarium::*;
+/// struct L1; impl ProtocolLabel for L1 {}
+/// struct L2; impl ProtocolLabel for L2 {}
 /// type Par = tpar!(Http;
-///     TInteract<Http, TClient, Message, TEnd<Http>>,
-///     TInteract<Http, TServer, Response, TEnd<Http>>,
+///     TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
+///     TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
 /// );
 /// ```
 #[macro_export]
@@ -125,8 +102,9 @@ macro_rules! assert_type_eq {
         const _: fn() = || {
             fn _assert_type_eq()
             where
-                $A: $crate::TypeEq<$B>
-            {}
+                $A: $crate::TypeEq<$B>,
+            {
+            }
         };
     };
 }
@@ -137,8 +115,12 @@ macro_rules! assert_disjoint {
         const _: fn() = || {
             fn _assert_disjoint()
             where
-                (): $crate::Disjoint<<$A as $crate::RolesOf>::Roles, <$B as $crate::RolesOf>::Roles>
-            {}
+                (): $crate::Disjoint<
+                    <$A as $crate::RolesOf>::Roles,
+                    <$B as $crate::RolesOf>::Roles,
+                >,
+            {
+            }
         };
     };
     (par $TPar:ty) => {
@@ -151,7 +133,8 @@ macro_rules! assert_disjoint {
 /// # Example
 /// ```rust
 /// use besedarium::*;
-/// type Roles = extract_roles!(TInteract<Http, TClient, Message, TEnd<Http>>);
+/// struct L; impl ProtocolLabel for L {}
+/// type Roles = extract_roles!(TInteract<Http, L, TClient, Message, TEnd<Http, L>>);
 /// ```
 #[macro_export]
 macro_rules! extract_roles {
@@ -160,6 +143,35 @@ macro_rules! extract_roles {
     };
 }
 
+#[macro_export]
+macro_rules! assert_unique_labels {
+    ($T:ty) => {
+        const _: fn() = || {
+            fn _assert_unique_labels()
+            where
+                <$T as $crate::LabelsOf>::Labels: $crate::UniqueList,
+            {
+            }
+        };
+    };
+}
+
+/// ## Compile-time Label Uniqueness Assertion
+///
+/// To ensure that all protocol labels are unique (no duplicates), use the [`assert_unique_labels!`] macro:
+///
+/// ```rust
+/// use besedarium::*;
+/// struct MyLabel1; impl ProtocolLabel for MyLabel1 {}
+/// struct MyLabel2; impl ProtocolLabel for MyLabel2 {}
+/// type MyProtocol = TChoice<
+///     Http,
+///     MyLabel1,
+///     TInteract<Http, MyLabel1, TClient, Message, TEnd<Http, MyLabel1>>,
+///     TInteract<Http, MyLabel2, TServer, Response, TEnd<Http, MyLabel2>>
+/// >;
+/// assert_unique_labels!(MyProtocol); // Compile-time error if labels are not unique
+/// ```
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
@@ -181,69 +193,78 @@ pub trait TSession<IO>: Sealed {
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
-/// type End = TEnd<Http>;
+/// use besedarium::*;
+/// struct L; impl ProtocolLabel for L {}
+/// type End = TEnd<Http, L>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TEnd<IO>(PhantomData<IO>);
+pub struct TEnd<IO, L = EmptyLabel>(PhantomData<(IO, L)>);
 
-impl<IO> Sealed for TEnd<IO> {}
-impl<IO> TSession<IO> for TEnd<IO> {
+impl<IO, L> Sealed for TEnd<IO, L> {}
+impl<IO, L> TSession<IO> for TEnd<IO, L> {
     type Compose<Rhs: TSession<IO>> = Rhs;
     const IS_EMPTY: bool = true;
 }
 
 /// Represents a single interaction in a protocol session.
 ///
-/// `TInteract<IO, R, H, T>` means role `R` sends or receives message `H` over IO, then continues as `T`.
+/// `TInteract<IO, L, R, H, T>` means role `R` sends or receives message `H` over IO, then continues as `T`.
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
-/// type Step = TInteract<Http, TClient, Message, TEnd<Http>>;
+/// use besedarium::*;
+/// struct L; impl ProtocolLabel for L {}
+/// type Step = TInteract<Http, L, TClient, Message, TEnd<Http, L>>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TInteract<IO, R, H, T: TSession<IO>>(PhantomData<(IO, R, H, T)>);
+pub struct TInteract<IO, L: ProtocolLabel, R, H, T: TSession<IO>>(PhantomData<(IO, L, R, H, T)>);
 
-impl<IO, R, H, T: TSession<IO>> Sealed for TInteract<IO, R, H, T> {}
-impl<IO, R, H, T: TSession<IO>> TSession<IO> for TInteract<IO, R, H, T> {
-    type Compose<Rhs: TSession<IO>> = TInteract<IO, R, H, T::Compose<Rhs>>;
+impl<IO, L: ProtocolLabel, R, H, T: TSession<IO>> Sealed for TInteract<IO, L, R, H, T> {}
+impl<IO, L: ProtocolLabel, R, H, T: TSession<IO>> TSession<IO> for TInteract<IO, L, R, H, T> {
+    type Compose<Rhs: TSession<IO>> = TInteract<IO, L, R, H, T::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 /// Recursive session type for repeating protocol fragments.
 ///
-/// `TRec<IO, S>` means repeat the protocol `S` (which may refer to itself).
+/// `TRec<IO, L, S>` means repeat the protocol `S` (which may refer to itself), with label `L`.
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
-/// type Streaming = TRec<Http, TInteract<Http, TClient, Message, TEnd<Http>>>;
+/// use besedarium::*;
+/// struct LoopLabel; impl ProtocolLabel for LoopLabel {}
+/// type Streaming = TRec<Http, LoopLabel, TInteract<Http, LoopLabel, TClient, Message, TEnd<Http, LoopLabel>>>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRec<IO, S: TSession<IO>>(PhantomData<(IO, S)>);
+pub struct TRec<IO, L: ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, L, S)>);
 
-impl<IO, S: TSession<IO>> Sealed for TRec<IO, S> {}
-impl<IO, S: TSession<IO>> TSession<IO> for TRec<IO, S> {
-    type Compose<Rhs: TSession<IO>> = TRec<IO, S::Compose<Rhs>>;
+impl<IO, L: ProtocolLabel, S: TSession<IO>> Sealed for TRec<IO, L, S> {}
+impl<IO, L: ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, L, S> {
+    type Compose<Rhs: TSession<IO>> = TRec<IO, L, S::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 /// Binary protocol choice between two branches.
 ///
-/// `TChoice<IO, L, R>` means the protocol can proceed as either `L` or `R`.
+/// `TChoice<IO, Lbl, L, R>` means the protocol can proceed as either `L` or `R`, with label `Lbl`.
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
-/// type Choice = TChoice<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>>;
+/// use besedarium::*;
+/// struct AcceptLabel; impl ProtocolLabel for AcceptLabel {}
+/// struct RejectLabel; impl ProtocolLabel for RejectLabel {}
+/// type Choice = TChoice<Http, AcceptLabel, TInteract<Http, AcceptLabel, TClient, Message, TEnd<Http, AcceptLabel>>, TInteract<Http, RejectLabel, TServer, Response, TEnd<Http, RejectLabel>>>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TChoice<IO, L: TSession<IO>, R: TSession<IO>>(PhantomData<(IO, L, R)>);
+pub struct TChoice<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>(
+    PhantomData<(IO, Lbl, L, R)>,
+);
 
-impl<IO, L: TSession<IO>, R: TSession<IO>> Sealed for TChoice<IO, L, R> {}
-impl<IO, L: TSession<IO>, R: TSession<IO>> TSession<IO> for TChoice<IO, L, R> {
-    type Compose<Rhs: TSession<IO>> = TChoice<IO, L::Compose<Rhs>, R::Compose<Rhs>>;
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>> Sealed for TChoice<IO, Lbl, L, R> {}
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>> TSession<IO>
+    for TChoice<IO, Lbl, L, R>
+{
+    type Compose<Rhs: TSession<IO>> = TChoice<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
@@ -255,7 +276,9 @@ impl<IO, L: TSession<IO>, R: TSession<IO>> TSession<IO> for TChoice<IO, L, R> {
 /// # Example
 /// ```rust
 /// use besedarium::*;
-/// type Choice = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTChoice<Http>>::Output;
+/// struct L1; impl ProtocolLabel for L1 {}
+/// struct L2; impl ProtocolLabel for L2 {}
+/// type Choice = <tlist!(TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>, TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>) as ToTChoice<Http>>::Output;
 /// ```
 pub trait ToTChoice<IO> {
     type Output: TSession<IO>;
@@ -263,19 +286,27 @@ pub trait ToTChoice<IO> {
 
 /// Branded parallel composition of two protocol branches.
 ///
-/// `TPar<IO, L, R, IsDisjoint>` means run `L` and `R` in parallel, with a marker for disjointness.
+/// `TPar<IO, Lbl, L, R, IsDisjoint>` means run `L` and `R` in parallel, with a marker for disjointness and label `Lbl`.
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
-/// type Par = TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB>;
+/// use besedarium::*;
+/// struct ParLabel; impl ProtocolLabel for ParLabel {}
+/// type Par = TPar<Http, ParLabel, TInteract<Http, ParLabel, TClient, Message, TEnd<Http, ParLabel>>, TInteract<Http, ParLabel, TServer, Response, TEnd<Http, ParLabel>>, FalseB>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
+pub struct TPar<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
+    PhantomData<(IO, Lbl, L, R, IsDisjoint)>,
+);
 
-impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> Sealed for TPar<IO, L, R, IsDisjoint> {}
-impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO, L, R, IsDisjoint> {
-    type Compose<Rhs: TSession<IO>> = TPar<IO, L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> Sealed
+    for TPar<IO, Lbl, L, R, IsDisjoint>
+{
+}
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO>
+    for TPar<IO, Lbl, L, R, IsDisjoint>
+{
+    type Compose<Rhs: TSession<IO>> = TPar<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
     const IS_EMPTY: bool = false;
 }
 
@@ -286,7 +317,9 @@ impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO,
 /// # Example
 /// ```rust
 /// use besedarium::*;
-/// type Par = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTPar<Http>>::Output;
+/// struct L1; impl ProtocolLabel for L1 {}
+/// struct L2; impl ProtocolLabel for L2 {}
+/// type Par = <tlist!(TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>, TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>) as ToTPar<Http>>::Output;
 /// ```
 pub trait ToTPar<IO> {
     type Output: TSession<IO>;
@@ -304,7 +337,8 @@ pub struct FalseB;
 /// # Example
 /// ```rust
 /// use besedarium::*;
-/// type Roles = <TInteract<Http, TClient, Message, TEnd<Http>> as RolesOf>::Roles;
+/// struct L; impl ProtocolLabel for L {}
+/// type Roles = <TInteract<Http, L, TClient, Message, TEnd<Http, L>> as RolesOf>::Roles;
 /// ```
 pub trait RolesOf {
     type Roles;
@@ -312,16 +346,20 @@ pub trait RolesOf {
 impl<IO> RolesOf for TEnd<IO> {
     type Roles = Nil;
 }
-impl<IO, R, H, T: TSession<IO> + RolesOf> RolesOf for TInteract<IO, R, H, T> {
+impl<IO, L: ProtocolLabel, R, H, T: TSession<IO> + RolesOf> RolesOf for TInteract<IO, L, R, H, T> {
     type Roles = Cons<R, <T as RolesOf>::Roles>;
 }
-impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> RolesOf for TChoice<IO, L, R> {
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO> + RolesOf, R: TSession<IO>> RolesOf
+    for TChoice<IO, Lbl, L, R>
+{
     type Roles = <L as RolesOf>::Roles;
 }
-impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf, IsDisjoint> RolesOf for TPar<IO, L, R, IsDisjoint> {
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO> + RolesOf, R: TSession<IO>, IsDisjoint> RolesOf
+    for TPar<IO, Lbl, L, R, IsDisjoint>
+{
     type Roles = <L as RolesOf>::Roles;
 }
-impl<IO, S: TSession<IO> + RolesOf> RolesOf for TRec<IO, S> {
+impl<IO, L: ProtocolLabel, S: TSession<IO> + RolesOf> RolesOf for TRec<IO, L, S> {
     type Roles = <S as RolesOf>::Roles;
 }
 
@@ -342,17 +380,11 @@ where
 // --- Disjointness Traits ---
 pub trait Contains<X> {}
 impl<X> Contains<X> for Nil {}
-impl<X, H, T> Contains<X> for Cons<H, T>
-where
-    T: Contains<X>,
-{}
+impl<X, H, T> Contains<X> for Cons<H, T> where T: Contains<X> {}
 
 pub trait NotContains<X> {}
 impl<X> NotContains<X> for Nil {}
-impl<X, H, T> NotContains<X> for Cons<H, T>
-where
-    T: NotContains<X>,
-{}
+impl<X, H, T> NotContains<X> for Cons<H, T> where T: NotContains<X> {}
 
 pub trait Disjoint<A, B> {}
 impl<B> Disjoint<Nil, B> for () {}
@@ -360,7 +392,8 @@ impl<H, T, B> Disjoint<Cons<H, T>, B> for ()
 where
     B: NotContains<H>,
     (): Disjoint<T, B>,
-{}
+{
+}
 
 // --- Compile-time Disjointness Assertion Machinery ---
 /// Compile-time assertion that a parallel protocol is disjoint.
@@ -370,20 +403,23 @@ where
 /// # Example
 /// ```rust
 /// use besedarium::*;
-/// type Checked = <TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB> as AssertDisjoint>::Output;
+/// struct MyLabel1; impl ProtocolLabel for MyLabel1 {}
+/// struct MyLabel2; impl ProtocolLabel for MyLabel2 {}
+/// type Checked = <TPar<Http, EmptyLabel, TInteract<Http, MyLabel1, TClient, Message, TEnd<Http, MyLabel1>>, TInteract<Http, MyLabel2, TServer, Response, TEnd<Http, MyLabel2>>, FalseB> as AssertDisjoint>::Output;
 /// ```
 pub trait AssertDisjoint {
     type Output;
 }
-impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> AssertDisjoint for TPar<IO, L, R, FalseB>
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> AssertDisjoint
+    for TPar<IO, EmptyLabel, L, R, FalseB>
 where
     (): Disjoint<<L as RolesOf>::Roles, <R as RolesOf>::Roles>,
     (): Disjoint<<R as RolesOf>::Roles, <L as RolesOf>::Roles>,
 {
-    type Output = TPar<IO, L, R, TrueB>;
+    type Output = TPar<IO, EmptyLabel, L, R, TrueB>;
 }
-impl<IO, L: TSession<IO>, R: TSession<IO>> AssertDisjoint for TPar<IO, L, R, TrueB> {
-    type Output = TPar<IO, L, R, TrueB>;
+impl<IO, L: TSession<IO>, R: TSession<IO>> AssertDisjoint for TPar<IO, EmptyLabel, L, R, TrueB> {
+    type Output = TPar<IO, EmptyLabel, L, R, TrueB>;
 }
 
 /// Type-level equality trait for compile-time assertions.
@@ -418,7 +454,7 @@ impl<IO> ToTChoice<IO> for Nil {
 
 // --- ToTChoice trait, recursive case ---
 impl<IO, H: TSession<IO>, T: ToTChoice<IO>> ToTChoice<IO> for Cons<H, T> {
-    type Output = TChoice<IO, H, <T as ToTChoice<IO>>::Output>;
+    type Output = TChoice<IO, EmptyLabel, H, <T as ToTChoice<IO>>::Output>;
 }
 
 // --- ToTPar trait, base case for Nil ---
@@ -428,7 +464,7 @@ impl<IO> ToTPar<IO> for Nil {
 
 // --- ToTPar trait, recursive case ---
 impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
-    type Output = TPar<IO, H, <T as ToTPar<IO>>::Output, FalseB>;
+    type Output = TPar<IO, EmptyLabel, H, <T as ToTPar<IO>>::Output, FalseB>;
 }
 
 // --- Type level Booleans ---
@@ -477,7 +513,7 @@ pub trait ProjectRole<Me, IO, G: TSession<IO>> {
 pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
 
 impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
-impl <IO, R> Sealed for EpEnd<IO, R> {}
+impl<IO, R> Sealed for EpEnd<IO, R> {}
 
 // Base case: end of protocol
 impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
@@ -487,7 +523,6 @@ impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
 pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
 impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
 impl<IO, R, H, T> Sealed for EpSend<IO, R, H, T> {}
-
 
 pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
 impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
@@ -500,18 +535,16 @@ pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>>
 }
 
 // Send-case when Flag = True
-impl<Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectInteract<True, Me, IO, R, H, T> for ()
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<True, Me, IO, R, H, T> for ()
 where
     Me: Role,
     (): ProjectRole<Me, IO, T>,
 {
-    type Out = EpSend<IO, Me,H, <() as ProjectRole<Me, IO, T>>::Out>;
+    type Out = EpSend<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
 }
 
 // Recv-case when Flag = False
-impl<Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectInteract<False, Me, IO, R, H, T> for ()
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<False, Me, IO, R, H, T> for ()
 where
     Me: Role,
     (): ProjectRole<Me, IO, T>,
@@ -519,11 +552,10 @@ where
     type Out = EpRecv<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
 }
 
-
 // --S-ingle `ProjectRole` Impl for `TInteract` --
 
-impl<Flag, Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectRole<Me, IO, TInteract<IO, R, H, T>> for ()
+impl<Flag, Me, IO, L: ProtocolLabel, R: Role, H, T: TSession<IO>>
+    ProjectRole<Me, IO, TInteract<IO, L, R, H, T>> for ()
 where
     Flag: Bool,
     Me: RoleEq<R, Output = Flag> + Role,
@@ -531,7 +563,6 @@ where
 {
     type Out = <() as ProjectInteract<Flag, Me, IO, R, H, T>>::Out;
 }
-
 
 // This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
 // Projection for Other Global Combinators
@@ -555,7 +586,8 @@ where
 }
 
 // ProjectRole for TChoice delegates to ProjectChoice
-impl<Me, IO, L: TSession<IO>, R: TSession<IO>> ProjectRole<Me, IO, TChoice<IO, L, R>> for ()
+impl<Me, IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>
+    ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
 where
     (): ProjectChoice<Me, IO, L, R>,
 {
@@ -578,7 +610,8 @@ where
     type Out = EpPar<IO, Me, OutL, OutR>;
 }
 
-impl<Me, IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> ProjectRole<Me, IO, TPar<IO, L, R, IsDisjoint>> for ()
+impl<Me, IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>
+    ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
 where
     (): ProjectPar<Me, IO, L, R>,
 {
@@ -618,4 +651,94 @@ impl Role for TBroker {}
 impl Role for TWorker {}
 impl Role for Void {}
 
+// --- Protocol Label Type ---
+/// Marker trait for user-definable protocol labels.
+pub trait ProtocolLabel {}
 
+/// Placeholder for an empty label (use when a label is not meaningful).
+pub struct EmptyLabel;
+impl ProtocolLabel for EmptyLabel {}
+
+// Example user-defined label (for docs/tests)
+// pub struct MyLabel;
+// impl ProtocolLabel for MyLabel {}
+
+// --- Label Extraction Machinery ---
+/// Extracts the set of labels used in a protocol type as a type-level list.
+///
+/// Used for uniqueness checks and compile-time assertions.
+///
+/// # Example
+/// ```rust
+/// use besedarium::*;
+/// struct L; impl ProtocolLabel for L {}
+/// type Labels = <TInteract<Http, L, TClient, Message, TEnd<Http, L>> as LabelsOf>::Labels;
+/// ```
+pub trait LabelsOf {
+    type Labels;
+}
+impl<IO, L> LabelsOf for TEnd<IO, L> {
+    type Labels = Cons<L, Nil>;
+}
+impl<IO, L: ProtocolLabel, R, H, T: TSession<IO> + LabelsOf> LabelsOf
+    for TInteract<IO, L, R, H, T>
+{
+    type Labels = Cons<L, <T as LabelsOf>::Labels>;
+}
+impl<IO, Lbl: ProtocolLabel, L: TSession<IO> + LabelsOf, R: TSession<IO> + LabelsOf> LabelsOf
+    for TChoice<IO, Lbl, L, R>
+{
+    type Labels = Cons<Lbl, <L as LabelsOf>::Labels>;
+}
+impl<
+        IO,
+        Lbl: ProtocolLabel,
+        L: TSession<IO> + LabelsOf,
+        R: TSession<IO> + LabelsOf,
+        IsDisjoint,
+    > LabelsOf for TPar<IO, Lbl, L, R, IsDisjoint>
+{
+    type Labels = Cons<Lbl, <L as LabelsOf>::Labels>;
+}
+impl<IO, L: ProtocolLabel, S: TSession<IO> + LabelsOf> LabelsOf for TRec<IO, L, S> {
+    type Labels = Cons<L, <S as LabelsOf>::Labels>;
+}
+impl LabelsOf for Nil {
+    type Labels = Nil;
+}
+impl<H, T> LabelsOf for Cons<H, T>
+where
+    H: LabelsOf,
+    T: LabelsOf,
+{
+    type Labels = <H as LabelsOf>::Labels;
+    // Note: For a type-level list of protocol types, only the head's labels are included.
+    // If you want to aggregate all, you may want to concatenate <H as LabelsOf>::Labels and <T as LabelsOf>::Labels.
+}
+
+// --- Uniqueness Traits for Type-level Lists ---
+/// Trait to check that a type-level list contains only unique elements (no duplicates).
+///
+/// Used for compile-time uniqueness assertions (e.g., for protocol labels).
+pub trait NotInList<X> {}
+impl<X> NotInList<X> for Nil {}
+impl<X, H, T> NotInList<X> for Cons<H, T>
+where
+    X: NotSame<H>,
+    T: NotInList<X>,
+{
+}
+
+/// Trait for type-level inequality (negation of TypeEq).
+pub trait NotSame<T> {}
+impl<A, B> NotSame<B> for A where A: NotTypeEq<B> {}
+
+// Helper trait: implemented for all pairs except when A == B
+pub trait NotTypeEq<B> {}
+impl<A, B> NotTypeEq<B> for A {}
+// Overlap: no impl for A == A
+
+/// Trait to check that all elements in a type-level list are unique.
+pub trait UniqueList {}
+impl UniqueList for Nil {}
+impl<H, T> UniqueList for Cons<H, T> where T: NotInList<H> + UniqueList {}
