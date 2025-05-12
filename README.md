@@ -23,7 +23,8 @@ Session types let you describe the structure of conversations between different 
 ## Example: Client-Server Handshake
 ```rust
 use besedarium::*;
-type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
+struct L; impl ProtocolLabel for L {}
+type Handshake = TInteract<Http, L, TClient, Message, TInteract<Http, L, TServer, Response, TEnd<Http, L>>>;
 ```
 
 ```mermaid
@@ -37,9 +38,11 @@ sequenceDiagram
 ## Example: N-ary Choice
 ```rust
 use besedarium::*;
+struct L1; impl ProtocolLabel for L1 {}
+struct L2; impl ProtocolLabel for L2 {}
 type Choice = tchoice!(Http;
-    TInteract<Http, TClient, Message, TEnd<Http>>,
-    TInteract<Http, TServer, Response, TEnd<Http>>,
+    TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
+    TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
 );
 ```
 
@@ -57,9 +60,11 @@ flowchart TD
 ## Example: Parallel Composition
 ```rust
 use besedarium::*;
+struct L1; impl ProtocolLabel for L1 {}
+struct L2; impl ProtocolLabel for L2 {}
 type Par = tpar!(Http;
-    TInteract<Http, TClient, Message, TEnd<Http>>,
-    TInteract<Http, TServer, Response, TEnd<Http>>,
+    TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
+    TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
 );
 ```
 
@@ -84,16 +89,14 @@ The projection machinery in Besedarium allows you to derive the local (endpoint)
 ## Example
 ```rust
 use besedarium::*;
-struct Alice;
-struct Bob;
-impl Role for Alice {}
-impl Role for Bob {}
+struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
+struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
 impl RoleEq<Alice> for Alice { type Output = True; }
 impl RoleEq<Bob> for Alice { type Output = False; }
 impl RoleEq<Alice> for Bob { type Output = False; }
 impl RoleEq<Bob> for Bob { type Output = True; }
-
-type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+struct L; impl ProtocolLabel for L {}
+type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
 ```
