@@ -1,29 +1,34 @@
-# Besedarium: Session Types in Rust — Implementation Overview and Analysis
+# Implementation Overview
 
-## Introduction & Goals
+## Besedarium: Session Types in Rust — Implementation Overview and Analysis
+
+### Introduction & Goals
 
 Besedarium is a Rust library for building, composing, and verifying communication protocols at the type level using session types. The primary goal is to catch protocol mistakes at compile time, ensuring that distributed systems and networked applications follow the correct message flow. The library aims for a balance between strong static guarantees, ergonomic protocol construction, and extensibility for multiparty and advanced session type features.
 
-## What Are Session Types?
+### What Are Session Types?
 
 Session types are a type-theoretic framework for describing and verifying structured communication between concurrent or distributed processes. They allow developers to specify the sequence and structure of messages exchanged between roles (participants) in a protocol, ensuring properties like linearity (no double use of channels), progress (no deadlocks), and protocol fidelity (no unexpected messages).
 
 In practice, session types provide a way to encode communication protocols as types, so that the compiler can check for protocol violations. This is especially valuable in distributed systems, where mismatches in message order or structure can lead to subtle, hard-to-debug errors. Session types originated in the study of process calculi and have been adopted in several programming languages, including Haskell, Scala, and Rust, to provide strong compile-time guarantees for communication safety.
 
-## High-Level Architecture
+### High-Level Architecture
 
 Besedarium models protocols as global types (describing the whole protocol) and provides machinery to project these to local (endpoint) types for each role. The core is a set of combinators (type-level building blocks) and traits for composing, analyzing, and projecting protocols. Macros are used for ergonomic construction of n-ary choices and parallel branches. Compile-time assertions and trybuild tests ensure that safety properties are enforced and violations are caught early.
 
 ---
 
-# Global Session Type Combinators
+## Global Session Type Combinators
 
-## 1. `TInteract`
+### 1. `TInteract`
+
 - **Purpose:** Models a single interaction (send/receive) by a role in a protocol.
 - **Implementation:**
+
   ```rust
   pub struct TInteract<IO, R, H, T: TSession<IO>>(PhantomData<(IO, R, H, T)>);
   ```
+
   - `IO`: protocol marker (e.g., Http, Mqtt)
   - `R`: role performing the action
   - `H`: message type
@@ -37,9 +42,11 @@ Besedarium models protocols as global types (describing the whole protocol) and 
   - Linearity (each step is explicit and unique in the protocol).
   - Type safety for message and role.
 - **Example:**
+
   ```rust
   type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
   ```
+
 - **Diagram:**
 
   ```mermaid
@@ -50,12 +57,15 @@ Besedarium models protocols as global types (describing the whole protocol) and 
       Server-->>Client: Response
   ```
 
-## 2. `TChoice`
+### 2. `TChoice`
+
 - **Purpose:** Models a branching point in the protocol (choice between alternatives).
 - **Implementation:**
+
   ```rust
   pub struct TChoice<IO, L: TSession<IO>, R: TSession<IO>>(PhantomData<(IO, L, R)>);
   ```
+
   - Used recursively for n-ary choices via macros.
 - **Pros:**
   - Expressive for modeling protocol alternatives.
@@ -65,12 +75,14 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 - **Properties Ensured:**
   - Exhaustiveness (all branches are explicit).
 - **Example:**
+
   ```rust
   type Choice = tchoice!(Http;
       TInteract<Http, TClient, Message, TEnd<Http>>,
       TInteract<Http, TServer, Response, TEnd<Http>>,
   );
   ```
+
 - **Diagram:**
 
   ```mermaid
@@ -84,12 +96,15 @@ Besedarium models protocols as global types (describing the whole protocol) and 
       B --> End2((End))
   ```
 
-## 3. `TPar`
+##@ 3. `TPar`
+
 - **Purpose:** Models parallel (concurrent) composition of protocol branches.
 - **Implementation:**
+
   ```rust
   pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
   ```
+
   - `IsDisjoint` is a type-level boolean indicating if the branches are disjoint in their roles.
 - **Pros:**
   - Enables modeling of concurrent or independent protocol flows.
@@ -101,6 +116,7 @@ Besedarium models protocols as global types (describing the whole protocol) and 
   - Disjointness of roles (no role appears in more than one branch).
   - Linearity and progress for parallel branches.
 - **Example:**
+
   ```rust
   type Workflow = tpar!(Http;
       TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>,
@@ -109,6 +125,7 @@ Besedarium models protocols as global types (describing the whole protocol) and 
   );
   assert_disjoint!(par Workflow);
   ```
+
 - **Diagram:**
 
   ```mermaid
@@ -121,12 +138,15 @@ Besedarium models protocols as global types (describing the whole protocol) and 
       end
   ```
 
-## 4. `TRec`
+### 4. `TRec`
+
 - **Purpose:** Models recursion (repetition) in protocols.
 - **Implementation:**
+
   ```rust
   pub struct TRec<IO, S: TSession<IO>>(PhantomData<(IO, S)>);
   ```
+
 - **Pros:**
   - Enables modeling of streaming, loops, or repeated protocol fragments.
 - **Cons:**
@@ -146,9 +166,11 @@ Besedarium models protocols as global types (describing the whole protocol) and 
       A --> Start
   ```
 
-## 5. `TEnd`
+### 5. `TEnd`
+
 - **Purpose:** Marks the end of a protocol branch.
 - **Implementation:**
+
   ```rust
   pub struct TEnd<IO>(PhantomData<IO>);
   ```
@@ -161,25 +183,28 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 
 ---
 
-# Local (Endpoint) Session Types and Projection
+## Local (Endpoint) Session Types and Projection
 
 ## Overview
 
 Local (endpoint) types describe the protocol from the perspective of a single role. Besedarium provides machinery to project a global protocol to the local type for any role, ensuring that each participant follows the correct sequence of actions.
 
 ## Endpoint Combinators
+
 - `EpSend<IO, R, H, T>`: Send action for role R
 - `EpRecv<IO, R, H, T>`: Receive action for role R
 - `EpChoice<IO, R, L, Rb>`: Local choice/branching
 - `EpPar<IO, R, L, Rb>`: Local parallel composition
 - `EpEnd<IO, R>`: Local protocol termination
 
-## Projection Machinery
+### Projection Machinery
+
 - `ProjectRole<Me, IO, G>`: Trait to project a global protocol G to the local session type for role Me.
 - Uses type-level role equality (`RoleEq`) to determine send/receive.
 - Compile-time assertions (e.g., `assert_type_eq!`) ensure correctness.
 
-## Example: Projection
+### Example: Projection
+
 ```rust
 struct Alice;
 struct Bob;
@@ -197,7 +222,7 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ---
 
-# Compile-Time Properties & Testing
+## Compile-Time Properties & Testing
 
 - **Disjointness:** Enforced for parallel branches via traits and macros.
 - **Type Equality:** Compile-time assertions ensure that projected types match expected types.
@@ -205,25 +230,28 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ---
 
-# Comparison with Other Implementations
+## Comparison with Other Implementations
 
-## Haskell (Session Types Libraries)
+### Haskell (Session Types Libraries)
+
 - Haskell libraries (e.g., [session-types](https://hackage.haskell.org/package/session-types), [mpst](https://hackage.haskell.org/package/mpst)) use type classes and GADTs for similar guarantees.
 - Rust’s trait system is less expressive for some advanced features (e.g., mutual recursion, dependent types), but macros and type-level programming provide strong guarantees.
 
-## Scala (Effpi, Scribble)
+### Scala (Effpi, Scribble)
+
 - Scala libraries use implicits and type-level programming for session types.
 - [Effpi](https://github.com/effpi/effpi) is a Scala library for concurrent and distributed programming with session types.
 - [Scribble](https://www.scribble.org/) is a protocol language and toolchain, with Scala integration for multiparty session types.
 - Rust’s approach is more explicit and less reliant on inference, but offers similar compile-time safety.
 
-## Other Rust Libraries
+### Other Rust
+
 - Some Rust crates (e.g., [session-types](https://crates.io/crates/session-types), [ferrite](https://github.com/ferrite-rs/ferrite)) focus on binary session types or runtime representations.
 - Besedarium emphasizes multiparty, global-to-local projection, and compile-time protocol construction.
 
 ---
 
-# Extensibility & Future Work
+### Extensibility & Future Work
 
 - **Easy to Extend:** New combinators and macros can be added for more protocol features.
 - **Limitations:** No runtime choreography, no mutual recursion, no dynamic role handling (yet).
@@ -231,7 +259,7 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ---
 
-# Summary Table
+### Summary Table
 
 | Combinator | Purpose         | Properties Ensured         | Pros                        | Cons                       |
 |------------|----------------|----------------------------|-----------------------------|----------------------------|
@@ -244,7 +272,8 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ---
 
-# References
+## References
+
 - [Multiparty Asynchronous Session Types (Honda et al., 2008)](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
 - [Linear type theory for asynchronous session types (Gay & Vasconcelos, 2010)](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf)
 - [Propositions as sessions (Wadler, 2012)](https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions.pdf)

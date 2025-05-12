@@ -16,10 +16,12 @@ This document outlines the plan for adding user-definable labels to protocol com
 ## 2. Placeholder/Empty Labels
 
 - Provide a documented convention for an empty label, e.g.:
+
   ```rust
   pub struct EmptyLabel;
   impl ProtocolLabel for EmptyLabel {}
   ```
+
 - Users can use this as a placeholder where a label is not meaningful.
 
 ## 3. Adding Labels to Protocol Combinators
@@ -79,6 +81,7 @@ type MyProtocol = TRec<Http, StartLabel, ...>;
 ---
 
 ## Guidance
+
 - **Default to user-definable labels:** All protocol labels should be supplied by users, not hardcoded in the library.
 - **Document conventions:** Clearly explain how to define and use labels, and how to use the empty label as a placeholder.
 - **Enforce uniqueness:** Use type-level or macro-based checks to ensure all labels in a protocol are unique.
@@ -87,4 +90,4 @@ type MyProtocol = TRec<Http, StartLabel, ...>;
 
 ---
 
-*Prepared by GitHub Copilot, 12 May 2025*
+Prepared by GitHub Copilot, 12 May 2025
