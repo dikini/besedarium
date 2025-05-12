@@ -2,7 +2,7 @@
 //! This module uses concrete roles and types to exercise all combinators and disjointness machinery.
 
 use besedarium::*;
-use besedarium::{assert_type_eq, assert_disjoint, tpar};
+use besedarium::{assert_disjoint, assert_type_eq, tpar};
 
 mod protocols;
 
@@ -31,7 +31,12 @@ pub struct Mixed;
 // Short, disjoint: Ok
 mod par_disjoint_test {
     use super::*;
-    type ParDisjoint = TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB>;
+    type ParDisjoint = TPar<
+        Http,
+        TInteract<Http, TClient, Message, TEnd<Http>>,
+        TInteract<Http, TServer, Response, TEnd<Http>>,
+        FalseB,
+    >;
     assert_disjoint!(par ParDisjoint);
 }
 
@@ -46,13 +51,20 @@ mod par_disjoint_test {
 // Long, disjoint: Ok
 mod long_disjoint_test {
     use super::*;
-    type LongDisjoint = TPar<Http,
-        TInteract<Http, TClient, Message, TChoice<Http,
-            TInteract<Http, TServer, Response, TEnd<Http>>,
-            TRec<Http, TInteract<Http, TBroker, Publish, TEnd<Http>>>
-        >>,
+    type LongDisjoint = TPar<
+        Http,
+        TInteract<
+            Http,
+            TClient,
+            Message,
+            TChoice<
+                Http,
+                TInteract<Http, TServer, Response, TEnd<Http>>,
+                TRec<Http, TInteract<Http, TBroker, Publish, TEnd<Http>>>,
+            >,
+        >,
         TInteract<Http, TWorker, Notify, TEnd<Http>>,
-        FalseB
+        FalseB,
     >;
     assert_disjoint!(par LongDisjoint);
 }
@@ -124,10 +136,11 @@ mod mixed_protocol_interact {
 mod mixed_protocol_par {
     use super::*;
     // Parallel composition of different protocol branches
-    type ParMixed = TPar<Http,
+    type ParMixed = TPar<
+        Http,
         TInteract<Http, TClient, Message, TEnd<Http>>, // HTTP
         TInteract<Mqtt, TBroker, Publish, TEnd<Mqtt>>, // MQTT
-        FalseB
+        FalseB,
     >;
     assert_disjoint!(par ParMixed);
 }
@@ -158,15 +171,18 @@ mod nary_macro_tests {
         TInteract<Http, TWorker, Notify, TEnd<Http>>
     );
     // Type equality check for n-ary macro
-    type ManualFourWay = TChoice<Http,
+    type ManualFourWay = TChoice<
+        Http,
         TInteract<Http, TClient, Message, TEnd<Http>>,
-        TChoice<Http,
+        TChoice<
+            Http,
             TInteract<Http, TServer, Response, TEnd<Http>>,
-            TChoice<Http,
+            TChoice<
+                Http,
                 TInteract<Http, TBroker, Publish, TEnd<Http>>,
-                TInteract<Http, TWorker, Notify, TEnd<Http>>
-            >
-        >
+                TInteract<Http, TWorker, Notify, TEnd<Http>>,
+            >,
+        >,
     >;
     // assert_type_eq!(FourWay, ManualFourWay); // Disabled: Rust type system does not treat these as equal
 }
@@ -193,12 +209,14 @@ mod nary_macro_tests {
 
 // --- Example Protocols ---
 // Client-server handshake (HTTP request/response)
-type HttpHandshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
+type HttpHandshake =
+    TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
 
 // Publish/subscribe (MQTT)
-type MqttPubSub = TChoice<Mqtt,
+type MqttPubSub = TChoice<
+    Mqtt,
     TInteract<Mqtt, TClient, Publish, TEnd<Mqtt>>,
-    TInteract<Mqtt, TClient, Subscribe, TEnd<Mqtt>>
+    TInteract<Mqtt, TClient, Subscribe, TEnd<Mqtt>>,
 >;
 
 mod workflow_disjoint_test {
@@ -343,5 +361,36 @@ mod runtime_tests {
     #[test]
     fn mixed_marker_type() {
         assert_disjoint!(par super::protocols::MixedExample);
+    }
+
+    #[test]
+    fn projection_static_check_alice() {
+        use besedarium::*;
+        struct Alice;
+        struct Bob;
+        impl Role for Alice {}
+        impl Role for Bob {}
+        impl RoleEq<Alice> for Alice {
+            type Output = True;
+        }
+        impl RoleEq<Bob> for Alice {
+            type Output = False;
+        }
+        impl RoleEq<Alice> for Bob {
+            type Output = False;
+        }
+        impl RoleEq<Bob> for Bob {
+            type Output = True;
+        }
+
+        type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+        type AliceLocalExpected =
+            EpSend<Http, Alice, Message, EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>>;
+        assert_type_eq!(
+            <() as ProjectRole<Alice, Http, Global>>::Out,
+            AliceLocalExpected
+        );
+        // This test will fail to compile if the projection is incorrect
+        let _ = core::any::TypeId::of::<<() as ProjectRole<Alice, Http, Global>>::Out>();
     }
 }

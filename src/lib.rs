@@ -74,7 +74,6 @@
 /// ```
 ///
 /// See the README and protocol examples for more details.
-
 use core::marker::PhantomData;
 
 #[macro_export]
@@ -125,8 +124,9 @@ macro_rules! assert_type_eq {
         const _: fn() = || {
             fn _assert_type_eq()
             where
-                $A: $crate::TypeEq<$B>
-            {}
+                $A: $crate::TypeEq<$B>,
+            {
+            }
         };
     };
 }
@@ -137,8 +137,12 @@ macro_rules! assert_disjoint {
         const _: fn() = || {
             fn _assert_disjoint()
             where
-                (): $crate::Disjoint<<$A as $crate::RolesOf>::Roles, <$B as $crate::RolesOf>::Roles>
-            {}
+                (): $crate::Disjoint<
+                    <$A as $crate::RolesOf>::Roles,
+                    <$B as $crate::RolesOf>::Roles,
+                >,
+            {
+            }
         };
     };
     (par $TPar:ty) => {
@@ -271,7 +275,9 @@ pub trait ToTChoice<IO> {
 /// type Par = TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
+pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
+    PhantomData<(IO, L, R, IsDisjoint)>,
+);
 
 impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> Sealed for TPar<IO, L, R, IsDisjoint> {}
 impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO, L, R, IsDisjoint> {
@@ -318,7 +324,9 @@ impl<IO, R, H, T: TSession<IO> + RolesOf> RolesOf for TInteract<IO, R, H, T> {
 impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> RolesOf for TChoice<IO, L, R> {
     type Roles = <L as RolesOf>::Roles;
 }
-impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf, IsDisjoint> RolesOf for TPar<IO, L, R, IsDisjoint> {
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf, IsDisjoint> RolesOf
+    for TPar<IO, L, R, IsDisjoint>
+{
     type Roles = <L as RolesOf>::Roles;
 }
 impl<IO, S: TSession<IO> + RolesOf> RolesOf for TRec<IO, S> {
@@ -342,17 +350,11 @@ where
 // --- Disjointness Traits ---
 pub trait Contains<X> {}
 impl<X> Contains<X> for Nil {}
-impl<X, H, T> Contains<X> for Cons<H, T>
-where
-    T: Contains<X>,
-{}
+impl<X, H, T> Contains<X> for Cons<H, T> where T: Contains<X> {}
 
 pub trait NotContains<X> {}
 impl<X> NotContains<X> for Nil {}
-impl<X, H, T> NotContains<X> for Cons<H, T>
-where
-    T: NotContains<X>,
-{}
+impl<X, H, T> NotContains<X> for Cons<H, T> where T: NotContains<X> {}
 
 pub trait Disjoint<A, B> {}
 impl<B> Disjoint<Nil, B> for () {}
@@ -360,7 +362,8 @@ impl<H, T, B> Disjoint<Cons<H, T>, B> for ()
 where
     B: NotContains<H>,
     (): Disjoint<T, B>,
-{}
+{
+}
 
 // --- Compile-time Disjointness Assertion Machinery ---
 /// Compile-time assertion that a parallel protocol is disjoint.
@@ -375,7 +378,8 @@ where
 pub trait AssertDisjoint {
     type Output;
 }
-impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> AssertDisjoint for TPar<IO, L, R, FalseB>
+impl<IO, L: TSession<IO> + RolesOf, R: TSession<IO> + RolesOf> AssertDisjoint
+    for TPar<IO, L, R, FalseB>
 where
     (): Disjoint<<L as RolesOf>::Roles, <R as RolesOf>::Roles>,
     (): Disjoint<<R as RolesOf>::Roles, <L as RolesOf>::Roles>,
@@ -477,7 +481,7 @@ pub trait ProjectRole<Me, IO, G: TSession<IO>> {
 pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
 
 impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
-impl <IO, R> Sealed for EpEnd<IO, R> {}
+impl<IO, R> Sealed for EpEnd<IO, R> {}
 
 // Base case: end of protocol
 impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
@@ -487,7 +491,6 @@ impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
 pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
 impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
 impl<IO, R, H, T> Sealed for EpSend<IO, R, H, T> {}
-
 
 pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
 impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
@@ -500,18 +503,16 @@ pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>>
 }
 
 // Send-case when Flag = True
-impl<Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectInteract<True, Me, IO, R, H, T> for ()
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<True, Me, IO, R, H, T> for ()
 where
     Me: Role,
     (): ProjectRole<Me, IO, T>,
 {
-    type Out = EpSend<IO, Me,H, <() as ProjectRole<Me, IO, T>>::Out>;
+    type Out = EpSend<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
 }
 
 // Recv-case when Flag = False
-impl<Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectInteract<False, Me, IO, R, H, T> for ()
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<False, Me, IO, R, H, T> for ()
 where
     Me: Role,
     (): ProjectRole<Me, IO, T>,
@@ -519,11 +520,9 @@ where
     type Out = EpRecv<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
 }
 
-
 // --S-ingle `ProjectRole` Impl for `TInteract` --
 
-impl<Flag, Me, IO, R: Role, H, T: TSession<IO>>
-    ProjectRole<Me, IO, TInteract<IO, R, H, T>> for ()
+impl<Flag, Me, IO, R: Role, H, T: TSession<IO>> ProjectRole<Me, IO, TInteract<IO, R, H, T>> for ()
 where
     Flag: Bool,
     Me: RoleEq<R, Output = Flag> + Role,
@@ -531,7 +530,6 @@ where
 {
     type Out = <() as ProjectInteract<Flag, Me, IO, R, H, T>>::Out;
 }
-
 
 // This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
 // Projection for Other Global Combinators
@@ -578,7 +576,8 @@ where
     type Out = EpPar<IO, Me, OutL, OutR>;
 }
 
-impl<Me, IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> ProjectRole<Me, IO, TPar<IO, L, R, IsDisjoint>> for ()
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>
+    ProjectRole<Me, IO, TPar<IO, L, R, IsDisjoint>> for ()
 where
     (): ProjectPar<Me, IO, L, R>,
 {
@@ -617,5 +616,3 @@ impl Role for TServer {}
 impl Role for TBroker {}
 impl Role for TWorker {}
 impl Role for Void {}
-
-
