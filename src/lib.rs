@@ -172,7 +172,6 @@ macro_rules! assert_unique_labels {
 /// >;
 /// assert_unique_labels!(MyProtocol); // Compile-time error if labels are not unique
 /// ```
-
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
