@@ -47,6 +47,34 @@
 //! - Negative/compile-fail tests: `tests/trybuild/`
 //! - More docs: `README.md`, `docs/`
 
+/// # Projection: From Global to Local Session Types
+///
+/// The projection machinery allows you to derive the local (endpoint) session type for a given role from a global protocol specification.
+///
+/// ## How it works
+/// - The [`ProjectRole`] trait recursively traverses a global protocol (a type implementing [`TSession`]) and produces the local protocol for a specific role.
+/// - Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
+/// - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
+///
+/// ## Example
+/// ```rust
+/// use besedarium::*;
+/// struct Alice;
+/// struct Bob;
+/// impl Role for Alice {}
+/// impl Role for Bob {}
+/// impl RoleEq<Alice> for Alice { type Output = True; }
+/// impl RoleEq<Bob> for Alice { type Output = False; }
+/// impl RoleEq<Alice> for Bob { type Output = False; }
+/// impl RoleEq<Bob> for Bob { type Output = True; }
+///
+/// type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+/// type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
+/// type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
+/// ```
+///
+/// See the README and protocol examples for more details.
+
 use core::marker::PhantomData;
 
 #[macro_export]
@@ -61,7 +89,7 @@ macro_rules! tlist {
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Choice = tchoice!(Http;
 ///     TInteract<Http, TClient, Message, TEnd<Http>>,
 ///     TInteract<Http, TServer, Response, TEnd<Http>>,
@@ -78,7 +106,7 @@ macro_rules! tchoice {
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Par = tpar!(Http;
 ///     TInteract<Http, TClient, Message, TEnd<Http>>,
 ///     TInteract<Http, TServer, Response, TEnd<Http>>,
@@ -122,7 +150,7 @@ macro_rules! assert_disjoint {
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Roles = extract_roles!(TInteract<Http, TClient, Message, TEnd<Http>>);
 /// ```
 #[macro_export]
@@ -226,7 +254,7 @@ impl<IO, L: TSession<IO>, R: TSession<IO>> TSession<IO> for TChoice<IO, L, R> {
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Choice = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTChoice<Http>>::Output;
 /// ```
 pub trait ToTChoice<IO> {
@@ -257,7 +285,7 @@ impl<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> for TPar<IO,
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Par = <tlist!(TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>) as ToTPar<Http>>::Output;
 /// ```
 pub trait ToTPar<IO> {
@@ -275,7 +303,7 @@ pub struct FalseB;
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Roles = <TInteract<Http, TClient, Message, TEnd<Http>> as RolesOf>::Roles;
 /// ```
 pub trait RolesOf {
@@ -341,7 +369,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// use playground::*;
+/// use besedarium::*;
 /// type Checked = <TPar<Http, TInteract<Http, TClient, Message, TEnd<Http>>, TInteract<Http, TServer, Response, TEnd<Http>>, FalseB> as AssertDisjoint>::Output;
 /// ```
 pub trait AssertDisjoint {
@@ -403,11 +431,159 @@ impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
     type Output = TPar<IO, H, <T as ToTPar<IO>>::Output, FalseB>;
 }
 
-// --- Concrete Roles for Testing and Protocol Examples ---
-pub struct TClient;
-pub struct TServer;
-pub struct TBroker;
-pub struct TWorker;
+// --- Type level Booleans ---
+pub struct True;
+pub struct False;
+
+pub trait Bool {}
+impl Bool for True {}
+impl Bool for False {}
+
+/// Trait for type-level equality between roles.
+///
+/// # Usage
+/// - This trait is required for session type projection.
+/// - **You must implement this trait for every pair of roles in your protocol.**
+///   - For the same role: `type Output = True;`
+///   - For different roles: `type Output = False;`
+///
+/// # Example
+/// ```rust
+/// use besedarium::{Role, RoleEq, True, False};
+/// struct Alice;
+/// struct Bob;
+/// impl Role for Alice {}
+/// impl Role for Bob {}
+/// impl RoleEq<Alice> for Alice { type Output = True; }
+/// impl RoleEq<Bob> for Alice { type Output = False; }
+/// impl RoleEq<Alice> for Bob { type Output = False; }
+/// impl RoleEq<Bob> for Bob { type Output = True; }
+/// ```
+///
+/// This trait must be implemented by protocol authors for all roles they use.
+pub trait RoleEq<Other: Role> {
+    type Output;
+}
+
+// --- Local end point (Ep) session type trait---
+pub trait EpSession<IO, R>: Sealed {}
+
+// Define a trait that projects a global `TSession` onto a single role `Me`:
+pub trait ProjectRole<Me, IO, G: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Base case: end of Ep (end point) protocol EpEnd
+pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
+
+impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
+impl <IO, R> Sealed for EpEnd<IO, R> {}
+
+// Base case: end of protocol
+impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
+    type Out = EpEnd<IO, R>;
+}
+
+pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
+impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
+impl<IO, R, H, T> Sealed for EpSend<IO, R, H, T> {}
+
+
+pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
+impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
+impl<IO, R, H, T> Sealed for EpRecv<IO, R, H, T> {}
+
+// --- Helper Trait to Dispatch on the Boolean Flag ---
+
+pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Send-case when Flag = True
+impl<Me, IO, R: Role, H, T: TSession<IO>>
+    ProjectInteract<True, Me, IO, R, H, T> for ()
+where
+    Me: Role,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = EpSend<IO, Me,H, <() as ProjectRole<Me, IO, T>>::Out>;
+}
+
+// Recv-case when Flag = False
+impl<Me, IO, R: Role, H, T: TSession<IO>>
+    ProjectInteract<False, Me, IO, R, H, T> for ()
+where
+    Me: Role,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = EpRecv<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
+}
+
+
+// --S-ingle `ProjectRole` Impl for `TInteract` --
+
+impl<Flag, Me, IO, R: Role, H, T: TSession<IO>>
+    ProjectRole<Me, IO, TInteract<IO, R, H, T>> for ()
+where
+    Flag: Bool,
+    Me: RoleEq<R, Output = Flag> + Role,
+    (): ProjectInteract<Flag, Me, IO, R, H, T>,
+{
+    type Out = <() as ProjectInteract<Flag, Me, IO, R, H, T>>::Out;
+}
+
+
+// This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
+// Projection for Other Global Combinators
+// For each global combinator, add a `ProjectRole` impl:
+
+pub struct EpChoice<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
+impl<IO, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Me, L, R> {}
+impl<IO, Me, L, R> Sealed for EpChoice<IO, Me, L, R> {}
+// Helper trait for projecting TChoice
+pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Blanket impl for ProjectChoice
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectChoice<Me, IO, L, R> for ()
+where
+    (): ProjectRole<Me, IO, L, Out = OutL>,
+    (): ProjectRole<Me, IO, R, Out = OutR>,
+{
+    type Out = EpChoice<IO, Me, OutL, OutR>;
+}
+
+// ProjectRole for TChoice delegates to ProjectChoice
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>> ProjectRole<Me, IO, TChoice<IO, L, R>> for ()
+where
+    (): ProjectChoice<Me, IO, L, R>,
+{
+    type Out = <() as ProjectChoice<Me, IO, L, R>>::Out;
+}
+
+pub struct EpPar<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
+impl<IO, Me, L, R> EpSession<IO, Me> for EpPar<IO, Me, L, R> {}
+impl<IO, Me, L, R> Sealed for EpPar<IO, Me, L, R> {}
+
+pub trait ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectPar<Me, IO, L, R> for ()
+where
+    (): ProjectRole<Me, IO, L, Out = OutL>,
+    (): ProjectRole<Me, IO, R, Out = OutR>,
+{
+    type Out = EpPar<IO, Me, OutL, OutR>;
+}
+
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint> ProjectRole<Me, IO, TPar<IO, L, R, IsDisjoint>> for ()
+where
+    (): ProjectPar<Me, IO, L, R>,
+{
+    type Out = <() as ProjectPar<Me, IO, L, R>>::Out;
+}
 
 // --- Example Messages ---
 pub struct Message;
@@ -424,3 +600,22 @@ pub struct Cache;
 pub struct Mixed;
 
 pub mod test_types;
+
+// Role trait for protocol participants
+pub trait Role {}
+
+// --- Concrete Roles for Testing and Protocol Examples ---
+pub struct TClient;
+pub struct TServer;
+pub struct TBroker;
+pub struct TWorker;
+pub struct Void;
+
+// Role implementations for concrete roles
+impl Role for TClient {}
+impl Role for TServer {}
+impl Role for TBroker {}
+impl Role for TWorker {}
+impl Role for Void {}
+
+

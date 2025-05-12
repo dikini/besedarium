@@ -72,6 +72,34 @@ flowchart TD
     end
 ```
 
+## Projection: From Global to Local Session Types
+
+The projection machinery in Besedarium allows you to derive the local (endpoint) session type for a given role from a global protocol specification.
+
+## How it works
+- The `ProjectRole` trait recursively traverses a global protocol (a type implementing `TSession`) and produces the local protocol for a specific role.
+- Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
+- Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
+
+## Example
+```rust
+use besedarium::*;
+struct Alice;
+struct Bob;
+impl Role for Alice {}
+impl Role for Bob {}
+impl RoleEq<Alice> for Alice { type Output = True; }
+impl RoleEq<Bob> for Alice { type Output = False; }
+impl RoleEq<Alice> for Bob { type Output = False; }
+impl RoleEq<Bob> for Bob { type Output = True; }
+
+type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
+type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
+type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
+```
+
+See the protocol examples in `tests/protocols/` for more details.
+
 ## Where do I find more?
 - **Protocol examples:** See `tests/protocols/` for real-world patterns.
 - **Negative tests:** See `tests/trybuild/` for compile-fail cases and macro edge cases.

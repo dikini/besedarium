@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README.md is now included as module-level documentation via `#![doc = include_str!("../README.md")]` for docs.rs and cargo doc.
 - `extract_roles!` macro for compile-time role extraction from protocol types.
 - Improved documentation for all macros, with clear usage examples.
+- Projection machinery: derive local (endpoint) session types for a given role from a global protocol specification using the `ProjectRole` trait and helpers (`ProjectInteract`, `ProjectChoice`, `ProjectPar`).
+- Endpoint types: `EpSend`, `EpRecv`, `EpChoice`, `EpPar` for local session types.
+- Comprehensive documentation for projection in both the library and README, including usage, examples, and trait requirements for protocol authors.
 
 ### Changed
 - Refactored integration tests to avoid macro name collisions.
@@ -31,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed crate from `playground` to `besedarium` (package and library names).
 - Updated imports and module references from `playground::` to `besedarium::` across code, tests, examples, and documentation.
 - Updated README title, headings, and docs to reflect the new project name "Besedarium".
+- Refactored combinator projection logic to use helper traits and avoid overlapping trait impls, improving maintainability and extensibility.
+- Updated documentation and README to include a dedicated section on projection from global to local session types.
 
 ### Removed
 - Removed main.rs and moved all logic to lib.rs for a library-only crate structure.
