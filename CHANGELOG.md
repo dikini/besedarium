@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Projection machinery: derive local (endpoint) session types for a given role from a global protocol specification using the `ProjectRole` trait and helpers (`ProjectInteract`, `ProjectChoice`, `ProjectPar`).
 - Endpoint types: `EpSend`, `EpRecv`, `EpChoice`, `EpPar` for local session types.
 - Comprehensive documentation for projection in both the library and README, including usage, examples, and trait requirements for protocol authors.
+- GitHub Actions CI workflow: automatically builds, tests, lints (clippy), and checks formatting on push to main and on non-draft pull requests targeting main. Draft PRs are skipped.
 
 ### Changed
 - Refactored integration tests to avoid macro name collisions.
