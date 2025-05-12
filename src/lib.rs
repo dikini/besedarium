@@ -475,148 +475,8 @@ pub trait Bool {}
 impl Bool for True {}
 impl Bool for False {}
 
-/// Trait for type-level equality between roles.
-///
-/// # Usage
-/// - This trait is required for session type projection.
-/// - **You must implement this trait for every pair of roles in your protocol.**
-///   - For the same role: `type Output = True;`
-///   - For different roles: `type Output = False;`
-///
-/// # Example
-/// ```rust
-/// use besedarium::{Role, RoleEq, True, False};
-/// struct Alice;
-/// struct Bob;
-/// impl Role for Alice {}
-/// impl Role for Bob {}
-/// impl RoleEq<Alice> for Alice { type Output = True; }
-/// impl RoleEq<Bob> for Alice { type Output = False; }
-/// impl RoleEq<Alice> for Bob { type Output = False; }
-/// impl RoleEq<Bob> for Bob { type Output = True; }
-/// ```
-///
-/// This trait must be implemented by protocol authors for all roles they use.
-pub trait RoleEq<Other: Role> {
-    type Output;
-}
-
-// --- Local end point (Ep) session type trait---
-pub trait EpSession<IO, R>: Sealed {}
-
-// Define a trait that projects a global `TSession` onto a single role `Me`:
-pub trait ProjectRole<Me, IO, G: TSession<IO>> {
-    type Out: EpSession<IO, Me>;
-}
-
-// Base case: end of Ep (end point) protocol EpEnd
-pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
-
-impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
-impl<IO, R> Sealed for EpEnd<IO, R> {}
-
-// Base case: end of protocol
-impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
-    type Out = EpEnd<IO, R>;
-}
-
-pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
-impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
-impl<IO, R, H, T> Sealed for EpSend<IO, R, H, T> {}
-
-pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
-impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
-impl<IO, R, H, T> Sealed for EpRecv<IO, R, H, T> {}
-
-// --- Helper Trait to Dispatch on the Boolean Flag ---
-
-pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>> {
-    type Out: EpSession<IO, Me>;
-}
-
-// Send-case when Flag = True
-impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<True, Me, IO, R, H, T> for ()
-where
-    Me: Role,
-    (): ProjectRole<Me, IO, T>,
-{
-    type Out = EpSend<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
-}
-
-// Recv-case when Flag = False
-impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<False, Me, IO, R, H, T> for ()
-where
-    Me: Role,
-    (): ProjectRole<Me, IO, T>,
-{
-    type Out = EpRecv<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
-}
-
-// --S-ingle `ProjectRole` Impl for `TInteract` --
-
-impl<Flag, Me, IO, L: ProtocolLabel, R: Role, H, T: TSession<IO>>
-    ProjectRole<Me, IO, TInteract<IO, L, R, H, T>> for ()
-where
-    Flag: Bool,
-    Me: RoleEq<R, Output = Flag> + Role,
-    (): ProjectInteract<Flag, Me, IO, R, H, T>,
-{
-    type Out = <() as ProjectInteract<Flag, Me, IO, R, H, T>>::Out;
-}
-
-// This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
-// Projection for Other Global Combinators
-// For each global combinator, add a `ProjectRole` impl:
-
-pub struct EpChoice<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
-impl<IO, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Me, L, R> {}
-impl<IO, Me, L, R> Sealed for EpChoice<IO, Me, L, R> {}
-// Helper trait for projecting TChoice
-pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
-    type Out: EpSession<IO, Me>;
-}
-
-// Blanket impl for ProjectChoice
-impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectChoice<Me, IO, L, R> for ()
-where
-    (): ProjectRole<Me, IO, L, Out = OutL>,
-    (): ProjectRole<Me, IO, R, Out = OutR>,
-{
-    type Out = EpChoice<IO, Me, OutL, OutR>;
-}
-
-// ProjectRole for TChoice delegates to ProjectChoice
-impl<Me, IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>
-    ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
-where
-    (): ProjectChoice<Me, IO, L, R>,
-{
-    type Out = <() as ProjectChoice<Me, IO, L, R>>::Out;
-}
-
-pub struct EpPar<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
-impl<IO, Me, L, R> EpSession<IO, Me> for EpPar<IO, Me, L, R> {}
-impl<IO, Me, L, R> Sealed for EpPar<IO, Me, L, R> {}
-
-pub trait ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> {
-    type Out: EpSession<IO, Me>;
-}
-
-impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectPar<Me, IO, L, R> for ()
-where
-    (): ProjectRole<Me, IO, L, Out = OutL>,
-    (): ProjectRole<Me, IO, R, Out = OutR>,
-{
-    type Out = EpPar<IO, Me, OutL, OutR>;
-}
-
-impl<Me, IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>
-    ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
-where
-    (): ProjectPar<Me, IO, L, R>,
-{
-    type Out = <() as ProjectPar<Me, IO, L, R>>::Out;
-}
+// --- ProjectPar: Associated-type-based case selection (no trait overlap) ---
+// (Removed obsolete ProjectParDispatch impls)
 
 // --- Example Messages ---
 pub struct Message;
@@ -742,3 +602,203 @@ impl<A, B> NotTypeEq<B> for A {}
 pub trait UniqueList {}
 impl UniqueList for Nil {}
 impl<H, T> UniqueList for Cons<H, T> where T: NotInList<H> + UniqueList {}
+
+// --- EpSkip: Optional silent/no-op endpoint combinator ---
+/// EpSkip is a no-op endpoint type for roles uninvolved in a protocol branch.
+/// Not used at runtime, but can improve type-level precision for projections.
+#[doc(hidden)]
+pub struct EpSkip<IO, R>(PhantomData<(IO, R)>);
+impl<IO, R> EpSession<IO, R> for EpSkip<IO, R> {}
+impl<IO, R> Sealed for EpSkip<IO, R> {}
+
+// --- Local end point (Ep) session type trait---
+pub trait EpSession<IO, R>: Sealed {}
+
+// Define a trait that projects a global `TSession` onto a single role `Me`:
+pub trait ProjectRole<Me, IO, G: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Base case: end of Ep (end point) protocol EpEnd
+pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
+
+impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
+impl<IO, R> Sealed for EpEnd<IO, R> {}
+
+// Base case: end of protocol
+impl<R, IO> ProjectRole<R, IO, TEnd<IO>> for () {
+    type Out = EpEnd<IO, R>;
+}
+
+pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
+impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
+impl<IO, R, H, T> Sealed for EpSend<IO, R, H, T> {}
+
+pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
+impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
+impl<IO, R, H, T> Sealed for EpRecv<IO, R, H, T> {}
+
+// --- Helper Trait to Dispatch on the Boolean Flag ---
+
+pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Send-case when Flag = True
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<True, Me, IO, R, H, T> for ()
+where
+    Me: Role,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = EpSend<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
+}
+
+// Recv-case when Flag = False
+impl<Me, IO, R: Role, H, T: TSession<IO>> ProjectInteract<False, Me, IO, R, H, T> for ()
+where
+    Me: Role,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = EpRecv<IO, Me, H, <() as ProjectRole<Me, IO, T>>::Out>;
+}
+
+// --S-ingle `ProjectRole` Impl for `TInteract` --
+
+impl<Flag, Me, IO, L: ProtocolLabel, R: Role, H, T: TSession<IO>>
+    ProjectRole<Me, IO, TInteract<IO, L, R, H, T>> for ()
+where
+    Flag: Bool,
+    Me: RoleEq<R, Output = Flag> + Role,
+    (): ProjectInteract<Flag, Me, IO, R, H, T>,
+{
+    type Out = <() as ProjectInteract<Flag, Me, IO, R, H, T>>::Out;
+}
+
+// This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
+// Projection for Other Global Combinators
+// For each global combinator, add a `ProjectRole` impl:
+
+pub struct EpChoice<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
+impl<IO, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Me, L, R> {}
+impl<IO, Me, L, R> Sealed for EpChoice<IO, Me, L, R> {}
+// Helper trait for projecting TChoice
+pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Blanket impl for ProjectChoice
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectChoice<Me, IO, L, R> for ()
+where
+    (): ProjectRole<Me, IO, L, Out = OutL>,
+    (): ProjectRole<Me, IO, R, Out = OutR>,
+{
+    type Out = EpChoice<IO, Me, OutL, OutR>;
+}
+
+// ProjectRole for TChoice delegates to ProjectChoice
+impl<Me, IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>
+    ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    (): ProjectChoice<Me, IO, L, R>,
+{
+    type Out = <() as ProjectChoice<Me, IO, L, R>>::Out;
+}
+
+pub struct EpPar<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
+impl<IO, Me, L, R> EpSession<IO, Me> for EpPar<IO, Me, L, R> {}
+impl<IO, Me, L, R> Sealed for EpPar<IO, Me, L, R> {}
+
+// --- Type-level booleans for TEnd detection ---
+pub trait IsTEnd<IO> { type Output; }
+// Only implement for TEnd
+impl<IO, L> IsTEnd<IO> for TEnd<IO, L> { type Output = True; }
+// Blanket impl for all other TSession types except TEnd
+impl<IO, T> IsTEnd<IO> for T
+where
+    T: TSession<IO>,
+    T: core::any::Any,
+    T: ?Sized,
+    T: core::ops::Not<Output = TEnd<IO, ()>>,
+{
+    type Output = False;
+}
+
+// --- Marker types for ProjectPar cases ---
+pub struct BothTEnd;
+pub struct LeftTEnd;
+pub struct RightTEnd;
+pub struct BothNonTEnd;
+
+// --- Type-level case selection for ProjectPar ---
+pub trait ProjectParCase<IO, L: TSession<IO>, R: TSession<IO>> { type Case; }
+impl<IO, L: TSession<IO>, R: TSession<IO>> ProjectParCase<IO, L, R> for ()
+where
+    L: IsTEnd<IO>,
+    R: IsTEnd<IO>,
+    <L as IsTEnd<IO>>::Output: Bool,
+    <R as IsTEnd<IO>>::Output: Bool,
+    (): ProjectParCaseSwitch<IO, L, R, <L as IsTEnd<IO>>::Output, <R as IsTEnd<IO>>::Output>,
+{
+    type Case = <() as ProjectParCaseSwitch<IO, L, R, <L as IsTEnd<IO>>::Output, <R as IsTEnd<IO>>::Output>>::Case;
+}
+
+// --- Type-level switch for ProjectParCase ---
+pub trait ProjectParCaseSwitch<IO, L: TSession<IO>, R: TSession<IO>, LB, RB> { type Case; }
+// Both TEnd
+impl<IO, L: TSession<IO>, R: TSession<IO>> ProjectParCaseSwitch<IO, L, R, True, True> for () { type Case = BothTEnd; }
+// Left TEnd, right not
+impl<IO, L: TSession<IO>, R: TSession<IO>> ProjectParCaseSwitch<IO, L, R, True, False> for () { type Case = LeftTEnd; }
+// Right TEnd, left not
+impl<IO, L: TSession<IO>, R: TSession<IO>> ProjectParCaseSwitch<IO, L, R, False, True> for () { type Case = RightTEnd; }
+// Both not TEnd
+impl<IO, L: TSession<IO>, R: TSession<IO>> ProjectParCaseSwitch<IO, L, R, False, False> for () { type Case = BothNonTEnd; }
+
+// --- Main ProjectPar trait ---
+pub trait ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>> ProjectPar<Me, IO, L, R> for ()
+where
+    (): ProjectParCase<IO, L, R>,
+    (): ProjectParDispatchImpl<Me, IO, L, R, <() as ProjectParCase<IO, L, R>>::Case>,
+{
+    type Out = <() as ProjectParDispatchImpl<Me, IO, L, R, <() as ProjectParCase<IO, L, R>>::Case>>::Out;
+}
+
+// --- ProjectParDispatchImpl: one impl per case marker ---
+pub trait ProjectParDispatchImpl<Me, IO, L: TSession<IO>, R: TSession<IO>, Case> {
+    type Out: EpSession<IO, Me>;
+}
+// Both TEnd => EpEnd
+impl<Me, IO> ProjectParDispatchImpl<Me, IO, TEnd<IO>, TEnd<IO>, BothTEnd> for () {
+    type Out = EpEnd<IO, Me>;
+}
+// Left TEnd, right not => delegate to right
+impl<Me, IO, R: TSession<IO>, OutR> ProjectParDispatchImpl<Me, IO, TEnd<IO>, R, LeftTEnd> for ()
+where
+    (): ProjectRole<Me, IO, R, Out = OutR>,
+    OutR: EpSession<IO, Me>,
+{
+    type Out = OutR;
+}
+// Right TEnd, left not => delegate to left
+impl<Me, IO, L: TSession<IO>, OutL> ProjectParDispatchImpl<Me, IO, L, TEnd<IO>, RightTEnd> for ()
+where
+    (): ProjectRole<Me, IO, L, Out = OutL>,
+    OutL: EpSession<IO, Me>,
+{
+    type Out = OutL;
+}
+// Both not TEnd => EpPar
+impl<Me, IO, L: TSession<IO>, R: TSession<IO>, OutL, OutR> ProjectParDispatchImpl<Me, IO, L, R, BothNonTEnd> for ()
+where
+    (): ProjectRole<Me, IO, L, Out = OutL>,
+    (): ProjectRole<Me, IO, R, Out = OutR>,
+    OutL: EpSession<IO, Me>,
+    OutR: EpSession<IO, Me>,
+{
+    type Out = EpPar<IO, Me, OutL, OutR>;
+}
+
+// Add a stub for the missing RoleEq trait:
+pub trait RoleEq<R> { type Output; }
