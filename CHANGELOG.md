@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation for projection in both the library and README, including usage, examples, and trait requirements for protocol authors.
 - GitHub Actions CI workflow: automatically builds, tests, lints (clippy), and checks formatting on push to main and on non-draft pull requests targeting main. Draft PRs are skipped.
 - Static compile-time projection check: Added a test to ensure that the projection from global to local session type for a role (e.g., Alice) is correct. This test is reported as a regular Rust test and fails to compile if the projection is incorrect.
+- Added docs/ImplementationOverview.md: a detailed overview and analysis of the current implementation, including goals, session type theory, combinator-by-combinator discussion, global/local types, compile-time properties, testing, and a comparison with other session type libraries (with direct links). Diagrams are properly separated for clarity.
 
 ### Changed
 - Refactored integration tests to avoid macro name collisions.
