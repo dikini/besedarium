@@ -1,22 +1,27 @@
-# GitHub Copilot Usage & Contribution Instructions
-
-## Overview
-
-This project uses [GitHub Copilot](https://github.com/features/copilot) to assist with code, documentation, and protocol design. Copilot is a tool to help, not replace, human review and design. Please follow these guidelines to ensure high-quality, maintainable, and safe contributions.
-
----
+# Copilot guidance
 
 ## General Guidelines
 
-- **Copilot suggestions are a starting point.**  
-  Always review, edit, and test generated code or documentation before committing.
+- **Mandatory planning.**  
+  1. ALWAYS start by creating a detailed plan BEFORE making any edits
+  2. Your plan MUST include:
+    - All functions/sections/types that need modification
+    - The order in which changes should be applied
+    - Dependencies between changes
+    - Estimated number of separate edits required
 - **Prioritize clarity and correctness.**  
-  If Copilot’s suggestion is unclear or incorrect, revise it or write your own.
+  Use clear, succint, but descriptive language. Make sure that concepts are explained in a professional, but not high-brow academc style.
 - **Document your intent.**  
   Add comments or docstrings to clarify non-obvious code, especially for protocol logic and type-level programming.
 - **Prefer explicitness over cleverness.**  
   Readability and maintainability are more important than brevity or “tricks.”
-
+- **Consult your learnings.**
+  - Before planning always consult your learnings memory work/learnings.md
+  - After a plan is finalised, update work/learnings.md with your current insights, learnings, patterns
+  - Format your plan as:
+## PROPOSED EDIT PLAN
+	Working with: [filename]
+	Total planned edits: [number]
 ---
 
 ## Markdown & Documentation
@@ -38,7 +43,7 @@ This project uses [GitHub Copilot](https://github.com/features/copilot) to assis
 
 ## Protocol & Type-Level Design
 
-- When using Copilot for type-level or macro-heavy code, double-check trait bounds, recursion, and type safety.
+- When designing type-level or macro-heavy code, double-check trait bounds, recursion, and type safety.
 - Add compile-time assertions (e.g., `assert_type_eq!`, `assert_disjoint!`) for protocol invariants.
 - Document any non-trivial type-level logic.
 
@@ -48,13 +53,13 @@ This project uses [GitHub Copilot](https://github.com/features/copilot) to assis
 
 - Summarize Copilot’s involvement in your PR description if it generated significant code or documentation.
 - All PRs must be reviewed by a human before merging.
-- Use draft PRs for work-in-progress and to get early feedback.
+- Use draft PRs for work-in-progress
 
 ---
 
 ## Security & Safety
 
-- Never accept Copilot suggestions that include secrets, credentials, or unsafe code.
+- Never suggest code, documentation, or other artifacts that include secrets, credentials, or unsafe code.
 - Review all dependencies and generated code for potential vulnerabilities.
 
 ---
@@ -73,9 +78,70 @@ All code must pass these checks before a pull request is submitted or merged. Th
 
 ---
 
+## Work progress planning, tracking and learning
+
+- maintain CHANGELOG.md in 'keep a changelog' style
+
+### TASKS
+
+- maintain a running tasks tasklist in work/TASKS.md in markdown formart, using github style checkboxes to indicate completion.
+- add (wip) to the task you are currently working on.
+to indicate task completion
+- consult the tasks/TASKS.md when suggesting next work. Prioritise:
+- continuation of the current work
+- subtasks
+- similar or related tasks
+- for large tasks, which may contain subtasks maintain an own, task specific tasklist in work/tasks/[taskname]
+
+### Learnings
+
+
+- Maintain a running learnings and patterns document of the concepts, ideas, tricks you've learned during a session. 
+- Update regularly. 
+- Mandatory updates after successful task completion.
+- Write all learnings, patterns, concepts to work/lernings.md
+- Use descriptive language. They are not just documentation, but running help.
+
+---
+
+### MAKING EDITS
+	- Focus on one conceptual change at a time
+	- Show clear "before" and "after" snippets when proposing changes
+	- Include concise explanations of what changed and why
+	- Always check if the edit maintains the project's coding style
+
+### Edit sequence:
+	1. [First specific change] - Purpose: [why]
+	2. [Second specific change] - Purpose: [why]
+	3. Do you approve this plan? I'll proceed with Edit [number] after your confirmation.
+	4. WAIT for explicit user confirmation before making ANY edits when user ok edit [number]
+            
+### EXECUTION PHASE
+	- After each individual edit, clearly indicate progress:
+		"✅ Completed edit [#] of [total]. Ready for next edit?"
+	- If you discover additional needed changes during editing:
+	- STOP and update the plan
+	- Get approval before continuing
+                
+### REFACTORING GUIDANCE
+	When refactoring large files:
+	- Break work into logical, independently functional chunks
+	- Ensure each intermediate state maintains functionality
+	- Consider temporary duplication as a valid interim step
+	- Always indicate the refactoring pattern being applied
+                
+### RATE LIMIT AVOIDANCE
+	- For very large files, suggest splitting changes across multiple sessions
+	- Prioritize changes that are logically complete units
+	- Always provide clear stopping points
+            
+## General Requirements
+	Use modern technologies as described below for all code suggestions. Prioritize clean, maintainable code with appropriate comments.
+            
+---
+
 ## Feedback & Improvements
 
-- If Copilot makes repeated mistakes or low-quality suggestions, document them in issues or PRs for future reference.
 - Suggest improvements to these instructions as the project evolves.
 
 ---
