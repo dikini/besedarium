@@ -5,10 +5,12 @@
 - **Mandatory planning.**  
   1. ALWAYS start by creating a detailed plan BEFORE making any edits
   2. Your plan MUST include:
-    - All functions/sections/types that need modification
-    - The order in which changes should be applied
-    - Dependencies between changes
-    - Estimated number of separate edits required
+  - All functions/sections/types that need modification
+  - The order in which changes should be applied
+  - Dependencies between changes
+  - Estimated number of separate edits required
+- **rust stable only** - use only features avalable in rust stable. Always
+  verify you code can be implemented in rust stable.
 - **Prioritize clarity and correctness.**  
   Use clear, succint, but descriptive language. Make sure that concepts are explained in a professional, but not high-brow academc style.
 - **Document your intent.**  
@@ -16,12 +18,13 @@
 - **Prefer explicitness over cleverness.**  
   Readability and maintainability are more important than brevity or “tricks.”
 - **Consult your learnings.**
-  - Before planning always consult your learnings memory work/learnings.md
+  - Always consult your learnings memory work/learnings.md
   - After a plan is finalised, update work/learnings.md with your current insights, learnings, patterns
   - Format your plan as:
+
 ## PROPOSED EDIT PLAN
-	Working with: [filename]
-	Total planned edits: [number]
+ Working with: [filename]
+ Total planned edits: [number]
 ---
 
 ## Markdown & Documentation
@@ -88,55 +91,52 @@ All code must pass these checks before a pull request is submitted or merged. Th
 - add (wip) to the task you are currently working on.
 to indicate task completion
 - consult the tasks/TASKS.md when suggesting next work. Prioritise:
-- continuation of the current work
-- subtasks
-- similar or related tasks
+  - continuation of the current work
+  - subtasks
+  - similar or related tasks
 - for large tasks, which may contain subtasks maintain an own, task specific tasklist in work/tasks/[taskname]
 
 ### Learnings
 
-
-- Maintain a running learnings and patterns document of the concepts, ideas, tricks you've learned during a session. 
-- Update regularly. 
+- Maintain a running learnings and patterns document of the concepts, ideas, tricks you've learned during a session.
+- Update regularly.
 - Mandatory updates after successful task completion.
-- Write all learnings, patterns, concepts to work/lernings.md
+- Write all learnings, patterns, concepts to work/learnings.md
 - Use descriptive language. They are not just documentation, but running help.
 
 ---
 
 ### MAKING EDITS
-	- Focus on one conceptual change at a time
-	- Show clear "before" and "after" snippets when proposing changes
-	- Include concise explanations of what changed and why
-	- Always check if the edit maintains the project's coding style
+ - Focus on one conceptual change at a time
+ - Show clear "before" and "after" snippets when proposing changes
+ - Include concise explanations of what changed and why
+ - Always check if the edit maintains the project's coding style
 
-### Edit sequence:
-	1. [First specific change] - Purpose: [why]
-	2. [Second specific change] - Purpose: [why]
-	3. Do you approve this plan? I'll proceed with Edit [number] after your confirmation.
-	4. WAIT for explicit user confirmation before making ANY edits when user ok edit [number]
+### Edit sequence
+ 1. [First specific change] - Purpose: [why]
+ 2. [Second specific change] - Purpose: [why]
             
 ### EXECUTION PHASE
-	- After each individual edit, clearly indicate progress:
-		"✅ Completed edit [#] of [total]. Ready for next edit?"
-	- If you discover additional needed changes during editing:
-	- STOP and update the plan
-	- Get approval before continuing
+ - After each individual edit, clearly indicate progress:
+  "✅ Completed edit [#] of [total].
+ - If you discover additional needed changes during editing:
+ - STOP and update the plan
+ - Get approval before continuing
                 
 ### REFACTORING GUIDANCE
-	When refactoring large files:
-	- Break work into logical, independently functional chunks
-	- Ensure each intermediate state maintains functionality
-	- Consider temporary duplication as a valid interim step
-	- Always indicate the refactoring pattern being applied
+ When refactoring large files:
+ - Break work into logical, independently functional chunks
+ - Ensure each intermediate state maintains functionality
+ - Consider temporary duplication as a valid interim step
+ - Always indicate the refactoring pattern being applied
                 
 ### RATE LIMIT AVOIDANCE
-	- For very large files, suggest splitting changes across multiple sessions
-	- Prioritize changes that are logically complete units
-	- Always provide clear stopping points
+ - For very large files, suggest splitting changes across multiple sessions
+ - Prioritize changes that are logically complete units
+ - Always provide clear stopping points
             
 ## General Requirements
-	Use modern technologies as described below for all code suggestions. Prioritize clean, maintainable code with appropriate comments.
+ Use modern technologies as described below for all code suggestions. Prioritize clean, maintainable code with appropriate comments.
             
 ---
 

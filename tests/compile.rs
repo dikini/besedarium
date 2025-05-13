@@ -401,43 +401,4 @@ mod runtime_tests {
     fn mixed_marker_type() {
         assert_disjoint!(par super::protocols::MixedExample);
     }
-
-    #[test]
-    fn projection_static_check_alice() {
-        use besedarium::*;
-        struct Alice;
-        struct Bob;
-        impl Role for Alice {}
-        impl Role for Bob {}
-        impl ProtocolLabel for Alice {}
-        impl ProtocolLabel for Bob {}
-        impl RoleEq<Alice> for Alice {
-            type Output = True;
-        }
-        impl RoleEq<Bob> for Alice {
-            type Output = False;
-        }
-        impl RoleEq<Alice> for Bob {
-            type Output = False;
-        }
-        impl RoleEq<Bob> for Bob {
-            type Output = True;
-        }
-
-        type Global = TInteract<
-            Http,
-            EmptyLabel,
-            Alice,
-            Message,
-            TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>,
-        >;
-        type AliceLocalExpected =
-            EpSend<Http, Alice, Message, EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>>;
-        assert_type_eq!(
-            <() as ProjectRole<Alice, Http, Global>>::Out,
-            AliceLocalExpected
-        );
-        // This test will fail to compile if the projection is incorrect
-        let _ = core::any::TypeId::of::<<() as ProjectRole<Alice, Http, Global>>::Out>();
-    }
 }

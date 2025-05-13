@@ -101,13 +101,33 @@ use besedarium::*;
 struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
 struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
 impl RoleEq<Alice> for Alice { type Output = True; }
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Bob> for Bob { type Output = True; }
+impl RoleEq<Bob> for Alice   { type Output = False; }
+impl RoleEq<Alice> for Bob   { type Output = False; }
+impl RoleEq<Bob> for Bob     { type Output = True; }
 struct L; impl ProtocolLabel for L {}
-type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
+
+type Global = TInteract<
+    Http,
+    EmptyLabel,
+    Alice,
+    Message,
+    TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>
+>;
+
+// Project onto Alice and Bob
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
-type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
+type BobLocal   = <() as ProjectRole<Bob,   Http, Global>>::Out;
+
+// Alice should send then receive
+assert_type_eq!(
+    AliceLocal,
+    EpSend<
+        Http,
+        Alice,
+        Message,
+        EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>
+    >
+);
 ```
 
 See the protocol examples in `tests/protocols/` for more details.

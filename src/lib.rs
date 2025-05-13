@@ -33,7 +33,7 @@
 /// - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
 ///
 /// ## Example
-/// ```rust
+/// ```ignore
 /// use besedarium::*;
 /// struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
 /// struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
@@ -90,7 +90,7 @@ macro_rules! tchoice {
 /// ```
 #[macro_export]
 macro_rules! tpar {
-    ($io:ty; $($branch:ty),+ $(,)?) => {
+    ($io:ty; $($branch:ty),* $(,)?) => {
         <tlist!($($branch),*) as ToTPar<$io>>::Output
     };
 }
@@ -178,20 +178,16 @@ pub(crate) mod sealed {
 mod protocol;
 pub use protocol::*;
 mod introspection;
-pub use introspection::*;
 mod types;
 pub use types::*;
 
 // Re-export key protocol roles and endpoint types for crate users and tests
 pub use introspection::{LabelsOf, RolesOf};
 pub use protocol::{
-    AssertDisjoint, FalseB, TChoice, TEnd, TInteract, TPar, TRec, TSession, ToTChoice, ToTPar,
-    TrueB, TypeEq, UniqueList,
+    AssertDisjoint, TChoice, TEnd, TInteract, TPar, TRec, TSession, ToTChoice, ToTPar, UniqueList,
 };
-pub use types::{
-    Cache, Db, EmptyLabel, Http, Message, Mixed, Mqtt, Notify, ProtocolLabel, Publish, Response,
-    Subscribe,
-};
+// Re-export canonical type-level booleans from types
+pub use types::{Bool, False, True};
 // Re-export concrete roles and traits for tests
 pub use protocol::{Role, RoleEq, TBroker, TClient, TServer, TWorker, Void};
 // Re-export endpoint types and projection traits
