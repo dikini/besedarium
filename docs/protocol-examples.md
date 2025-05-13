@@ -36,6 +36,50 @@ Customer → Agency : {
 - This protocol can be modeled using a sequence of `TInteract` (for messages) and `TChoice` (for the accept/reject decision).
 - Each branch of the choice is a sequence of further interactions, ending with `TEnd`.
 
+**Global Protocol (Besedarium API):**
+
+```rust
+type SimpleGlobal =
+    TInteract<
+        Http,
+        EmptyLabel,
+        Customer,
+        Order<Hawaii>,
+        TInteract<
+            Http,
+            EmptyLabel,
+            Agency,
+            Quote<Nat>,
+            TChoice<
+                Http,
+                EmptyLabel,
+                // accept branch
+                TInteract<
+                    Http,
+                    EmptyLabel,
+                    Customer,
+                    Accept<Bool>,
+                    TInteract<
+                        Http,
+                        EmptyLabel,
+                        Customer,
+                        Address<Nat>,
+                        TInteract<
+                            Http,
+                            EmptyLabel,
+                            Agency,
+                            Date<Nat>,
+                            TEnd<Http>
+                        >
+                    >
+                >,
+                // reject branch
+                TEnd<Http>
+            >
+        >
+    >;
+```
+
 **Projection to Local Types:**
 
 - Each role (Customer, Agency) gets a local protocol, where choices and message directions are preserved.
@@ -73,6 +117,41 @@ rec {
 - The `retry` branch should loop back to the start of the recursion.
 - The current library uses a simple `TRec`, but does not have explicit recursion variables or a way to "break out" of recursion in a type-safe way.
 
+**Global Protocol (Besedarium API):**
+
+```rust
+type RetryGlobal =
+    TRec<
+        Http,
+        RecursionLabel<"retry_loop">,
+        TInteract<
+            Http,
+            EmptyLabel,
+            Customer,
+            Order<Place>,
+            TInteract<
+                Http,
+                EmptyLabel,
+                Agency,
+                Quote<Nat>,
+                TChoice<
+                    Http,
+                    EmptyLabel,
+                    // accept
+                    TInteract<Http, EmptyLabel, Customer, Accept<Bool>, /*...*/> ,
+                    TChoice<
+                        Http,
+                        EmptyLabel,
+                        // retry branch loops to recursion point
+                        TInteract<Http, EmptyLabel, Customer, Retry, /* loops via TRec */>,
+                        TEnd<Http>
+                    >
+                >
+            >
+        >
+    >;
+```
+
 **Projection to Local Types:**
 
 - The Customer and Agency both see the recursion, but the decision to retry is made by the Customer and communicated explicitly.
@@ -80,42 +159,85 @@ rec {
 
 **Example Local Projection (Customer):**
 
-```ignore
-rec {
-    send Agency : order(place);
-    receive Agency : quote(nat);
-    choose {
-        accept:
-            send Agency : address(nat);
-            receive Agency : date(nat);
-            end,
-        retry:
-            send Agency : retry;
-            // loop back to rec
-        reject:
-            end
-    }
-}
+```rust
+// Customer sees recursion loop with accept, retry, or reject
+type CustomerLocalRetry =
+    EpSend<
+        Http,
+        Customer,
+        Order<Place>,
+        EpRecv<
+            Http,
+            Customer,
+            Quote<Nat>,
+            EpChoice<
+                Http,
+                Customer,
+                // accept branch
+                EpSend<
+                    Http,
+                    Customer,
+                    Address<Nat>,
+                    EpRecv<
+                        Http,
+                        Customer,
+                        Date<Nat>,
+                        EpEnd<Http, Customer>
+                    >
+                >,
+                // nested choice: retry or reject
+                EpChoice<
+                    Http,
+                    Customer,
+                    // retry: implicit recursion via TRec
+                    EpSend<Http, Customer, Retry, /* loops via TRec */>,
+                    // reject: end
+                    EpEnd<Http, Customer>
+                >
+            >
+        >
+    >;
 ```
 
 **Example Local Projection (Agency):**
 
-```ignore
-rec {
-    receive Customer : order(place);
-    send Customer : quote(nat);
-    offer {
-        accept:
-            receive Customer : address(nat);
-            send Customer : date(nat);
-            end,
-        retry:
-            receive Customer : retry;
-            // loop back to rec
-        reject:
-            end
-    }
-}
+```rust
+// Agency offers branches under recursion: accept, retry, or reject
+type AgencyLocalRetry =
+    EpRecv<
+        Http,
+        Agency,
+        Order<Place>,
+        EpSend<
+            Http,
+            Agency,
+            Quote<Nat>,
+            EpChoice<
+                Http,
+                Agency,
+                // accept branch
+                EpRecv<
+                    Http,
+                    Agency,
+                    Address<Nat>,
+                    EpSend<
+                        Http,
+                        Agency,
+                        Date<Nat>,
+                        EpEnd<Http, Agency>
+                    >
+                >,
+                // nested choice: retry or reject
+                EpChoice<
+                    Http,
+                    Agency,
+                    // retry: implicit recursion via TRec
+                    EpRecv<Http, Agency, Retry, /* loops via TRec */>,
+                    EpEnd<Http, Agency>
+                >
+            >
+        >
+    >;
 ```
 
 ---
@@ -154,55 +276,104 @@ Client → Proxy : request {
 
 - Each role gets a local protocol, with the proxy making the choice and the others offering the corresponding branches.
 
-**Example Local Projection (Client):**
-
-```ignore
-send Proxy : request;
-offer {
-    forward:
-        receive WebService : reply;
-        end,
-    audit:
-        receive WebService : reply;
-        end
-}
+### Example Local Projection (Client)
+```rust
+// Client sends request then offers two symmetric reply branches
+type ClientLocal =
+    EpSend<
+        Http,
+        Client,
+        Request,
+        EpChoice<
+            Http,
+            Client,
+            EpRecv<Http, Client, Reply, EpEnd<Http, Client>>,
+            EpRecv<Http, Client, Reply, EpEnd<Http, Client>>
+        >
+    >;
 ```
 
-**Example Local Projection (Proxy):**
-
-```ignore
-receive Client : request;
-choose {
-    forward:
-        send WebService : forward;
-        receive WebService : reply;
-        send Client : reply;
-        end,
-    audit:
-        send WebService : audit;
-        receive WebService : details;
-        send WebService : resume;
-        receive WebService : reply;
-        send Client : reply;
-        end
-}
+### Example Local Projection (Proxy)
+```rust
+// Proxy receives request, chooses forward or audit, then dispatches messages
+type ProxyLocal =
+    EpRecv<
+        Http,
+        Proxy,
+        Request,
+        EpChoice<
+            Http,
+            Proxy,
+            // forward branch
+            EpSend<
+                Http,
+                Proxy,
+                Forward,
+                EpRecv<
+                    Http,
+                    Proxy,
+                    Reply,
+                    EpSend<Http, Proxy, Reply, EpEnd<Http, Proxy>>
+                >
+            >,
+            // audit branch
+            EpSend<
+                Http,
+                Proxy,
+                Audit,
+                EpRecv<
+                    Http,
+                    Proxy,
+                    Details,
+                    EpSend<
+                        Http,
+                        Proxy,
+                        Resume,
+                        EpRecv<
+                            Http,
+                            Proxy,
+                            Reply,
+                            EpSend<Http, Proxy, Reply, EpEnd<Http, Proxy>>
+                        >
+                    >
+                >
+            >
+        >
+    >;
 ```
 
-**Example Local Projection (Web Service):**
-
-```ignore
-offer {
-    forward:
-        receive Proxy : forward;
-        send Client : reply;
-        end,
-    audit:
-        receive Proxy : audit;
-        send Proxy : details;
-        receive Proxy : resume;
-        send Client : reply;
-        end
-}
+### Example Local Projection (Web Service)
+```rust
+// Web Service offers forward or audit handling
+type WebServiceLocal =
+    EpChoice<
+        Http,
+        WebService,
+        // forward branch
+        EpRecv<
+            Http,
+            WebService,
+            Forward,
+            EpSend<Http, WebService, Reply, EpEnd<Http, WebService>>
+        >,
+        // audit branch
+        EpRecv<
+            Http,
+            WebService,
+            Audit,
+            EpSend<
+                Http,
+                WebService,
+                Details,
+                EpRecv<
+                    Http,
+                    WebService,
+                    Resume,
+                    EpSend<Http, WebService, Reply, EpEnd<Http, WebService>>
+                >
+            >
+        >
+    >;
 ```
 
 ---

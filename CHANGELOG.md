@@ -58,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code formatting and style updated to follow rustfmt and clippy recommendations.
 - Refactored `FilterSkips` trait to use marker-type dispatch (`IsEpSkipType`/`IsNotEpSkipType`) via `GetEpSkipTypeMarker`, eliminating associated-type generics
 - Enumerated explicit `IsEpSkipTypeImpl` impls for each endpoint variant (`EpSkip`, `EpSend`, `EpRecv`, `EpChoice`, `EpPar`, `EpEnd`)
+- Updated docs/protocol-examples.md with real API examples using `TInteract`, `TChoice`, `TRec`, `TEnd`, and explicit local-projection types (`EpSend`, `EpRecv`, `EpChoice`, `EpSkip`). Documented skip-filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
+- Recorded new patterns in work/learnings.md after protocol-examples updates, including marker-type dispatch for `EpSkip` and explicit recursion modeling with `TRec`.
 
 ### Removed
 

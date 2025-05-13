@@ -138,6 +138,12 @@ Workarounds:
 - Use `trybuild` to automate macro edge-case and compile-fail tests.
 - Mark unstable or in-progress doctests as `ignore` to keep docs builds green.
 
+## 2025-05-13: Documentation updates for protocol-examples.md
+- Synced examples with actual `TSession` API: used `TInteract`, `TChoice`, `TRec`, `TEnd`, and `Var` generics.
+- Documented local projection internals: `EpSkip` filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
+- Clarified recursion model: flat global labels (`TRec<IO, Label, S>`) with explicit `Var<Label>` loops; absence of de Bruijn indices.
+- Revised examples in sections 1.1, 1.2, and 2 to Rust `EpSession` types for send/receive/choice patterns.
+
 ---
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*
