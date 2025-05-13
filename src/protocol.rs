@@ -85,7 +85,7 @@ pub trait TSession<IO>: sealed::Sealed {
 ///
 /// - `IO`: Protocol marker type.
 /// - `L`: Label for this end (default: EmptyLabel).
-/// 
+///
 /// Used to indicate protocol termination.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TEnd<IO, L = types::EmptyLabel>(PhantomData<(IO, L)>);
