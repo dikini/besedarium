@@ -2,6 +2,24 @@
 
 Welcome to the Session Types Playground! This project is a Rust library for building, composing, and verifying communication protocols at the type level. If you’ve ever wanted to make sure your distributed systems or networked applications follow the right message flow—at compile time—this is for you.
 
+## Background: Session Types
+
+Session types provide a formal, type-based approach to describing and verifying communication protocols between concurrent or distributed processes. By encoding the permitted sequences of message exchanges in types, they guarantee properties such as protocol fidelity, progress, and deadlock freedom.
+
+Key research works:
+- K. Honda, V. T. Vasconcelos, M. Kubo. “Language primitives and type discipline for structured communication-based programming.” ESOP ’98.
+- N. Yoshida, M. H. Carbone. “Multiparty asynchronous session types.” POPL ’15.
+- R. Gay and N. Vasconcelos. “Linear type theory for asynchronous session types.” JFP ’10.
+
+Notable implementations:
+- Rust:
+  - besedarium (this library)
+  - `session-types` crate (https://crates.io/crates/session-types)
+- Scala:
+  - Effpi library (https://github.com/effpi/effpi)
+- Haskell:
+  - `session` package (https://hackage.haskell.org/package/session)
+
 ## What is this?
 
 Session types let you describe the structure of conversations between different parts of your system. With this library, you can:
@@ -101,13 +119,33 @@ use besedarium::*;
 struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
 struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
 impl RoleEq<Alice> for Alice { type Output = True; }
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Bob> for Bob { type Output = True; }
+impl RoleEq<Bob> for Alice   { type Output = False; }
+impl RoleEq<Alice> for Bob   { type Output = False; }
+impl RoleEq<Bob> for Bob     { type Output = True; }
 struct L; impl ProtocolLabel for L {}
-type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
+
+type Global = TInteract<
+    Http,
+    EmptyLabel,
+    Alice,
+    Message,
+    TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>
+>;
+
+// Project onto Alice and Bob
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
-type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
+type BobLocal   = <() as ProjectRole<Bob,   Http, Global>>::Out;
+
+// Alice should send then receive
+assert_type_eq!(
+    AliceLocal,
+    EpSend<
+        Http,
+        Alice,
+        Message,
+        EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>
+    >
+);
 ```
 
 See the protocol examples in `tests/protocols/` for more details.

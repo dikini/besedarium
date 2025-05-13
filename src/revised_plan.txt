@@ -1,0 +1,130 @@
+Here's a revised plan:
+
+    Keep the ContainsRole<R> trait as introduced before. This is crucial for determining if a role is present in a branch.
+
+    Modify the ProjectParBranch<Flag: Bool, Me, IO, G: TSession<IO>> helper trait.
+        The True implementation remains the same: project the branch G for role Me.
+        The False implementation should now return EpSkip<IO, Me> instead of TEnd<IO, Me>. This clearly indicates that the role is skipping this specific parallel branch.
+
+    Modify the ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> trait.
+        It will still use ProjectParBranch to project each branch based on the ContainsRole check.
+        The ComposeProjectedParBranches helper trait needs to be adjusted to handle EpSkip.
+        When composing the projected branches, if a branch results in EpSkip, it should be effectively removed from the resulting EpPar. If both branches result in EpSkip, the result should be EpSkip. If one branch is EpSkip and the other is a projected session, the result is just the projected session. If both are projected sessions, the result is EpPar of those sessions.
+
+Let's implement these changes.
+
+First, ensure you have the ContainsRole and Or traits as discussed before. They are necessary for this approach.
+
+Now, let's modify the ProjectParBranch trait in src/protocol.rs:
+
+rust
+/// Helper trait to dispatch on Role Presence in a Parallel Branch.
+pub trait ProjectParBranch<Flag: types::Bool, Me: Role, IO, G: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Case when the role is present in the branch
+impl<Me: Role, IO, G: TSession<IO>> ProjectParBranch<types::True, Me, IO, G> for ()
+where
+    (): ProjectRole<Me, IO, G>,
+{
+    type Out = <() as ProjectRole<Me, IO, G>>::Out;
+}
+
+// Case when the role is not present in the branch
+impl<Me: Role, IO, G: TSession<IO>> ProjectParBranch<types::False, Me, IO, G> for ()
+where
+    Me: Role,
+    IO: Sized,
+    G: TSession<IO> // Add TSession bound to G
+{
+    type Out = EpSkip<IO, Me>;
+}
+
+Next, let's modify the ProjectPar trait and the ComposeProjectedParBranches helper trait in src/protocol.rs:
+
+rust
+/// Helper trait for projecting a protocol parallel composition.
+///
+/// - `Me`: The role being projected.
+/// - `IO`: Protocol marker type.
+/// - `L`, `R`: The two protocol branches.
+pub trait ProjectPar<Me: Role, IO, L: TSession<IO>, R: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Blanket impl for ProjectPar
+impl<Me: Role, IO, L: TSession<IO> + ContainsRole<Me>, R: TSession<IO> + ContainsRole<Me>>
+    ProjectPar<Me, IO, L, R> for ()
+where
+    <L as ContainsRole<Me>>::Output: types::Bool,
+    <R as ContainsRole<Me>>::Output: types::Bool,
+    (): ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>,
+    (): ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>,
+    // We need to compose the projected branches, handling EpSkip
+    <(), <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out, <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out>: ComposeProjectedParBranches<IO, Me>,
+{
+    type Out = <<(), <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out, <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out> as ComposeProjectedParBranches<IO, Me>>::Out;
+}
+
+// New helper trait to compose the projected parallel branches, handling EpSkip
+pub trait ComposeProjectedParBranches<IO, Me: Role> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Case 1: Both branches are EpSkip (role not in either branch)
+impl<IO, Me: Role> ComposeProjectedParBranches<IO, Me> for ((), EpSkip<IO, Me>, EpSkip<IO, Me>) {
+    type Out = EpSkip<IO, Me>;
+}
+
+// Case 2: Left branch is projected, Right branch is EpSkip
+impl<IO, Me: Role, ProjectedL: EpSession<IO, Me>> ComposeProjectedParBranches<IO, Me>
+    for ((), ProjectedL, EpSkip<IO, Me>)
+{
+    type Out = ProjectedL;
+}
+
+// Case 3: Left branch is EpSkip, Right branch is projected
+impl<IO, Me: Role, ProjectedR: EpSession<IO, Me>> ComposeProjectedParBranches<IO, Me>
+    for ((), EpSkip<IO, Me>, ProjectedR)
+{
+    type Out = ProjectedR;
+}
+
+// Case 4: Both branches are projected
+impl<IO, Me: Role, ProjectedL: EpSession<IO, Me>, ProjectedR: EpSession<IO, Me>>
+    ComposeProjectedParBranches<IO, Me> for ((), ProjectedL, ProjectedR)
+where
+    ProjectedL: EpSession<IO, Me>, // Add bounds here
+    ProjectedR: EpSession<IO, Me>,
+{
+    type Out = EpPar<IO, Me, ProjectedL, ProjectedR>;
+}
+
+// Case 5: One branch is EpEnd and other is EpSkip
+// This handles cases like TPar<TEnd, TInteract> where TEnd projects to EpEnd
+impl<IO, Me: Role> ComposeProjectedParBranches<IO, Me> for ((), EpEnd<IO, Me>, EpSkip<IO, Me>) {
+    type Out = EpEnd<IO, Me>;
+}
+
+impl<IO, Me: Role> ComposeProjectedParBranches<IO, Me> for ((), EpSkip<IO, Me>, EpEnd<IO, Me>) {
+    type Out = EpEnd<IO, Me>;
+}
+
+// Case 6: One branch is EpEnd and other is projected
+impl<IO, Me: Role, ProjectedR: EpSession<IO, Me>> ComposeProjectedParBranches<IO, Me>
+    for ((), EpEnd<IO, Me>, ProjectedR)
+{
+    type Out = ProjectedR;
+}
+
+impl<IO, Me: Role, ProjectedL: EpSession<IO, Me>> ComposeProjectedParBranches<IO, Me>
+    for ((), ProjectedL, EpEnd<IO, Me>)
+{
+    type Out = ProjectedL;
+}
+
+// Case 7: Both branches are EpEnd
+impl<IO, Me: Role> ComposeProjectedParBranches<IO, Me> for ((), EpEnd<IO, Me>, EpEnd<IO, Me>) {
+    type Out = EpEnd<IO, Me>;
+}
