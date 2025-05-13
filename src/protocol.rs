@@ -59,7 +59,7 @@ use core::marker::PhantomData;
 ///
 /// ## See also
 /// - [`ProjectRole`], [`ProjectInteract`], [`ProjectChoice`], [`ProjectPar`]
-
+///
 /// Type-level empty list for n-ary combinators and role/label sets.
 /// Used as the base case for type-level lists.
 pub struct Nil;
@@ -85,6 +85,7 @@ pub trait TSession<IO>: sealed::Sealed {
 ///
 /// - `IO`: Protocol marker type.
 /// - `L`: Label for this end (default: EmptyLabel).
+/// 
 /// Used to indicate protocol termination.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TEnd<IO, L = types::EmptyLabel>(PhantomData<(IO, L)>);

@@ -23,32 +23,31 @@
 //! - Negative/compile-fail tests: `tests/trybuild/`
 //! - More docs: `README.md`, `docs/`
 
-/// # Projection: From Global to Local Session Types
-///
-/// The projection machinery allows you to derive the local (endpoint) session type for a given role from a global protocol specification.
-///
-/// ## How it works
-/// - The [`ProjectRole`] trait recursively traverses a global protocol (a type implementing [`TSession`]) and produces the local protocol for a specific role.
-/// - Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
-/// - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
-///
-/// ## Example
-/// ```ignore
-/// use besedarium::*;
-/// struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
-/// struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
-/// impl RoleEq<Alice> for Alice { type Output = True; }
-/// impl RoleEq<Bob> for Alice { type Output = False; }
-/// impl RoleEq<Alice> for Bob { type Output = False; }
-/// impl RoleEq<Bob> for Bob { type Output = True; }
-/// struct L; impl ProtocolLabel for L {}
-/// type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
-/// type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
-/// type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
-/// ```
-///
-/// See the README and protocol examples for more details.
-
+//! # Projection: From Global to Local Session Types
+//!
+//! The projection machinery allows you to derive the local (endpoint) session type for a given role from a global protocol specification.
+//!
+//! ## How it works
+//! - The [`ProjectRole`] trait recursively traverses a global protocol (a type implementing [`TSession`]) and produces the local protocol for a specific role.
+//! - Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
+//! - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
+//!
+//! ## Example
+//! ```ignore
+//! use besedarium::*;
+//! struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
+//! struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
+//! impl RoleEq<Alice> for Alice { type Output = True; }
+//! impl RoleEq<Bob> for Alice { type Output = False; }
+//! impl RoleEq<Alice> for Bob { type Output = False; }
+//! impl RoleEq<Bob> for Bob { type Output = True; }
+//! struct L; impl ProtocolLabel for L {}
+//! type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
+//! type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
+//! type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
+//! ```
+//!
+//! See the README and protocol examples for more details.
 #[macro_export]
 macro_rules! tlist {
     () => { Nil };
