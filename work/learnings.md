@@ -128,6 +128,16 @@ Workarounds:
 - **Distinguish** algorithm patterns (map vs filter) in prose first.
 - Use examples and ensure doctests compile.
 
+## 6. CI & Verification Workflow
+
+- Ensure every change is validated by:
+  - `cargo check` to catch compile errors
+  - `cargo fmt --all -- --check` to enforce formatting
+  - `cargo clippy` for linting and code quality checks
+  - `cargo test` (runtime, compile-fail, doctests, trybuild) for correctness
+- Use `trybuild` to automate macro edge-case and compile-fail tests.
+- Mark unstable or in-progress doctests as `ignore` to keep docs builds green.
+
 ---
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*
