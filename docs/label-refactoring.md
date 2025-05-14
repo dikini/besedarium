@@ -259,7 +259,7 @@ The test suite is organized into several components:
    - `workflow.rs` - Tests for multi-party workflows
 
 2. **Compile-Time Tests** (`tests/compile.rs`):
-   - Type equality assertions (`assert_type_eq!`) 
+   - Type equality assertions (`assert_type_eq!`)
    - Disjointness assertions (`assert_disjoint!`)
    - Label uniqueness tests (`assert_unique_labels!`)
 
@@ -643,7 +643,7 @@ Before beginning this refactoring, ensure:
 
 2. **Parameter Usage Audit**:
    - Document all places where label parameters are used ✅
-   - Identify all trait bounds and constraints on these parameters ✅ 
+   - Identify all trait bounds and constraints on these parameters ✅
    - Map out dependencies between different parts of the system ✅
 
 3. **Consistent Label Strategy**:
@@ -657,72 +657,44 @@ Before beginning this refactoring, ensure:
 
 ## Step-by-Step Implementation Plan
 
-### Phase 1: Preparation and Analysis
+### Phase 1: Preparation and Analysis ✅
 
-1. **Create a dedicated branch** for the refactoring work
+1. **Create a dedicated branch** for the refactoring work ✅ (created branch `feat/label-refactoring`)
 
-2. **Develop foundational test infrastructure**:
-   - Create helper traits/utilities for comparing and extracting label types
-   - Add assertion macros for label-specific testing if needed
-   - Develop baseline tests for current label behavior
+2. **Develop foundational test infrastructure** ✅
+   - Created helper traits/utilities for comparing and extracting label types
+   - Added assertion macros for label-specific testing
+   - Developed baseline tests for current label behavior
+   - Created test coverage tracking mechanism
 
-3. **Document the current label usage** across the codebase ✅
+3. **Establish test metrics** to measure test coverage of label-related functionality ✅
+   - **Define coverage criteria**: Created specific metrics for what constitutes "complete" label testing
+     - Combinator Coverage: Each combinator must have dedicated label tests
+     - Composition Operation Coverage: Each composition operation must verify label preservation
+     - Custom Label Type Coverage: Each combinator should be tested with at least 3 different label types
+     - Label Edge Case Coverage: Edge cases like nested compositions should have tests
+
+   - **Create a tracking mechanism**: Implemented type-level trait implementations to mark tested components
+     - Created `TestedWithCustomLabel` and `TestedLabelPreservation` traits
+     - Added a test coverage statistics structure
+     - Implemented a coverage report generator test
+
+   - **Set up baseline measurements**: Evaluated current test coverage against the defined metrics
+     - Combinator Coverage: 5/5 combinators have tests (100%)
+     - Composition Operation Coverage: 5/5 operations have tests (100%)
+     - Custom Label Type Coverage: 3/5 combinators meet target (60%)
+     - Label Edge Case Coverage: 0/3 edge cases tested (0%)
+
+   - **Define coverage targets**: Set specific coverage targets for each metric
+     - 100% of combinators must have custom label tests (met)
+     - 100% of composition operations must have label preservation tests (met)
+     - 100% of combinators should be tested with 3+ label types (partially met)
+     - 80% of edge cases should be tested (not met)
 
 4. **Create a detailed mapping** of all places where labels appear ✅
-
-5. **Establish test metrics** to measure test coverage of label-related functionality:
-   - **Define coverage criteria**: Create specific metrics for what constitutes "complete" label testing
-     - Example: "Each combinator must be tested with at least 3 different label types"
-     - Example: "Each composition operation must verify label preservation"
-   
-   - **Create a tracking mechanism**: Implement one of the tracking approaches:
-     - Type-level trait implementations to mark tested components
-     - Manual checklist in test file documentation
-     - Test matrix implementation that systematically tests combinations
-     - Custom coverage report generator
-   
-   - **Set up baseline measurements**: Evaluate current test coverage against the defined metrics
-     - Example: "Currently 2 of 5 combinators have custom label tests (40%)"
-     - Example: "0 of 5 composition operations verify label preservation (0%)"
-   
-   - **Define coverage targets**: Set specific coverage targets for each metric
-     - Example: "100% of combinators must have custom label tests"
-     - Example: "At least 80% of edge cases must be tested"
-   
-   - **Implement test tracking**: Add code to track progress against metrics
-     ```rust
-     // Example tracking implementation in tests
-     mod test_metrics {
-         // Track test coverage with compile-time metrics
-         #[derive(Debug)]
-         struct LabelTestCoverage {
-             combinators_with_custom_labels: usize,
-             total_combinators: usize,
-             // ...other metrics
-         }
-         
-         // Updated each time a test is added
-         const CURRENT_COVERAGE: LabelTestCoverage = LabelTestCoverage {
-             combinators_with_custom_labels: 2,
-             total_combinators: 5,
-             // ...other metrics
-         };
-         
-         // Calculate percentages
-         const COMBINATOR_COVERAGE_PCT: f32 = 
-             (CURRENT_COVERAGE.combinators_with_custom_labels as f32) /
-             (CURRENT_COVERAGE.total_combinators as f32) * 100.0;
-         
-         // Use #[test] to output current coverage during test runs
-         #[test]
-         fn report_label_test_coverage() {
-             println!("Label Test Coverage Report:");
-             println!("Combinators with custom label tests: {}%", 
-                     COMBINATOR_COVERAGE_PCT);
-             // ...print other metrics
-         }
-     }
-     ```
+   - Documented all label usages in `work/metrics/label_usage_mapping.md`
+   - Identified 5 key areas impacted by the refactoring
+   - Analyzed special challenges and areas requiring extra attention
 
 ### Phase 2: Core Type Updates
 
@@ -922,4 +894,4 @@ This refactoring, while extensive, will improve code readability, maintainabilit
 
 ---
 
-*Prepared by GitHub Copilot - May 14, 2025*
+Prepared by GitHub Copilot - May 14, 2025

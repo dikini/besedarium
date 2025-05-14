@@ -30,35 +30,6 @@ use core::marker::PhantomData;
 /// ## See also
 /// - [`ToTPar`], [`ToTChoice`], [`Disjoint`], [`UniqueList`], [`ConcatRoles`]
 /// - Macros: `tpar!`, `tchoice!`
-
-/// # Resolving Overlapping Trait Implementations with Helper Traits
-///
-/// Rust's trait system does not allow overlapping or conflicting trait impls.
-/// This is a challenge for type-level programming, especially when projecting
-/// global protocols to local types, where we want to dispatch on type-level
-/// booleans (e.g., role equality) or other conditions.
-///
-/// ## Pattern: Helper Traits for Disambiguation
-/// - Instead of writing multiple impls for the same trait (which would overlap),
-///   we write a single impl that computes a type-level flag (e.g., `TrueB`/`FalseB`)
-///   and then delegates to a *helper trait* that is specialized for each case.
-/// - The main trait (e.g., `ProjectRole`) computes the flag and calls the helper
-///   (e.g., `ProjectInteract<Flag, ...>`), which has non-overlapping impls for each case.
-///
-/// ## Example: Projecting an Interaction
-/// - `ProjectRole<Me, IO, TInteract<IO, L, R, H, T>>` computes whether `Me` is the
-///   same as `R` (the role performing the action) using `RoleEq`.
-/// - It then dispatches to `ProjectInteract<Flag, Me, IO, R, H, T>`, where `Flag`
-///   is `TrueB` if `Me == R`, `FalseB` otherwise.
-/// - `ProjectInteract` has separate impls for `TrueB` and `FalseB`, so there is no overlap.
-///
-/// ## Why use this pattern?
-/// - Avoids Rust's coherence/orphan rules and overlapping impl errors.
-/// - Makes the logic explicit and easy to extend for new cases.
-/// - Keeps the main trait (e.g., `ProjectRole`) simple and compositional.
-///
-/// ## See also
-/// - [`ProjectRole`], [`ProjectInteract`], [`ProjectChoice`], [`ProjectPar`]
 ///
 /// Type-level empty list for n-ary combinators and role/label sets.
 /// Used as the base case for type-level lists.

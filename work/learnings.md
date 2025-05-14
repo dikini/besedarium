@@ -139,12 +139,13 @@ Workarounds:
 - Mark unstable or in-progress doctests as `ignore` to keep docs builds green.
 
 ## 2025-05-13: Documentation updates for protocol-examples.md
+
 - Synced examples with actual `TSession` API: used `TInteract`, `TChoice`, `TRec`, `TEnd`, and `Var` generics.
 - Documented local projection internals: `EpSkip` filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
 - Clarified recursion model: flat global labels (`TRec<IO, Label, S>`) with explicit `Var<Label>` loops; absence of de Bruijn indices.
 - Revised examples in sections 1.1, 1.2, and 2 to Rust `EpSession` types for send/receive/choice patterns.
 
-## 2025-05-14: Runtime Implementation Pattern Comparison 
+## 2025-05-14: Runtime Implementation Pattern Comparison
 
 When implementing session types in Rust, we've identified three primary approaches, each with distinct trade-offs:
 
@@ -167,12 +168,111 @@ When implementing session types in Rust, we've identified three primary approach
    - Excellent for visualizing protocol flow in code structure
 
 Key implementation considerations:
+
 - Type safety and protocol enforcement should be prioritized regardless of approach
 - Project scale influences optimal choice (State Machines for small, Code Gen for large)
 - Developer experience varies significantly between approaches
 - Combined strategies often yield the best results for complex systems
 
 These patterns can be mixed to create hybrid approaches that leverage the strengths of each implementation style while mitigating their weaknesses.
+
+## Label Parameter Refactoring: Learnings and Insights
+
+### Phase 1: Preparation and Analysis (May 14, 2025)
+
+#### Patterns Observed
+
+1. **Label Parameter Usage Patterns**:
+   - The codebase has two competing naming conventions for label parameters:
+     - `L` for `TEnd`, `TInteract`, and `TRec`
+     - `Lbl` for `TChoice` and `TPar`
+   - This inconsistency makes code harder to read, especially in complex nested types
+   - Labels primarily serve documentation and debugging purposes, acting as type-level metadata
+
+2. **Label Preservation Patterns**:
+   - Labels are preserved during composition operations (`TSession::Compose`) for all combinators except `TEnd`
+   - `TEnd<IO, L>::Compose<Rhs>` returns `Rhs`, discarding the label `L` entirely
+   - All other combinators carefully preserve their label through composition operations
+
+3. **Label and Projection Patterns**:
+   - Endpoint types (`EpSend`, `EpRecv`, etc.) don't include label parameters
+   - Labels are present in global session types but lost in projection to endpoint types
+   - This creates a disconnect between global and local protocol representations
+
+4. **Label Testing Patterns**:
+   - Most tests use `EmptyLabel` as the default label parameter
+   - Few tests specifically validate label behavior during composition
+   - Tests primarily validate uniqueness constraints rather than preservation behavior
+
+#### Key Insights
+
+1. **Systematic Testing is Essential**:
+   - To safely refactor parameter names, we need strong tests validating behavior preservation
+   - Our new test infrastructure with `ExtractLabel` and `Same` traits enables explicit verification of label behavior
+   - The test coverage metrics we established provide a clear way to track our testing progress
+
+2. **Type-Level Programming Complexity**:
+   - Label parameters are deeply integrated into the type system through trait bounds and associated types
+   - Any change must carefully propagate through all dependent traits and types
+   - The introspection system (`LabelsOf` trait) and projection system have complex interactions with label parameters
+
+3. **Test Metric Approach**:
+   - Using type-level traits like `TestedWithCustomLabel` provides a compile-time verification of test coverage
+   - The combination of manual metrics tracking and automated test output provides good visibility
+   - Setting explicit coverage targets helps ensure thorough testing
+
+4. **Mapping the Codebase**:
+   - Creating a detailed mapping of all label usages is critical for comprehensive refactoring
+   - Five key areas were identified for focused attention:
+     1. Core type definitions
+     2. Trait implementations
+     3. Projection machinery
+     4. Introspection system
+     5. Tests and examples
+   - The mapping revealed potential challenges, particularly in areas where `L` is used both as a label and as a left branch parameter
+
+#### Implementation Learnings
+
+1. **Test Infrastructure Design**:
+   - Creating generic traits like `ExtractLabel` provides flexibility for testing various label behaviors
+   - Type-level assertions using traits like `Same` enable compile-time verification
+   - The modular approach of testing each combinator separately simplifies reasoning about behavior
+
+2. **Metrics Collection**:
+   - Separating metrics into distinct categories (combinator coverage, composition coverage, etc.) provides clearer insights
+   - Establishing baseline measurements helps identify areas needing more attention
+   - The coverage tracking implementation provides a template for future test infrastructure
+
+3. **Branching Strategy**:
+   - Using a dedicated feature branch (`feat/label-refactoring`) isolates this breaking change
+   - This allows focused testing without disrupting main development
+   - Branch protection and systematic testing will be essential as we proceed
+
+#### Next Steps and Recommendationscargo fmt --check
+
+1. **Improve Test Coverage**:
+   - Add tests for `TInteract` and `TRec` with additional custom label types to meet our target
+   - Implement tests for identified edge cases (nested compositions, mixed combinator interactions, complex structures)
+   - These improvements will ensure more comprehensive coverage before proceeding with the actual refactoring
+
+2. **Prioritize Simple Combinators First**:
+   - Begin the actual refactoring with `TEnd` as it has the simplest implementation
+   - Its unique behavior (not preserving labels in composition) makes it a good test case
+   - After gaining experience with the simplest case, proceed with `TInteract` and `TRec`
+
+3. **Consider Broader Impact**:
+   - This refactoring provides an opportunity to establish better label handling conventions
+   - Future work might explore preserving labels in projection, which would require endpoint types to include label parameters
+   - Documentation should clearly explain the role of labels in the protocol system
+
+4. **Be Vigilant About Parameter Ambiguity**:
+   - In `TChoice` and `TPar`, both `Lbl` (label) and `L` (left branch) parameters exist
+   - Careful attention is needed to ensure they aren't confused during refactoring
+   - Clear documentation will help future developers understand the distinction
+
+---
+
+These learnings will guide the implementation of subsequent phases of the label parameter refactoring project.
 
 ---
 *Consult this summary before any future protocol‐projection or
