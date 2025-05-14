@@ -352,9 +352,135 @@ These patterns can be mixed to create hybrid approaches that leverage the streng
      - Type aliases and examples
      - Tests specifically targeting that combinator
 
+### Phase 3: Projection and Introspection Refactoring (May 14, 2025)
+
+#### Completed Work
+
+1. **Pre-Implementation Tests for Introspection**:
+   - Created comprehensive tests for the `LabelsOf` and `RolesOf` traits
+   - Verified their behavior with existing parameter naming conventions
+   - Added tests that would detect any regression during refactoring
+
+2. **Updated Introspection Code**:
+   - Successfully refactored the `RolesOf` trait implementations to use `Lbl` parameter naming
+   - Updated the `LabelsOf` trait implementations with the consistent parameter name
+   - All introspection tests pass, confirming backward compatibility
+
+3. **Pre-Implementation Tests for Projection**:
+   - Created dedicated tests for projection traits with `TEnd` and `TInteract`
+   - Tested edge cases in projection machinery that rely on label parameters
+   - Established a baseline for expected projection behavior
+
+4. **Updated Projection Traits**:
+   - Refactored `ProjectRole` implementations for `TEnd` and `TInteract`
+   - Updated trait bounds and type constraints consistently
+   - All projection tests pass with the refactored parameter names
+
+5. **Updated Struct Definitions**:
+   - Refactored `TInteract` struct definition to use `Lbl` parameter naming
+   - Updated documentation to reflect the new parameter naming convention
+   - Refactored `TRec` struct definition to use `Lbl` parameter naming
+   - All struct-related trait implementations updated consistently
+
+#### Key Insights
+
+1. **Introspection System Complexity**:
+   - The `RolesOf` and `LabelsOf` traits are more deeply integrated with the type system than initially apparent
+   - Their implementations depend on recursive trait resolution and proper parameter propagation
+   - Consistent parameter naming greatly improves the readability and maintainability of this code
+
+2. **Pre-Implementation Testing Value**:
+   - Creating tests before implementation proved invaluable for introspection and projection
+   - Tests caught subtle issues in our understanding of the current implementation
+   - They provided a clear baseline against which to measure our changes
+
+3. **Dependencies in Projection System**:
+   - The projection system relies on intricate relationships between multiple traits
+   - Each trait focuses on a specific aspect of the projection process:
+     - `ProjectRole` handles the high-level projection from global to local types
+     - `ProjectInteract` specializes in single interaction projections
+     - `IsSkip` and `IsEnd` provide type-level predicates for endpoint types
+   - Consistent parameter naming makes these relationships clearer
+
+4. **Incremental Testing Approach**:
+   - Starting with simpler tests that work with the current implementation
+   - Gradually expanding to cover more complex cases
+   - This approach helped identify where projection implementations were incomplete
+
+5. **Documentation Importance**:
+   - Clear documentation of parameter names and their purposes is essential
+   - Updated doc comments throughout the codebase to maintain consistency
+   - This improves future maintainability and makes the code more approachable
+
+#### Challenges Encountered
+
+1. **Projection Implementation Gaps**:
+   - We discovered that `ProjectRole` is not fully implemented for all combinators
+   - Specifically, `TChoice` and `TPar` lack implementations, causing test failures
+   - We adjusted our tests to focus on the implemented functionality
+
+2. **Test Adaptation for Current State**:
+   - Some tests needed to be modified to work with the current implementation
+   - This required understanding which parts of the projection system are complete
+   - The adjusted tests still provide valuable verification of the refactoring
+
+3. **Parameter Constraints Propagation**:
+   - Each parameter change needs to propagate through multiple trait bounds
+   - Special care is needed to ensure all constraints are updated consistently
+   - The compiler provides valuable guidance but requires careful attention to error messages
+
+4. **Balancing Thoroughness with Progress**:
+   - Finding the right level of testing was a challenge
+   - Too detailed, and we'd end up testing unimplemented features
+   - Too shallow, and we might miss important interactions
+
+#### Refactoring Patterns Identified
+
+1. **Progressive Parameter Standardization**:
+   - Start with core types and related traits
+   - Move outward to dependent systems (introspection, projection)
+   - Finally update tests and examples
+
+2. **Trait Bound Examination**:
+   - For each type definition change, carefully examine all trait bounds
+   - Update related trait implementations with consistent parameter names
+   - Check for subtle relationships between traits that might be affected
+
+3. **Documentation Synchronization**:
+   - Update doc comments alongside code changes
+   - Ensure examples in documentation reflect new parameter names
+   - Keep changelog updated with each phase completion
+
+4. **Test-Driven Parameter Refactoring**:
+   - Create pre-implementation tests to verify current behavior
+   - Make parameter changes while keeping behavior identical
+   - Verify with post-implementation tests
+
+#### Future Recommendations
+
+1. **Complete Projection Implementation**:
+   - Implement `ProjectRole` for `TChoice` and `TPar` to complete the projection system
+   - Add corresponding tests once implemented
+   - This would allow more comprehensive testing of label parameter usage
+
+2. **Consider Label Preservation in Projection**:
+   - The current projection system loses label information
+   - A future enhancement could preserve labels in endpoint types
+   - This would provide better traceability between global and local types
+
+3. **Expand Test Coverage**:
+   - Continue adding tests for complex interactions between projection and labels
+   - Test label propagation through nested projections
+   - These tests will help catch any subtle issues in future refactorings
+
+4. **Documentation Improvements**:
+   - Add a dedicated section on label parameters in the library documentation
+   - Provide examples of how labels can be used effectively
+   - Explain the label preservation semantics clearly
+
 ---
 
-These learnings will guide the implementation of subsequent phases of the label parameter refactoring project.
+These learnings from Phase 3 complement our earlier insights and will guide any future work on the session type system, particularly regarding projection and introspection.
 
 ---
 *Consult this summary before any future protocol‐projection or

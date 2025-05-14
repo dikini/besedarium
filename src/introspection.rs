@@ -17,11 +17,11 @@ use crate::types;
 pub trait RolesOf {
     type Roles;
 }
-impl<IO> RolesOf for protocol::TEnd<IO> {
+impl<IO, Lbl> RolesOf for protocol::TEnd<IO, Lbl> {
     type Roles = protocol::Nil;
 }
-impl<IO, L: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + RolesOf> RolesOf
-    for protocol::TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + RolesOf> RolesOf
+    for protocol::TInteract<IO, Lbl, R, H, T>
 {
     type Roles = protocol::Cons<R, <T as RolesOf>::Roles>;
 }
@@ -44,8 +44,8 @@ impl<
 {
     type Roles = <L as RolesOf>::Roles;
 }
-impl<IO, L: types::ProtocolLabel, S: protocol::TSession<IO> + RolesOf> RolesOf
-    for protocol::TRec<IO, L, S>
+impl<IO, Lbl: types::ProtocolLabel, S: protocol::TSession<IO> + RolesOf> RolesOf
+    for protocol::TRec<IO, Lbl, S>
 {
     type Roles = <S as RolesOf>::Roles;
 }
@@ -58,13 +58,13 @@ impl<IO, L: types::ProtocolLabel, S: protocol::TSession<IO> + RolesOf> RolesOf
 pub trait LabelsOf {
     type Labels;
 }
-impl<IO, L> LabelsOf for protocol::TEnd<IO, L> {
-    type Labels = protocol::Cons<L, protocol::Nil>;
+impl<IO, Lbl> LabelsOf for protocol::TEnd<IO, Lbl> {
+    type Labels = protocol::Cons<Lbl, protocol::Nil>;
 }
-impl<IO, L: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + LabelsOf> LabelsOf
-    for protocol::TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + LabelsOf> LabelsOf
+    for protocol::TInteract<IO, Lbl, R, H, T>
 {
-    type Labels = protocol::Cons<L, <T as LabelsOf>::Labels>;
+    type Labels = protocol::Cons<Lbl, <T as LabelsOf>::Labels>;
 }
 impl<
         IO,
@@ -85,10 +85,10 @@ impl<
 {
     type Labels = protocol::Cons<Lbl, <L as LabelsOf>::Labels>;
 }
-impl<IO, L: types::ProtocolLabel, S: protocol::TSession<IO> + LabelsOf> LabelsOf
-    for protocol::TRec<IO, L, S>
+impl<IO, Lbl: types::ProtocolLabel, S: protocol::TSession<IO> + LabelsOf> LabelsOf
+    for protocol::TRec<IO, Lbl, S>
 {
-    type Labels = protocol::Cons<L, <S as LabelsOf>::Labels>;
+    type Labels = protocol::Cons<Lbl, <S as LabelsOf>::Labels>;
 }
 impl LabelsOf for protocol::Nil {
     type Labels = protocol::Nil;

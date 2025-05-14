@@ -70,41 +70,41 @@ impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
 /// Represents a single interaction in a protocol session.
 ///
 /// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `L`: Label for this interaction (for projection and debugging).
+/// - `Lbl`: Label for this interaction (for projection and debugging).
 /// - `R`: Role performing the action (sender or receiver).
 /// - `H`: Message type being sent or received.
 /// - `T`: Continuation protocol after this interaction.
 ///
 /// Used to model a single send/receive step in a protocol.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TInteract<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>>(
-    PhantomData<(IO, L, R, H, T)>,
+pub struct TInteract<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
+    PhantomData<(IO, Lbl, R, H, T)>,
 );
 
-impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
-    for TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
+    for TInteract<IO, Lbl, R, H, T>
 {
 }
-impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
-    for TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
+    for TInteract<IO, Lbl, R, H, T>
 {
-    type Compose<Rhs: TSession<IO>> = TInteract<IO, L, R, H, T::Compose<Rhs>>;
+    type Compose<Rhs: TSession<IO>> = TInteract<IO, Lbl, R, H, T::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 /// Recursive session type for repeating protocol fragments.
 ///
 /// - `IO`: Protocol marker type.
-/// - `L`: Label for this recursion (for projection and debugging).
+/// - `Lbl`: Label for this recursion (for projection and debugging).
 /// - `S`: The protocol fragment to repeat (may refer to itself).
 ///
 /// Used to model loops or streaming protocols.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRec<IO, L: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, L, S)>);
+pub struct TRec<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
 
-impl<IO, L: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TRec<IO, L, S> {}
-impl<IO, L: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, L, S> {
-    type Compose<Rhs: TSession<IO>> = TRec<IO, L, S::Compose<Rhs>>;
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TRec<IO, Lbl, S> {}
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, Lbl, S> {
+    type Compose<Rhs: TSession<IO>> = TRec<IO, Lbl, S::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
@@ -383,7 +383,7 @@ pub trait ProjectRole<Me, IO, G: TSession<IO>> {
 }
 
 // Base case: projecting end-of-session yields EpEnd
-impl<Me, IO, L> ProjectRole<Me, IO, TEnd<IO, L>> for ()
+impl<Me, IO, Lbl> ProjectRole<Me, IO, TEnd<IO, Lbl>> for ()
 where
     Me: Role,
 {
@@ -391,10 +391,10 @@ where
 }
 
 // Projection for single interaction: dispatch on role equality
-impl<Me, IO, L, R, H, T> ProjectRole<Me, IO, TInteract<IO, L, R, H, T>> for ()
+impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R, H, T>> for ()
 where
     Me: Role,
-    L: types::ProtocolLabel,
+    Lbl: types::ProtocolLabel,
     R: Role,
     T: TSession<IO>,
     Me: RoleEq<R>,
