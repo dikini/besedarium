@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TypeEq` trait with universal impl for compile-time type equality assertions
 - Added `docs/review-20250514.md`: A comprehensive code review of the Besedarium library examining the implementation approach, analyzing combinators for global and local session types, evaluating the projection mechanism, and providing suggestions for future development.
 - Added `docs/label-refactoring.md`: A detailed strategy document for standardizing label parameter naming across session type combinators, including current state analysis, parameter usage audit, test suite analysis, implementation plan, and recommendations for label preservation.
+- Added `docs/runtime-implementation-patterns.md`: A reference guide for implementing local per-role runtimes in Rust, with detailed examples of how to handle complex session type combinators (choice/offer, parallel composition, and recursion) across different implementation approaches.
+- Added comparative analysis of runtime implementation patterns to `work/learnings.md`, identifying three primary approaches (Typed Channel Wrappers, Code Generation with Procedural Macros, and State Machine Builders) with their respective trade-offs and implementation considerations.
 
 ### Changed
 

@@ -144,6 +144,36 @@ Workarounds:
 - Clarified recursion model: flat global labels (`TRec<IO, Label, S>`) with explicit `Var<Label>` loops; absence of de Bruijn indices.
 - Revised examples in sections 1.1, 1.2, and 2 to Rust `EpSession` types for send/receive/choice patterns.
 
+## 2025-05-14: Runtime Implementation Pattern Comparison 
+
+When implementing session types in Rust, we've identified three primary approaches, each with distinct trade-offs:
+
+1. **Typed Channel Wrappers**:
+   - Encode protocol state in type parameters
+   - Heavy reliance on Rust's type system for compile-time safety
+   - Interleaves business logic with protocol operations
+   - Complex type-level programming but high flexibility
+
+2. **Code Generation with Procedural Macros**:
+   - Minimizes boilerplate through automated code generation
+   - Typically uses callbacks/handlers for business logic integration
+   - Creates cleaner syntax for protocol definition
+   - May limit IDE support and introduce debugging challenges
+
+3. **State Machine Builders**:
+   - Makes protocol states explicit as distinct types
+   - Provides strong IDE support through state-specific method discovery
+   - Uses builder patterns and fluent APIs for readable protocol definition
+   - Excellent for visualizing protocol flow in code structure
+
+Key implementation considerations:
+- Type safety and protocol enforcement should be prioritized regardless of approach
+- Project scale influences optimal choice (State Machines for small, Code Gen for large)
+- Developer experience varies significantly between approaches
+- Combined strategies often yield the best results for complex systems
+
+These patterns can be mixed to create hybrid approaches that leverage the strengths of each implementation style while mitigating their weaknesses.
+
 ---
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*
