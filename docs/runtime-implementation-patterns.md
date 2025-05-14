@@ -1529,7 +1529,7 @@ fn upload_file() -> Result<(), Error> {
 // Define recursive protocol with traits
 #[recursive_protocol]
 trait StreamingProtocol {
-    // Define protocol structure with recursion
+    // Define the protocol structure with recursion
     type Protocol = Recv<Producer, Item> >>
         Choice<Consumer, "control", (
             Branch<"continue", Send<Consumer, Ack> >> Recurse>,
@@ -3058,13 +3058,13 @@ fn streaming_client() {
                 current_session = next_session;
             },
             Either::Right(final_session) => {
-                // Exit loop with final session
                 println!("Processed {} items", final_session.get_processed_count());
                 break;
             }
         }
     }
 }
+
 ```
 
 #### Key Benefits of This Approach
@@ -5427,10 +5427,14 @@ This section provides a comparative analysis of the three implementation pattern
 | **Typed Channel Wrappers** | High | Extensive | Minimal |
 | **Code Generation** | High | Moderate to High | Low to Moderate |
 | **State Machine Builders** | Very High | Extensive | Minimal |
+| **Actor-Based Runtime** | Moderate | Limited | Extensive |
+| **Continuation-Passing Style** | Good | Moderate | Moderate |
 
 - **Typed Channel Wrappers** provide strong type safety by encoding the protocol state in generic type parameters. This approach relies heavily on Rust's type system to prevent protocol violations at compile time.
 - **Code Generation** can provide strong type safety, but it depends on the quality of the generated code. Some runtime checks may be required when the protocol structure cannot be fully expressed in the generated types.
 - **State Machine Builders** often provide the strongest type safety by making each protocol state a distinct type, allowing the compiler to verify all transitions.
+- **Actor-Based Runtime** provides moderate type safety through message typing but relies more on runtime protocol enforcement. Protocol violations are detected when actors receive unexpected message types.
+- **Continuation-Passing Style** offers good type safety through function signatures and callback types, balancing compile-time and runtime protocol checking. Violations are caught when continuation functions receive incorrect types.
 
 ### Code Complexity and Verbosity Comparison
 
@@ -5439,10 +5443,14 @@ This section provides a comparative analysis of the three implementation pattern
 | **Typed Channel Wrappers** | Moderate | Verbose | Moderate |
 | **Code Generation** | High | Concise | Simple |
 | **State Machine Builders** | Low | Moderate | Explicit |
+| **Actor-Based Runtime** | Low to Moderate | Explicit | Simple |
+| **Continuation-Passing Style** | Low | Explicit | Flexible |
 
 - **Typed Channel Wrappers** require moderate initial setup to define the type-level representations but result in verbose protocol definitions due to explicit type annotations.
 - **Code Generation** has high initial setup cost to create the macros but leads to very concise protocol definitions and simple usage patterns.
 - **State Machine Builders** have low initial setup but create more visible protocol machinery in the code, making the protocol structure explicitly visible but potentially verbose.
+- **Actor-Based Runtime** requires moderate initial setup to define actor types but provides straightforward protocol representation through message passing. Protocol steps are defined explicitly, and usage is simple through actor messaging.
+- **Continuation-Passing Style** has low initial setup complexity and offers explicit protocol definition through callback chains. Usage is flexible as it adapts to different programming styles and control flow patterns.
 
 ### Business Logic Integration Analysis
 
@@ -5451,10 +5459,14 @@ This section provides a comparative analysis of the three implementation pattern
 | **Typed Channel Wrappers** | Interleaved | High | Good |
 | **Code Generation** | Callbacks/Handlers | Moderate | Very Good |
 | **State Machine Builders** | State-Driven | High | Excellent |
+| **Actor-Based Runtime** | Message Handlers | High | Very Good |
+| **Continuation-Passing Style** | Callback-Oriented | High | Good |
 
 - **Typed Channel Wrappers** allow business logic to be freely interleaved with protocol operations, giving developers flexibility in structuring their code.
 - **Code Generation** often uses callback or handler patterns that separate business logic from protocol mechanics, which can make testing easier but may constrain code organization.
 - **State Machine Builders** make protocol states explicit, allowing business logic to be organized around state transitions, which can improve testability and make the code more maintainable.
+- **Actor-Based Runtime** encapsulates business logic in message handlers, separating protocol structure from application code. This promotes high flexibility in implementation while maintaining a clear boundary between protocol and business concerns, enabling good testability through actor isolation.
+- **Continuation-Passing Style** structures business logic as callbacks, allowing for flexible composition of protocol steps. This approach enables a natural flow of business logic within the continuation chain while maintaining separation of concerns, though deep callback chains can sometimes make testing more complex.
 
 ### Developer Experience Evaluation
 
@@ -5463,10 +5475,14 @@ This section provides a comparative analysis of the three implementation pattern
 | **Typed Channel Wrappers** | Steep | Moderate | Moderate |
 | **Code Generation** | Moderate | Limited to Good | Challenging |
 | **State Machine Builders** | Moderate | Excellent | Good |
+| **Actor-Based Runtime** | Moderate | Good | Excellent |
+| **Continuation-Passing Style** | Moderate | Good | Challenging |
 
 - **Typed Channel Wrappers** have a steep learning curve due to complex type-level programming but provide good IDE support once the pattern is understood.
 - **Code Generation** has a moderate learning curve but may provide limited IDE support due to the indirection introduced by macros, making debugging more challenging.
 - **State Machine Builders** have a moderate learning curve and typically provide excellent IDE support through autocomplete for state-specific methods, improving discoverability and making the code easier to understand.
+- **Actor-Based Runtime** has a moderate learning curve as it requires understanding actor model concepts, but provides good IDE support for message types and handlers. The actor model excels in debuggability by making message flows explicit and providing supervision hierarchies for error tracking.
+- **Continuation-Passing Style** has a moderate learning curve requiring familiarity with higher-order functions and callbacks. It provides good IDE support for function signatures but can be challenging to debug due to the indirect control flow through continuation chains, especially with deeply nested callbacks.
 
 ### Project Scale Considerations Matrix
 
@@ -5475,10 +5491,14 @@ This section provides a comparative analysis of the three implementation pattern
 | **Typed Channel Wrappers** | Good | Good | Moderate | Challenging |
 | **Code Generation** | Overkill | Good | Excellent | Good |
 | **State Machine Builders** | Excellent | Good | Good | Good |
+| **Actor-Based Runtime** | Good | Excellent | Excellent | Good |
+| **Continuation-Passing Style** | Excellent | Good | Moderate | Moderate |
 
 - **Typed Channel Wrappers** work well for small to medium projects but may become unwieldy in larger systems with complex protocols due to the verbosity of type annotations.
 - **Code Generation** is often overkill for small projects but scales very well to large systems by automating repetitive protocol code, making it maintainable for large teams.
 - **State Machine Builders** are excellent for small projects due to their simplicity and work well for medium to large systems when protocol visualization is important.
+- **Actor-Based Runtime** works well for small projects but truly shines in medium to large systems where its built-in concurrency model and supervision hierarchies can effectively manage complex distributed protocols. The actor model's familiar patterns make it suitable for team collaboration.
+- **Continuation-Passing Style** excels in small projects due to its flexibility and minimal setup, but may become challenging to maintain in larger systems due to deeply nested callback chains. The higher-order function approach can present a steeper learning curve for team collaboration.
 
 ### Selection Guidance for Implementation Patterns
 
@@ -5505,6 +5525,22 @@ This section provides a comparative analysis of the three implementation pattern
 3. You prefer explicit state transitions over implicit protocol flow
 4. You're building a system where protocol states have significant business meaning
 5. You need to integrate with existing state machine frameworks
+
+#### When to Select Actor-Based Runtime
+
+1. You need a naturally concurrent implementation of distributed protocols
+2. Your system has complex supervision and error recovery requirements
+3. You prefer message-passing semantics that align closely with session types
+4. You want strong isolation between different protocol roles or participants
+5. You need a scalable approach for systems with many parallel protocol instances
+
+#### When to Select Continuation-Passing Style
+
+1. You want flexible composition of protocol steps without complex type machinery
+2. Your team is comfortable with functional programming patterns
+3. You need to integrate with callback-heavy APIs or asynchronous code
+4. You prefer explicit control flow through continuations over implicit state transitions
+5. You want to minimize upfront infrastructure code while maintaining protocol clarity
 
 ### Combined Implementation Strategies
 
