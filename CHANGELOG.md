@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit user and Copilot contribution guidelines added to the project (see instructions section).
 - Alias types `TrueB` and `FalseB` in `types.rs` for boolean literals used in tests
 - `TypeEq` trait with universal impl for compile-time type equality assertions
+- Added `docs/review-20250514.md`: A comprehensive code review of the Besedarium library examining the implementation approach, analyzing combinators for global and local session types, evaluating the projection mechanism, and providing suggestions for future development.
+- Added `docs/label-refactoring.md`: A detailed strategy document for standardizing label parameter naming across session type combinators, including current state analysis, parameter usage audit, test suite analysis, implementation plan, and recommendations for label preservation.
 
 ### Changed
 
