@@ -55,14 +55,14 @@ pub trait TSession<IO>: sealed::Sealed {
 /// End of a protocol session.
 ///
 /// - `IO`: Protocol marker type.
-/// - `L`: Label for this end (default: EmptyLabel).
+/// - `Lbl`: Label for this end (default: EmptyLabel).
 ///
 /// Used to indicate protocol termination.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TEnd<IO, L = types::EmptyLabel>(PhantomData<(IO, L)>);
+pub struct TEnd<IO, Lbl = types::EmptyLabel>(PhantomData<(IO, Lbl)>);
 
-impl<IO, L> sealed::Sealed for TEnd<IO, L> {}
-impl<IO, L> TSession<IO> for TEnd<IO, L> {
+impl<IO, Lbl> sealed::Sealed for TEnd<IO, Lbl> {}
+impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
     type Compose<Rhs: TSession<IO>> = Rhs;
     const IS_EMPTY: bool = true;
 }

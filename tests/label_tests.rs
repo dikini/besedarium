@@ -139,6 +139,40 @@ mod label_preservation_tests {
         assert_label_is_l1::<Composed>();
     }
 
+    // Additional test for TInteract with L2 label type
+    #[test]
+    fn test_tinteract_l2_label_preserved() {
+        type LabeledInteract = TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type Continuation = TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Composed = <LabeledInteract as TSession<Http>>::Compose<Continuation>;
+
+        fn assert_label_is_l2<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L2>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L2
+        assert_label_is_l2::<Composed>();
+    }
+
+    // Additional test for TInteract with L3 label type
+    #[test]
+    fn test_tinteract_l3_label_preserved() {
+        type LabeledInteract = TInteract<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type Continuation = TInteract<Http, L1, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Composed = <LabeledInteract as TSession<Http>>::Compose<Continuation>;
+
+        fn assert_label_is_l3<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L3>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L3
+        assert_label_is_l3::<Composed>();
+    }
+
     // Test that TRec's label is preserved in composition
     #[test]
     fn test_trec_label_preserved() {
@@ -154,6 +188,40 @@ mod label_preservation_tests {
 
         // This should compile successfully - verifying the extracted label is L1
         assert_label_is_l1::<Composed>();
+    }
+
+    // Additional test for TRec with L2 label type
+    #[test]
+    fn test_trec_l2_label_preserved() {
+        type LabeledRec = TRec<Http, L2, TEnd<Http, EmptyLabel>>;
+        type Continuation = TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Composed = <LabeledRec as TSession<Http>>::Compose<Continuation>;
+
+        fn assert_label_is_l2<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L2>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L2
+        assert_label_is_l2::<Composed>();
+    }
+
+    // Additional test for TRec with L3 label type
+    #[test]
+    fn test_trec_l3_label_preserved() {
+        type LabeledRec = TRec<Http, L3, TEnd<Http, EmptyLabel>>;
+        type Continuation = TInteract<Http, L1, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Composed = <LabeledRec as TSession<Http>>::Compose<Continuation>;
+
+        fn assert_label_is_l3<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L3>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L3
+        assert_label_is_l3::<Composed>();
     }
 
     // Test that TChoice's label is preserved in composition
@@ -202,6 +270,120 @@ mod label_preservation_tests {
     }
 }
 
+#[cfg(test)]
+mod label_edge_cases {
+    use super::*;
+
+    // Define test IO type
+    pub struct Http;
+
+    // Define test role types
+    pub struct TClient;
+    pub struct TServer;
+    impl Role for TClient {}
+    impl Role for TServer {}
+
+    // Define test message types
+    pub struct Message;
+    pub struct Response;
+
+    // Edge Case 1: Nested composition with multiple label types
+    // Test complex nesting of session types and verify label propagation
+    #[test]
+    fn test_nested_composition_label_preservation() {
+        // Create a deeply nested protocol with different labels at each level
+        type InnerProtocol = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type MiddleProtocol = TRec<Http, L2, InnerProtocol>;
+        type OuterProtocol = TChoice<Http, L3, MiddleProtocol, TEnd<Http, EmptyLabel>>;
+        
+        // Create a simple continuation
+        type Continuation = TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
+        
+        // Compose protocols
+        type Composed = <OuterProtocol as TSession<Http>>::Compose<Continuation>;
+
+        // Verify that the outermost label (L3) is preserved
+        fn assert_label_is_l3<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L3>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L3
+        assert_label_is_l3::<Composed>();
+    }
+
+    // Edge Case 2: Mixed combinator interactions
+    // Test how different combinators interact when composed together
+    #[test]
+    fn test_mixed_combinator_interactions() {
+        // Create a protocol mixing TPar and TChoice
+        type LeftBranch = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type RightBranch = TChoice<
+            Http,
+            L2,
+            TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+            TEnd<Http, EmptyLabel>,
+        >;
+        
+        type MixedProtocol = TPar<Http, L3, LeftBranch, RightBranch, FalseB>;
+        type Continuation = TRec<Http, EmptyLabel, TEnd<Http, EmptyLabel>>;
+        
+        // Compose protocols
+        type Composed = <MixedProtocol as TSession<Http>>::Compose<Continuation>;
+
+        // Verify that the outermost label (L3) is preserved
+        fn assert_label_is_l3<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L3>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L3
+        assert_label_is_l3::<Composed>();
+    }
+
+    // Edge Case 3: Complex structure with multiple label dependencies
+    // Test a complex protocol structure with multiple label interactions
+    #[test]
+    fn test_complex_protocol_structure() {
+        // Create a complex protocol with multiple branches and nested structures
+        type Branch1 = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type Branch2 = TRec<
+            Http, 
+            L2, 
+            TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>
+        >;
+        
+        type ComplexProtocol = TPar<
+            Http,
+            L3,
+            Branch1,
+            TChoice<
+                Http,
+                L2,
+                Branch2,
+                TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
+            >,
+            FalseB,
+        >;
+        
+        // When composed with a continuation, the outer label should be preserved
+        type Continuation = TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Composed = <ComplexProtocol as TSession<Http>>::Compose<Continuation>;
+
+        // Verify that the outermost label (L3) is preserved
+        fn assert_label_is_l3<T: ExtractLabel<Http>>()
+        where
+            <T as ExtractLabel<Http>>::Label: Same<L3>,
+        {
+        }
+
+        // This should compile successfully - verifying the extracted label is L3
+        assert_label_is_l3::<Composed>();
+    }
+}
+
 // --- Label Test Coverage Tracking ---
 #[doc(hidden)]
 pub mod test_coverage {
@@ -212,8 +394,14 @@ pub mod test_coverage {
 
     // Mark combinators as tested as we create tests for them
     impl TestedWithCustomLabel for TEnd<Http, L1> {}
+    // Mark TInteract as tested with all three custom label types
     impl TestedWithCustomLabel for TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TInteract<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    // Mark TRec as tested with all three custom label types
     impl TestedWithCustomLabel for TRec<Http, L1, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TRec<Http, L2, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TRec<Http, L3, TEnd<Http, EmptyLabel>> {}
     impl TestedWithCustomLabel for TChoice<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>> {}
     impl TestedWithCustomLabel
         for TPar<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>, FalseB>
@@ -225,7 +413,11 @@ pub mod test_coverage {
 
     // Mark compositions as tested as we create tests for them
     impl TestedLabelPreservation for TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedLabelPreservation for TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedLabelPreservation for TInteract<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>> {}
     impl TestedLabelPreservation for TRec<Http, L1, TEnd<Http, EmptyLabel>> {}
+    impl TestedLabelPreservation for TRec<Http, L2, TEnd<Http, EmptyLabel>> {}
+    impl TestedLabelPreservation for TRec<Http, L3, TEnd<Http, EmptyLabel>> {}
     impl TestedLabelPreservation for TChoice<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>> {}
     impl TestedLabelPreservation
         for TPar<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>, FalseB>
@@ -239,6 +431,10 @@ pub mod test_coverage {
         pub total_combinators: usize,
         pub composition_operations_tested: usize,
         pub total_composition_operations: usize,
+        pub custom_label_types_tested: usize,
+        pub target_custom_label_types: usize,
+        pub edge_cases_tested: usize,
+        pub target_edge_cases: usize,
     }
 
     // Current coverage metrics
@@ -247,6 +443,10 @@ pub mod test_coverage {
         total_combinators: 5,              // TEnd, TInteract, TRec, TChoice, TPar
         composition_operations_tested: 4,  // TInteract, TRec, TChoice, TPar
         total_composition_operations: 5,   // TEnd, TInteract, TRec, TChoice, TPar
+        custom_label_types_tested: 5,      // TEnd with L1, TInteract with all 3, TRec with all 3, TChoice with L1, TPar with L1
+        target_custom_label_types: 5,      // Each combinator should be tested with at least 1 custom label type
+        edge_cases_tested: 3,              // Nested compositions, mixed combinators, complex structures
+        target_edge_cases: 3,              // Nested compositions, mixed combinators, complex structures
     };
 
     // Calculate coverage percentages
@@ -258,6 +458,14 @@ pub mod test_coverage {
     pub const COMPOSITION_COVERAGE_PCT: f32 = (CURRENT_COVERAGE.composition_operations_tested
         as f32)
         / (CURRENT_COVERAGE.total_composition_operations as f32)
+        * 100.0;
+
+    pub const CUSTOM_LABEL_TYPES_PCT: f32 = (CURRENT_COVERAGE.custom_label_types_tested as f32)
+        / (CURRENT_COVERAGE.target_custom_label_types as f32)
+        * 100.0;
+
+    pub const EDGE_CASES_PCT: f32 = (CURRENT_COVERAGE.edge_cases_tested as f32)
+        / (CURRENT_COVERAGE.target_edge_cases as f32)
         * 100.0;
 
     // Print current coverage during test runs
@@ -275,6 +483,18 @@ pub mod test_coverage {
             CURRENT_COVERAGE.composition_operations_tested,
             CURRENT_COVERAGE.total_composition_operations,
             COMPOSITION_COVERAGE_PCT
+        );
+        println!(
+            "Combinators meeting custom label type target: {}/{} ({}%)",
+            CURRENT_COVERAGE.custom_label_types_tested,
+            CURRENT_COVERAGE.target_custom_label_types,
+            CUSTOM_LABEL_TYPES_PCT
+        );
+        println!(
+            "Edge cases tested: {}/{} ({}%)",
+            CURRENT_COVERAGE.edge_cases_tested,
+            CURRENT_COVERAGE.target_edge_cases,
+            EDGE_CASES_PCT
         );
     }
 

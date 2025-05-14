@@ -248,7 +248,7 @@ These patterns can be mixed to create hybrid approaches that leverage the streng
    - This allows focused testing without disrupting main development
    - Branch protection and systematic testing will be essential as we proceed
 
-#### Next Steps and Recommendationscargo fmt --check
+#### Next Steps and Recommendations
 
 1. **Improve Test Coverage**:
    - Add tests for `TInteract` and `TRec` with additional custom label types to meet our target
@@ -269,6 +269,88 @@ These patterns can be mixed to create hybrid approaches that leverage the streng
    - In `TChoice` and `TPar`, both `Lbl` (label) and `L` (left branch) parameters exist
    - Careful attention is needed to ensure they aren't confused during refactoring
    - Clear documentation will help future developers understand the distinction
+
+### Phase 2: Test Enhancement and Initial Refactoring (May 14, 2025)
+
+#### Completed Work
+
+1. **Enhanced Test Coverage**:
+   - Added comprehensive tests for `TInteract` and `TRec` with all three custom label types (`L1`, `L2`, `L3`)
+   - Implemented edge case tests for:
+     - Nested compositions with multiple label types
+     - Mixed combinator interactions (e.g., `TPar` with `TChoice` inside)
+     - Complex protocol structures with multi-level nesting
+   - Updated coverage metrics to reflect these improvements
+   - Achieved 100% coverage across all defined metrics
+
+2. **Refactored `TEnd<IO, L>` to `TEnd<IO, Lbl>`**:
+   - Successfully changed parameter name in type definition
+   - Updated documentation to reflect the new parameter name
+   - Updated trait implementations to use the new parameter name
+   - All tests still pass, confirming backward compatibility
+
+#### Key Insights
+
+1. **Test-First Refactoring is Effective**:
+   - By significantly improving test coverage before refactoring, we gained confidence in our changes
+   - Edge case tests were particularly valuable, uncovering subtleties in label propagation
+   - The comprehensive test suite now serves as a reliable safety net for further refactoring
+
+2. **Parameter Name Consistency Matters**:
+   - The consistent use of `Lbl` across combinators makes type definitions more readable
+   - It becomes easier to reason about the role of each parameter when they follow a consistent convention
+   - Type errors become more meaningful with consistent parameter names
+
+3. **Edge Cases Reveal Design Principles**:
+   - Testing nested compositions revealed that the outermost label always takes precedence
+   - This confirms the hierarchical nature of the protocol combinators
+   - Understanding this pattern is crucial for correctly implementing projection and composition
+
+4. **Metrics Drive Development**:
+   - Having explicit coverage metrics guided our testing efforts effectively
+   - The detailed breakdown (by combinator, by custom label type, by edge case) provided clear targets
+   - Automating the metrics reporting in tests helps maintain awareness of coverage quality
+
+#### Challenges Encountered
+
+1. **Multi-Parameter Type Classes**:
+   - Keeping track of which traits have `L` vs. `Lbl` parameters requires careful attention
+   - Our comprehensive mapping from Phase 1 was essential for navigating these dependencies
+   - We needed to ensure changes to `TEnd` didn't break any type-level computations
+
+2. **Test Design Complexity**:
+   - Creating meaningful edge case tests requires deep understanding of the type system
+   - We needed to model realistic protocol scenarios while isolating the behavior being tested
+   - Type-level assertions required careful construction to test exactly what we wanted
+
+3. **Documentation Synchronization**:
+   - Keeping documentation in sync with code changes is critical but challenging
+   - We updated both inline documentation and the metrics document
+   - This multi-document approach requires discipline but provides valuable context
+
+#### Next Phase Planning
+
+1. **Continue with Remaining Combinators**:
+   - Next step is to refactor `TInteract<IO, L, R, H, T>` to `TInteract<IO, Lbl, R, H, T>`
+   - Then proceed to `TRec<IO, L, S>` to `TRec<IO, Lbl, S>`
+   - `TChoice` and `TPar` already use the `Lbl` convention and don't need changes
+
+2. **Testing Strategy**:
+   - Run the full test suite after each combinator refactoring
+   - Pay special attention to projection tests, as they rely heavily on combinator types
+   - Update any examples or documentation using the old parameter names
+
+3. **Documentation Updates**:
+   - Continue updating the label_coverage.md metrics with each phase
+   - Consider adding a section in the main documentation about the label parameter convention
+   - Update code comments to reflect the new parameter naming convention
+
+4. **Consistency Checklist**:
+   - For each remaining refactoring step, verify:
+     - Type definition and documentation
+     - Trait implementations
+     - Type aliases and examples
+     - Tests specifically targeting that combinator
 
 ---
 

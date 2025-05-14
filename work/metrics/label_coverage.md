@@ -34,7 +34,7 @@ We have established the following metrics to track the completeness of our label
 
 **Target**: Each combinator should be tested with at least 3 different label types:
 - `EmptyLabel` (default)
-- At least 2 custom label types (e.g., `L1`, `L2`)
+- At least 2 custom label types (e.g., `L1`, `L2`, `L3`)
 
 ### 4. Label Edge Case Coverage
 
@@ -47,7 +47,7 @@ We have established the following metrics to track the completeness of our label
 
 **Target**: At least 80% of identified edge cases should have tests.
 
-## Current Baseline Measurements (as of May 14, 2025)
+## Current Measurements (as of May 14, 2025)
 
 ### 1. Combinator Coverage
 
@@ -78,33 +78,32 @@ We have established the following metrics to track the completeness of our label
 | Combinator | Different Label Types | Notes |
 |------------|----------------------|-------|
 | `TEnd`     | 3 (`L1`, `L2`, `L3`) | In `test_tend_label_replaced` |
-| `TInteract`| 2 (`L1`, `L2`)       | In `test_tinteract_label_preserved` |
-| `TRec`     | 2 (`L1`, `L2`)       | In `test_trec_label_preserved` |
-| `TChoice`  | 3 (`L1`, `L2`, `L3`) | In `test_tchoice_label_preserved` |
-| `TPar`     | 3 (`L1`, `L2`, `L3`) | In `test_tpar_label_preserved` |
+| `TInteract`| 3 (`L1`, `L2`, `L3`) | In `test_tinteract_label_preserved`, `test_tinteract_l2_label_preserved`, `test_tinteract_l3_label_preserved` |
+| `TRec`     | 3 (`L1`, `L2`, `L3`) | In `test_trec_label_preserved`, `test_trec_l2_label_preserved`, `test_trec_l3_label_preserved` |
+| `TChoice`  | 3 (`L1`, `L2`, `L3`) | In `test_tchoice_label_preserved` and edge case tests |
+| `TPar`     | 3 (`L1`, `L2`, `L3`) | In `test_tpar_label_preserved` and edge case tests |
 
 **Current Status**:
-- 3/5 combinators meet target (≥ 3 label types)
-- 2/5 combinators need additional label type tests
+- 5/5 combinators meet target (≥ 3 label types)
 
 ### 4. Label Edge Case Coverage
 
 | Edge Case | Has Tests | Notes |
 |-----------|-----------|-------|
-| Nested compositions | ❌ No | Not yet implemented |
-| Mixed combinator interactions | ❌ No | Not yet implemented |
-| Complex protocol structures | ❌ No | Not yet implemented |
+| Nested compositions | ✅ Yes | In `test_nested_composition_label_preservation` |
+| Mixed combinator interactions | ✅ Yes | In `test_mixed_combinator_interactions` |
+| Complex protocol structures | ✅ Yes | In `test_complex_protocol_structure` |
 
-**Current Coverage**: 0/3 = 0%
+**Current Coverage**: 3/3 = 100%
 
 ## Summary
 
-| Metric | Current Value | Target | Status |
-|--------|--------------|--------|--------|
-| Combinator Coverage | 100% | 100% | ✅ Met |
-| Composition Operation Coverage | 100% | 100% | ✅ Met |
-| Custom Label Type Coverage | 60% | 100% | ⚠️ Partially met |
-| Label Edge Case Coverage | 0% | 80% | ❌ Not met |
+| Metric | Previous | Current Value | Target | Status |
+|--------|----------|--------------|--------|--------|
+| Combinator Coverage | 100% | 100% | 100% | ✅ Met |
+| Composition Operation Coverage | 100% | 100% | 100% | ✅ Met |
+| Custom Label Type Coverage | 60% | 100% | 100% | ✅ Met |
+| Label Edge Case Coverage | 0% | 100% | 80% | ✅ Exceeded |
 
 ## Test Coverage Tracking Implementation
 
@@ -123,6 +122,10 @@ The test coverage is tracked both manually in this document and programmatically
        pub total_combinators: usize,
        pub composition_operations_tested: usize,
        pub total_composition_operations: usize,
+       pub custom_label_types_tested: usize,
+       pub target_custom_label_types: usize,
+       pub edge_cases_tested: usize,
+       pub target_edge_cases: usize,
    }
    ```
 
@@ -139,18 +142,28 @@ The test coverage is tracked both manually in this document and programmatically
                 CURRENT_COVERAGE.composition_operations_tested, 
                 CURRENT_COVERAGE.total_composition_operations,
                 COMPOSITION_COVERAGE_PCT);
+       println!("Combinators meeting custom label type target: {}/{} ({}%)",
+                CURRENT_COVERAGE.custom_label_types_tested,
+                CURRENT_COVERAGE.target_custom_label_types,
+                CUSTOM_LABEL_TYPES_PCT);
+       println!("Edge cases tested: {}/{} ({}%)",
+                CURRENT_COVERAGE.edge_cases_tested,
+                CURRENT_COVERAGE.target_edge_cases,
+                EDGE_CASES_PCT);
    }
    ```
 
-## Next Steps for Improving Coverage
+## Next Steps for Phase 2 Refactoring
 
-1. Add tests for `TInteract` and `TRec` with at least one additional custom label type
-2. Implement tests for the identified edge cases:
-   - Nested compositions with multiple label types
-   - Mixed combinator interactions
-   - Complex protocol structures
+With all test coverage metrics now meeting or exceeding targets, we are ready to proceed with the actual label parameter refactoring in Phase 2. The implementation plan is:
 
-These improvements will ensure comprehensive test coverage before proceeding with the actual label parameter refactoring.
+1. Begin with refactoring `TEnd<IO, L>` to `TEnd<IO, Lbl>` since it has the simplest implementation
+2. Run the tests to verify the refactoring works as expected
+3. Continue with refactoring the remaining combinators in this order:
+   - `TInteract<IO, L, R, H, T>` to `TInteract<IO, Lbl, R, H, T>`
+   - `TRec<IO, L, S>` to `TRec<IO, Lbl, S>`
+   - Keep `TChoice<IO, Lbl, L, R>` as is (already using `Lbl`)
+   - Keep `TPar<IO, Lbl, L, R, IsDisjoint>` as is (already using `Lbl`)
 
 ---
 
