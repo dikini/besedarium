@@ -22,17 +22,35 @@ impl Role for Bob {}
 impl Role for Charlie {}
 
 // --- Role equality implementations ---
-impl RoleEq<Alice> for Alice { type Output = True; }
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Charlie> for Alice { type Output = False; }
+impl RoleEq<Alice> for Alice {
+    type Output = True;
+}
+impl RoleEq<Bob> for Alice {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Alice {
+    type Output = False;
+}
 
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Bob> for Bob { type Output = True; }
-impl RoleEq<Charlie> for Bob { type Output = False; }
+impl RoleEq<Alice> for Bob {
+    type Output = False;
+}
+impl RoleEq<Bob> for Bob {
+    type Output = True;
+}
+impl RoleEq<Charlie> for Bob {
+    type Output = False;
+}
 
-impl RoleEq<Alice> for Charlie { type Output = False; }
-impl RoleEq<Bob> for Charlie { type Output = False; }
-impl RoleEq<Charlie> for Charlie { type Output = True; }
+impl RoleEq<Alice> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Bob> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Charlie {
+    type Output = True;
+}
 
 // --- Message Types for Testing ---
 struct Message;
@@ -51,10 +69,10 @@ mod project_role_tests {
     fn test_projection_of_tend() {
         // Define a TEnd protocol
         type GlobalProtocol = TEnd<Http, L1>;
-        
+
         // Project onto Alice
         type AliceLocal = <() as ProjectRole<Alice, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: EpEnd<Http, Alice>
         assert_type_eq!(AliceLocal, EpEnd<Http, Alice>);
     }
@@ -64,10 +82,10 @@ mod project_role_tests {
     fn test_projection_of_tinteract_as_sender() {
         // Define a global protocol where Alice sends a message
         type GlobalProtocol = TInteract<Http, L1, Alice, Message, TEnd<Http, L2>>;
-        
+
         // Project onto Alice
         type AliceLocal = <() as ProjectRole<Alice, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: EpSend<Http, Alice, Message, EpEnd<Http, Alice>>
         assert_type_eq!(
             AliceLocal,
@@ -80,10 +98,10 @@ mod project_role_tests {
     fn test_projection_of_tinteract_as_receiver() {
         // Define a global protocol where Alice sends a message
         type GlobalProtocol = TInteract<Http, L1, Alice, Message, TEnd<Http, L2>>;
-        
+
         // Project onto Bob
         type BobLocal = <() as ProjectRole<Bob, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: EpRecv<Http, Bob, Message, EpEnd<Http, Bob>>
         assert_type_eq!(
             BobLocal,
@@ -97,17 +115,12 @@ mod project_role_tests {
         // Define a global protocol with multiple interactions:
         // 1. Alice sends Message to Bob
         // 2. Bob sends Response to Alice
-        type GlobalProtocol = TInteract<
-            Http,
-            L1,
-            Alice,
-            Message,
-            TInteract<Http, L2, Bob, Response, TEnd<Http, L3>>
-        >;
-        
+        type GlobalProtocol =
+            TInteract<Http, L1, Alice, Message, TInteract<Http, L2, Bob, Response, TEnd<Http, L3>>>;
+
         // Project onto Alice
         type AliceLocal = <() as ProjectRole<Alice, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: Alice sends Message then receives Response
         assert_type_eq!(
             AliceLocal,
@@ -118,10 +131,10 @@ mod project_role_tests {
                 EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>
             >
         );
-        
+
         // Project onto Bob
         type BobLocal = <() as ProjectRole<Bob, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: Bob receives Message then sends Response
         assert_type_eq!(
             BobLocal,
@@ -138,17 +151,12 @@ mod project_role_tests {
     #[test]
     fn test_projection_of_uninvolved_role() {
         // Define a global protocol with interactions only between Alice and Bob
-        type GlobalProtocol = TInteract<
-            Http,
-            L1,
-            Alice,
-            Message,
-            TInteract<Http, L2, Bob, Response, TEnd<Http, L3>>
-        >;
-        
+        type GlobalProtocol =
+            TInteract<Http, L1, Alice, Message, TInteract<Http, L2, Bob, Response, TEnd<Http, L3>>>;
+
         // Project onto Charlie who is not involved
         type CharlieLocal = <() as ProjectRole<Charlie, Http, GlobalProtocol>>::Out;
-        
+
         // Expected: Charlie receives both messages as they're not the sender
         assert_type_eq!(
             CharlieLocal,
@@ -165,30 +173,18 @@ mod project_role_tests {
     #[test]
     fn test_project_interact_dispatch() {
         // When role is sender (flag = True)
-        type SenderOut = <() as ProjectInteract<
-            True,
-            Alice,
-            Http,
-            Alice,
-            Message,
-            TEnd<Http, L1>
-        >>::Out;
-        
+        type SenderOut =
+            <() as ProjectInteract<True, Alice, Http, Alice, Message, TEnd<Http, L1>>>::Out;
+
         assert_type_eq!(
             SenderOut,
             EpSend<Http, Alice, Message, EpEnd<Http, Alice>>
         );
-        
+
         // When role is not sender (flag = False)
-        type ReceiverOut = <() as ProjectInteract<
-            False,
-            Bob,
-            Http,
-            Alice,
-            Message,
-            TEnd<Http, L1>
-        >>::Out;
-        
+        type ReceiverOut =
+            <() as ProjectInteract<False, Bob, Http, Alice, Message, TEnd<Http, L1>>>::Out;
+
         assert_type_eq!(
             ReceiverOut,
             EpRecv<Http, Bob, Message, EpEnd<Http, Bob>>
@@ -206,10 +202,13 @@ mod projection_helper_tests {
     fn test_is_ep_skip_variant() {
         // EpSkip should be identified as skip type
         assert_type_eq!(IsSkip<EpSkip<Http, Alice>, Http, Alice>, True);
-        
+
         // Other endpoint types should not be identified as skip
         assert_type_eq!(IsSkip<EpEnd<Http, Alice>, Http, Alice>, False);
-        assert_type_eq!(IsSkip<EpSend<Http, Alice, Message, EpEnd<Http, Alice>>, Http, Alice>, False);
+        assert_type_eq!(
+            IsSkip<EpSend<Http, Alice, Message, EpEnd<Http, Alice>>, Http, Alice>,
+            False
+        );
     }
 
     // Test IsEpEndVariant trait
@@ -217,10 +216,13 @@ mod projection_helper_tests {
     fn test_is_ep_end_variant() {
         // EpEnd should be identified as end type
         assert_type_eq!(IsEnd<EpEnd<Http, Alice>, Http, Alice>, True);
-        
+
         // Other endpoint types should not be identified as end
         assert_type_eq!(IsEnd<EpSkip<Http, Alice>, Http, Alice>, False);
-        assert_type_eq!(IsEnd<EpSend<Http, Alice, Message, EpEnd<Http, Alice>>, Http, Alice>, False);
+        assert_type_eq!(
+            IsEnd<EpSend<Http, Alice, Message, EpEnd<Http, Alice>>, Http, Alice>,
+            False
+        );
     }
 
     // Test ProjectParBranch based on role presence
@@ -231,19 +233,19 @@ mod projection_helper_tests {
             True,
             Alice,
             Http,
-            TInteract<Http, L1, Alice, Message, TEnd<Http, L2>>
+            TInteract<Http, L1, Alice, Message, TEnd<Http, L2>>,
         >>::Out;
         assert_type_eq!(
             RolePresent,
             EpSend<Http, Alice, Message, EpEnd<Http, Alice>>
         );
-        
+
         // Role is not present in branch (flag = False)
         type RoleNotPresent = <() as ProjectParBranch<
             False,
             Alice,
             Http,
-            TInteract<Http, L1, Bob, Message, TEnd<Http, L2>>
+            TInteract<Http, L1, Bob, Message, TEnd<Http, L2>>,
         >>::Out;
         assert_type_eq!(RoleNotPresent, EpSkip<Http, Alice>);
     }

@@ -21,19 +21,16 @@ pub trait SameLabelList<T> {}
 impl SameLabelList<Nil> for Nil {}
 
 /// Matches two non-empty lists if their heads are the same type and tails are the same list
-impl<H, T1, T2> SameLabelList<Cons<H, T2>> for Cons<H, T1> 
-where 
-    T1: SameLabelList<T2>
-{}
+impl<H, T1, T2> SameLabelList<Cons<H, T2>> for Cons<H, T1> where T1: SameLabelList<T2> {}
 
 /// Trait to assert that a type's labels match an expected list
 pub trait HasLabels<Expected> {}
 
 /// Implementation that checks if a type's labels match an expected list
-impl<T: LabelsOf, Expected> HasLabels<Expected> for T
-where
-    <T as LabelsOf>::Labels: SameLabelList<Expected>,
-{}
+impl<T: LabelsOf, Expected> HasLabels<Expected> for T where
+    <T as LabelsOf>::Labels: SameLabelList<Expected>
+{
+}
 
 // --- Tests for LabelsOf trait ---
 #[cfg(test)]
@@ -58,10 +55,10 @@ mod labels_of_tests {
     fn test_tend_labels() {
         // Define a type using TEnd with custom label
         type EndWithLabel = TEnd<Http, L1>;
-        
+
         // Expected label list is Cons<L1, Nil>
         type Expected = Cons<L1, Nil>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<EndWithLabel>();
@@ -72,10 +69,10 @@ mod labels_of_tests {
     fn test_tinteract_labels() {
         // Define a type using TInteract with custom label
         type InteractWithLabel = TInteract<Http, L1, TClient, Message, TEnd<Http, L2>>;
-        
+
         // Expected label list is Cons<L1, Cons<L2, Nil>>
         type Expected = Cons<L1, Cons<L2, Nil>>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<InteractWithLabel>();
@@ -86,10 +83,10 @@ mod labels_of_tests {
     fn test_trec_labels() {
         // Define a type using TRec with custom label
         type RecWithLabel = TRec<Http, L1, TEnd<Http, L2>>;
-        
+
         // Expected label list is Cons<L1, Cons<L2, Nil>>
         type Expected = Cons<L1, Cons<L2, Nil>>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<RecWithLabel>();
@@ -100,15 +97,15 @@ mod labels_of_tests {
     fn test_tchoice_labels() {
         // Define a type using TChoice with custom label
         type ChoiceWithLabel = TChoice<
-            Http, 
-            L1, 
+            Http,
+            L1,
             TInteract<Http, L2, TClient, Message, TEnd<Http, L3>>,
-            TEnd<Http, EmptyLabel>
+            TEnd<Http, EmptyLabel>,
         >;
-        
+
         // Expected label list is Cons<L1, Cons<L2, Cons<L3, Nil>>>
         type Expected = Cons<L1, Cons<L2, Cons<L3, Nil>>>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<ChoiceWithLabel>();
@@ -123,12 +120,12 @@ mod labels_of_tests {
             L1,
             TInteract<Http, L2, TClient, Message, TEnd<Http, L3>>,
             TEnd<Http, EmptyLabel>,
-            FalseB
+            FalseB,
         >;
-        
+
         // Expected label list is Cons<L1, Cons<L2, Cons<L3, Nil>>>
         type Expected = Cons<L1, Cons<L2, Cons<L3, Nil>>>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<ParWithLabel>();
@@ -139,12 +136,9 @@ mod labels_of_tests {
     fn test_complex_protocol_labels() {
         // Create a complex protocol with multiple branches and nested structures
         type Branch1 = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
-        type Branch2 = TRec<
-            Http, 
-            L2, 
-            TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>
-        >;
-        
+        type Branch2 =
+            TRec<Http, L2, TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>>;
+
         type ComplexProtocol = TPar<
             Http,
             L1,
@@ -157,11 +151,11 @@ mod labels_of_tests {
             >,
             FalseB,
         >;
-        
+
         // Expected label list is quite complex due to nesting
         // TPar has L1, then branch1 has L1 and EmptyLabel, then L2 from TChoice, L2 from TRec, etc.
         type Expected = Cons<L1, Cons<L1, Cons<EmptyLabel, Nil>>>;
-        
+
         // This will compile only if the labels match the expected list
         fn assert_correct_labels<T: HasLabels<Expected>>() {}
         assert_correct_labels::<ComplexProtocol>();
@@ -193,19 +187,16 @@ mod roles_of_tests {
     impl SameRoleList<Nil> for Nil {}
 
     /// Matches two non-empty lists if their heads are the same type and tails are the same list
-    impl<H, T1, T2> SameRoleList<Cons<H, T2>> for Cons<H, T1> 
-    where 
-        T1: SameRoleList<T2>
-    {}
+    impl<H, T1, T2> SameRoleList<Cons<H, T2>> for Cons<H, T1> where T1: SameRoleList<T2> {}
 
     /// Trait to assert that a type's roles match an expected list
     pub trait HasRoles<Expected> {}
 
     /// Implementation that checks if a type's roles match an expected list
-    impl<T: RolesOf, Expected> HasRoles<Expected> for T
-    where
-        <T as RolesOf>::Roles: SameRoleList<Expected>,
-    {}
+    impl<T: RolesOf, Expected> HasRoles<Expected> for T where
+        <T as RolesOf>::Roles: SameRoleList<Expected>
+    {
+    }
 
     // Test that TInteract<IO, L, R, H, T> correctly extracts its roles
     #[test]
@@ -213,10 +204,10 @@ mod roles_of_tests {
         // Define a type using TInteract with roles
         // Use EmptyLabel for TEnd to match current implementation
         type InteractWithRole = TInteract<Http, L1, TClient, Message, TEnd<Http>>;
-        
+
         // Expected role list is Cons<TClient, Nil>
         type Expected = Cons<TClient, Nil>;
-        
+
         // This will compile only if the roles match the expected list
         fn assert_correct_roles<T: HasRoles<Expected>>() {}
         assert_correct_roles::<InteractWithRole>();
@@ -228,16 +219,16 @@ mod roles_of_tests {
         // Define a complex protocol with multiple roles
         // Use TEnd<Http> instead of TEnd<Http, L3> to match current implementation
         type Protocol = TInteract<
-            Http, 
-            L1, 
-            TClient, 
-            Message, 
-            TInteract<Http, L2, TServer, Response, TEnd<Http>>
+            Http,
+            L1,
+            TClient,
+            Message,
+            TInteract<Http, L2, TServer, Response, TEnd<Http>>,
         >;
-        
+
         // Expected role list is Cons<TClient, Cons<TServer, Nil>>
         type Expected = Cons<TClient, Cons<TServer, Nil>>;
-        
+
         // This will compile only if the roles match the expected list
         fn assert_correct_roles<T: HasRoles<Expected>>() {}
         assert_correct_roles::<Protocol>();

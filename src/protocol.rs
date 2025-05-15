@@ -460,12 +460,12 @@ where
     R: ContainsRole<Me>,
     <R as ContainsRole<Me>>::Output: types::Bool,
     (): ProjectChoiceCase<
-        Me, 
-        IO, 
-        L, 
+        Me,
+        IO,
+        L,
         R,
         <L as ContainsRole<Me>>::Output,
-        <R as ContainsRole<Me>>::Output
+        <R as ContainsRole<Me>>::Output,
     >,
 {
     type Out = <() as ProjectChoiceCase<
@@ -474,7 +474,7 @@ where
         L,
         R,
         <L as ContainsRole<Me>>::Output,
-        <R as ContainsRole<Me>>::Output
+        <R as ContainsRole<Me>>::Output,
     >>::Out;
 }
 
@@ -492,12 +492,8 @@ where
     (): ProjectRole<Me, IO, L>,
     (): ProjectRole<Me, IO, R>,
 {
-    type Out = EpChoice<
-        IO,
-        Me,
-        <() as ProjectRole<Me, IO, L>>::Out,
-        <() as ProjectRole<Me, IO, R>>::Out
-    >;
+    type Out =
+        EpChoice<IO, Me, <() as ProjectRole<Me, IO, L>>::Out, <() as ProjectRole<Me, IO, R>>::Out>;
 }
 
 // Case 2: Only left branch contains the role
@@ -609,12 +605,12 @@ where
     // Use a helper trait to dispatch based on L branch containment
     (): TParContainsRoleImpl<
         <L as ContainsRole<RoleT>>::Output,
-        <R as ContainsRole<RoleT>>::Output
+        <R as ContainsRole<RoleT>>::Output,
     >,
 {
     type Output = <() as TParContainsRoleImpl<
         <L as ContainsRole<RoleT>>::Output,
-        <R as ContainsRole<RoleT>>::Output
+        <R as ContainsRole<RoleT>>::Output,
     >>::Output;
 }
 
@@ -1037,13 +1033,13 @@ where
     (): ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>,
     (): ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>,
     // Get the resulting endpoint types
-    <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out: 
-        EpSession<IO, Me> + 
-        IsEpSkipVariant<IO, Me> + 
+    <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out:
+        EpSession<IO, Me> +
+        IsEpSkipVariant<IO, Me> +
         IsEpEndVariant<IO, Me>,
     <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out:
-        EpSession<IO, Me> + 
-        IsEpSkipVariant<IO, Me> + 
+        EpSession<IO, Me> +
+        IsEpSkipVariant<IO, Me> +
         IsEpEndVariant<IO, Me>,
     // Ensure the output types have the right marker types
     <<() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out as IsEpSkipVariant<IO, Me>>::Output: types::Bool,
@@ -1052,8 +1048,8 @@ where
     <<() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out as IsEpEndVariant<IO, Me>>::Output: types::Bool,
     // Compose the projected branches
     (): ComposeProjectedParBranches<
-        IO, 
-        Me, 
+        IO,
+        Me,
         <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out,
         <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out
     >,
