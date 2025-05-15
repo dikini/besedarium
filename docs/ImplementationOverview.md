@@ -4,17 +4,34 @@
 
 ### Introduction & Goals
 
-Besedarium is a Rust library for building, composing, and verifying communication protocols at the type level using session types. The primary goal is to catch protocol mistakes at compile time, ensuring that distributed systems and networked applications follow the correct message flow. The library aims for a balance between strong static guarantees, ergonomic protocol construction, and extensibility for multiparty and advanced session type features.
+Besedarium is a Rust library for building, composing, and verifying communication protocols at the
+type level using session types. The primary goal is to catch protocol mistakes at compile time,
+ensuring that distributed systems and networked applications follow the correct message flow. The
+library aims for a balance between strong static guarantees, ergonomic protocol construction, and
+extensibility for multiparty and advanced session type features.
 
 ### What Are Session Types?
 
-Session types are a type-theoretic framework for describing and verifying structured communication between concurrent or distributed processes. They allow developers to specify the sequence and structure of messages exchanged between roles (participants) in a protocol, ensuring properties like linearity (no double use of channels), progress (no deadlocks), and protocol fidelity (no unexpected messages).
+Session types are a type-theoretic framework for describing and verifying structured communication
+between concurrent or distributed processes. They allow developers to specify the sequence and
+structure of messages exchanged between roles (participants) in a protocol, ensuring properties
+like linearity (no double use of channels), progress (no deadlocks), and protocol fidelity (no
+unexpected messages).
 
-In practice, session types provide a way to encode communication protocols as types, so that the compiler can check for protocol violations. This is especially valuable in distributed systems, where mismatches in message order or structure can lead to subtle, hard-to-debug errors. Session types originated in the study of process calculi and have been adopted in several programming languages, including Haskell, Scala, and Rust, to provide strong compile-time guarantees for communication safety.
+In practice, session types provide a way to encode communication protocols as types, so that the
+compiler can check for protocol violations. This is especially valuable in distributed systems,
+where mismatches in message order or structure can lead to subtle, hard-to-debug errors. Session
+types originated in the study of process calculi and have been adopted in several programming
+languages, including Haskell, Scala, and Rust, to provide strong compile-time guarantees for
+communication safety.
 
 ### High-Level Architecture
 
-Besedarium models protocols as global types (describing the whole protocol) and provides machinery to project these to local (endpoint) types for each role. The core is a set of combinators (type-level building blocks) and traits for composing, analyzing, and projecting protocols. Macros are used for ergonomic construction of n-ary choices and parallel branches. Compile-time assertions and trybuild tests ensure that safety properties are enforced and violations are caught early.
+Besedarium models protocols as global types (describing the whole protocol) and provides machinery
+to project these to local (endpoint) types for each role. The core is a set of combinators
+(type-level building blocks) and traits for composing, analyzing, and projecting protocols. Macros
+are used for ergonomic construction of n-ary choices and parallel branches. Compile-time assertions
+and trybuild tests ensure that safety properties are enforced and violations are caught early.
 
 ---
 
@@ -44,7 +61,8 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 - **Example:**
 
   ```rust
-  type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>;
+  type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response,
+  TEnd<Http>>>;
   ```
 
 - **Diagram:**
@@ -102,7 +120,8 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 - **Implementation:**
 
   ```rust
-  pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R, IsDisjoint)>);
+  pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R,
+  IsDisjoint)>);
   ```
 
   - `IsDisjoint` is a type-level boolean indicating if the branches are disjoint in their roles.
@@ -191,7 +210,9 @@ Besedarium models protocols as global types (describing the whole protocol) and 
 
 ## Overview
 
-Local (endpoint) types describe the protocol from the perspective of a single role. Besedarium provides machinery to project a global protocol to the local type for any role, ensuring that each participant follows the correct sequence of actions.
+Local (endpoint) types describe the protocol from the perspective of a single role. Besedarium
+provides machinery to project a global protocol to the local type for any role, ensuring that each
+participant follows the correct sequence of actions.
 
 ## Endpoint Combinators
 
@@ -203,7 +224,8 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 
 ### Projection Machinery
 
-- `ProjectRole<Me, IO, G>`: Trait to project a global protocol G to the local session type for role Me.
+- `ProjectRole<Me, IO, G>`: Trait to project a global protocol G to the local session type for role
+Me.
 - Uses type-level role equality (`RoleEq`) to determine send/receive.
 - Compile-time assertions (e.g., `assert_type_eq!`) ensure correctness.
 
@@ -230,31 +252,48 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ### What is EpSkip?
 
-EpSkip (also called EpSilent or EpNoOp) is a local endpoint combinator representing a "do nothing" or silent step in a protocol. It is used in session type systems to indicate that a role is uninvolved in a particular protocol fragment (e.g., not present in any branch of a parallel composition).
+EpSkip (also called EpSilent or EpNoOp) is a local endpoint combinator representing a "do nothing"
+or silent step in a protocol. It is used in session type systems to indicate that a role is
+uninvolved in a particular protocol fragment (e.g., not present in any branch of a parallel
+composition).
 
 #### Pros of EpSkip
 
-- **Type-level precision:** Clearly indicates uninvolved roles in the local type, improving protocol clarity and correctness.
-- **Simplifies endpoint code:** Allows endpoint interpreters to treat uninvolved roles as true no-ops, potentially reducing boilerplate.
-- **Explicit intent:** Makes the protocol structure and role participation explicit in the type system.
+- **Type-level precision:** Clearly indicates uninvolved roles in the local type, improving
+protocol clarity and correctness.
+- **Simplifies endpoint code:** Allows endpoint interpreters to treat uninvolved roles as true
+no-ops, potentially reducing boilerplate.
+- **Explicit intent:** Makes the protocol structure and role participation explicit in the type
+system.
 
 #### Cons of EpSkip
 
-- **Increased runtime complexity:** The endpoint state machine must recognize and handle EpSkip states, even though they do nothing.
-- **More verbose state machines:** The presence of explicit no-op states can make the runtime control flow harder to follow, especially in complex protocols.
-- **Potential confusion:** Developers may not immediately distinguish between EpSkip (no-op) and EpEnd (termination), leading to ambiguity if not documented and handled carefully.
-- **Maintenance burden:** All endpoint interpreters, code generators, and runtime systems must consistently handle EpSkip, increasing the surface area for bugs or inconsistencies.
+- **Increased runtime complexity:** The endpoint state machine must recognize and handle EpSkip
+states, even though they do nothing.
+- **More verbose state machines:** The presence of explicit no-op states can make the runtime
+control flow harder to follow, especially in complex protocols.
+- **Potential confusion:** Developers may not immediately distinguish between EpSkip (no-op) and
+EpEnd (termination), leading to ambiguity if not documented and handled carefully.
+- **Maintenance burden:** All endpoint interpreters, code generators, and runtime systems must
+consistently handle EpSkip, increasing the surface area for bugs or inconsistencies.
 
 ### Rationale for Not Implementing EpSkip (for Now)
 
-While EpSkip improves type-level expressiveness, we have decided not to implement it at this stage due to the increased costs at runtime. The main reasons are:
+While EpSkip improves type-level expressiveness, we have decided not to implement it at this stage
+due to the increased costs at runtime. The main reasons are:
 
-- **State machine complexity:** Every endpoint runtime must implement and handle EpSkip states, which adds to the number of possible states and transitions, even though most are no-ops.
-- **Control flow clarity:** The presence of explicit skip states can make the runtime logic more verbose and harder to reason about, especially when debugging or tracing protocol execution.
-- **Potential for confusion:** Without careful documentation and discipline, EpSkip may be mistaken for protocol termination (EpEnd), leading to subtle bugs.
-- **Implementation overhead:** All endpoint interpreters and code generators must be updated to recognize and correctly process EpSkip, increasing maintenance and testing effort.
+- **State machine complexity:** Every endpoint runtime must implement and handle EpSkip states,
+which adds to the number of possible states and transitions, even though most are no-ops.
+- **Control flow clarity:** The presence of explicit skip states can make the runtime logic more
+verbose and harder to reason about, especially when debugging or tracing protocol execution.
+- **Potential for confusion:** Without careful documentation and discipline, EpSkip may be mistaken
+for protocol termination (EpEnd), leading to subtle bugs.
+- **Implementation overhead:** All endpoint interpreters and code generators must be updated to
+recognize and correctly process EpSkip, increasing maintenance and testing effort.
 
-For these reasons, the current design omits EpSkip and instead allows uninvolved roles to project to simple terminal or empty endpoint types (e.g., EpEnd), accepting some loss of type-level precision in favor of runtime simplicity and maintainability.
+For these reasons, the current design omits EpSkip and instead allows uninvolved roles to project
+to simple terminal or empty endpoint types (e.g., EpEnd), accepting some loss of type-level
+precision in favor of runtime simplicity and maintainability.
 
 ---
 
@@ -262,7 +301,8 @@ For these reasons, the current design omits EpSkip and instead allows uninvolved
 
 - **Disjointness:** Enforced for parallel branches via traits and macros.
 - **Type Equality:** Compile-time assertions ensure that projected types match expected types.
-- **Negative Tests:** Trybuild tests ensure that violations (e.g., duplicate roles, mixed IO) fail to compile.
+- **Negative Tests:** Trybuild tests ensure that violations (e.g., duplicate roles, mixed IO) fail
+to compile.
 
 ---
 
@@ -270,20 +310,28 @@ For these reasons, the current design omits EpSkip and instead allows uninvolved
 
 ### Haskell (Session Types Libraries)
 
-- Haskell libraries (e.g., [session-types](https://hackage.haskell.org/package/session-types), [mpst](https://hackage.haskell.org/package/mpst)) use type classes and GADTs for similar guarantees.
-- Rust’s trait system is less expressive for some advanced features (e.g., mutual recursion, dependent types), but macros and type-level programming provide strong guarantees.
+- Haskell libraries (e.g., [session-types](https://hackage.haskell.org/package/session-types),
+[mpst](https://hackage.haskell.org/package/mpst)) use type classes and GADTs for similar guarantees.
+- Rust’s trait system is less expressive for some advanced features (e.g., mutual recursion,
+dependent types), but macros and type-level programming provide strong guarantees.
 
 ### Scala (Effpi, Scribble)
 
 - Scala libraries use implicits and type-level programming for session types.
-- [Effpi](https://github.com/effpi/effpi) is a Scala library for concurrent and distributed programming with session types.
-- [Scribble](https://www.scribble.org/) is a protocol language and toolchain, with Scala integration for multiparty session types.
-- Rust’s approach is more explicit and less reliant on inference, but offers similar compile-time safety.
+- [Effpi](https://github.com/effpi/effpi) is a Scala library for concurrent and distributed
+programming with session types.
+- [Scribble](https://www.scribble.org/) is a protocol language and toolchain, with Scala
+integration for multiparty session types.
+- Rust’s approach is more explicit and less reliant on inference, but offers similar compile-time
+safety.
 
 ### Other Rust
 
-- Some Rust crates (e.g., [session-types](https://crates.io/crates/session-types), [ferrite](https://github.com/ferrite-rs/ferrite)) focus on binary session types or runtime representations.
-- Besedarium emphasizes multiparty, global-to-local projection, and compile-time protocol construction.
+- Some Rust crates (e.g., [session-types](https://crates.io/crates/session-types),
+[ferrite](https://github.com/ferrite-rs/ferrite)) focus on binary session types or runtime
+representations.
+- Besedarium emphasizes multiparty, global-to-local projection, and compile-time protocol
+construction.
 
 ---
 
@@ -291,29 +339,42 @@ For these reasons, the current design omits EpSkip and instead allows uninvolved
 
 - **Easy to Extend:** New combinators and macros can be added for more protocol features.
 - **Limitations:** No runtime choreography, no mutual recursion, no dynamic role handling (yet).
-- **Planned:** Improved endpoint combinators (e.g., Silent, Branch, Select), better error messages, and runtime integration.
+- **Planned:** Improved endpoint combinators (e.g., Silent, Branch, Select), better error messages,
+and runtime integration.
 
 ---
 
 ### Summary Table
 
-| Combinator | Purpose         | Properties Ensured         | Pros                        | Cons                       |
-|------------|----------------|----------------------------|-----------------------------|----------------------------|
-| TInteract  | Interaction    | Linearity, type safety     | Simple, compositional       | Explicit for each step     |
-| TChoice    | Branching      | Exhaustiveness             | Expressive, n-ary via macro | Verbose without macros     |
-| TPar       | Parallelism    | Disjointness, progress     | Models concurrency          | Requires explicit checks   |
-| TRec       | Recursion      | Well-formedness            | Loops, streaming            | No mutual recursion        |
-| TEnd       | Termination    | Explicit end               | Simple                      | -                          |
-| Ep*        | Endpoint types | Local protocol correctness | Ensures local fidelity      | No runtime choreography    |
+| Combinator | Purpose         | Properties Ensured         | Pros                        | Cons
+                   |
+|------------|----------------|----------------------------|-----------------------------|----------
+------------------|
+| TInteract  | Interaction    | Linearity, type safety     | Simple, compositional       | Explicit
+for each step     |
+| TChoice    | Branching      | Exhaustiveness             | Expressive, n-ary via macro | Verbose
+without macros     |
+| TPar       | Parallelism    | Disjointness, progress     | Models concurrency          | Requires
+explicit checks   |
+| TRec       | Recursion      | Well-formedness            | Loops, streaming            | No
+mutual recursion        |
+| TEnd       | Termination    | Explicit end               | Simple                      | -
+                  |
+| Ep*        | Endpoint types | Local protocol correctness | Ensures local fidelity      | No
+runtime choreography    |
 
 ---
 
 ## References
 
-- [Multiparty Asynchronous Session Types (Honda et al., 2008)](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
-- [Linear type theory for asynchronous session types (Gay & Vasconcelos, 2010)](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf)
-- [Propositions as sessions (Wadler, 2012)](https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions.pdf)
+- [Multiparty Asynchronous Session Types (Honda et al.,
+2008)](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
+- [Linear type theory for asynchronous session types (Gay & Vasconcelos,
+2010)](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf)
+- [Propositions as sessions (Wadler, 2012)][wadler-2012]
 - [Session Types in Rust (blog post)](https://blog.sessiontypes.com/)
+
+[wadler-2012]: https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions.pdf
 
 ---
 

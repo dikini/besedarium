@@ -285,56 +285,73 @@ Three primary patterns for session type runtime implementation:
 
 ## 4. Key Insights
 
-1. **Type-Level Dispatch** is crucial for non-overlapping implementations and enables pattern-matching-like behavior in the type system.
+1. **Type-Level Dispatch** is crucial for non-overlapping implementations and enables
+pattern-matching-like behavior in the type system.
 
-2. **Helper Traits** create indirection that resolves implementation conflicts and improves modularity.
+2. **Helper Traits** create indirection that resolves implementation conflicts and improves
+modularity.
 
 3. **Trait Design** should focus on composable, single-responsibility traits with clear boundaries.
 
-4. **Recursive Type Traversal** with proper terminal cases is essential for handling nested protocols.
+4. **Recursive Type Traversal** with proper terminal cases is essential for handling nested
+protocols.
 
 5. **Case Multiplication** means implementations grow with the product of case dimensions.
 
-6. **Type-Level Boolean Operations** enable complex decision logic that would be impossible with simple trait bounds.
+6. **Type-Level Boolean Operations** enable complex decision logic that would be impossible with
+simple trait bounds.
 
-7. **Protocol Projection** decisions depend heavily on role presence, requiring sophisticated role containment checking.
+7. **Protocol Projection** decisions depend heavily on role presence, requiring sophisticated role
+containment checking.
 
 8. **Test-First Refactoring** with comprehensive metrics significantly reduces regression risk.
 
 9. **Parameter Consistency** across the codebase improves readability and simplifies reasoning.
 
-10. **Edge Case Testing** reveals subtle design principles that may not be apparent from basic tests.
+10. **Edge Case Testing** reveals subtle design principles that may not be apparent from basic
+tests.
 
 ## 5. Code Organization Insights
 
 ### Modular Protocol System Structure
 
-The refactoring of the protocol system into smaller, purpose-specific files revealed several important insights:
+The refactoring of the protocol system into smaller, purpose-specific files revealed several
+important insights:
 
-1. **Layer-Based Organization**: Separating the protocol system into conceptual layers improves maintainability:
+1. **Layer-Based Organization**: Separating the protocol system into conceptual layers improves
+maintainability:
    - `base.rs`: Core traits and types used across the entire system
    - `global.rs`: Global protocol type definitions and combinators
    - `local.rs`: Local endpoint type definitions and behaviors
    - `transforms.rs`: Transformation logic between global and local types
    - `utils.rs`: Helper functions and utilities
 
-2. **Interface Stability**: By carefully designing the public module interfaces and re-exports, we maintained full backward compatibility while significantly improving the internal organization.
+2. **Interface Stability**: By carefully designing the public module interfaces and re-exports, we
+maintained full backward compatibility while significantly improving the internal organization.
 
-3. **Documentation Cohesion**: Comments and documentation now align more closely with the code they explain, making it easier to understand specific components without having to search through a large file.
+3. **Documentation Cohesion**: Comments and documentation now align more closely with the code they
+explain, making it easier to understand specific components without having to search through a
+large file.
 
-4. **Testing Focus**: Tests can now target specific components more precisely, making it easier to understand test failures and add new tests for specific features.
+4. **Testing Focus**: Tests can now target specific components more precisely, making it easier to
+understand test failures and add new tests for specific features.
 
-5. **Evolution Path**: The modular structure creates a clearer path for evolving individual components while maintaining the overall system architecture.
+5. **Evolution Path**: The modular structure creates a clearer path for evolving individual
+components while maintaining the overall system architecture.
 
 ### Style and Documentation Standards
 
-1. **Consistent Style**: Using `cargo fmt` and `cargo clippy` consistently ensures that the code follows Rust's standard style guidelines.
+1. **Consistent Style**: Using `cargo fmt` and `cargo clippy` consistently ensures that the code
+follows Rust's standard style guidelines.
 
-2. **Documentation Style**: Separating markdown style fixes from code refactoring prevents scope creep and helps maintain focus on the primary task.
+2. **Documentation Style**: Separating markdown style fixes from code refactoring prevents scope
+creep and helps maintain focus on the primary task.
 
-3. **Progressive Enhancement**: Address foundational issues first (code structure) before tackling more superficial concerns (documentation formatting).
+3. **Progressive Enhancement**: Address foundational issues first (code structure) before tackling
+more superficial concerns (documentation formatting).
 
-4. **Technical Debt Management**: Tracking formatting issues as separate tasks helps maintain project momentum while acknowledging work that still needs to be done.
+4. **Technical Debt Management**: Tracking formatting issues as separate tasks helps maintain
+project momentum while acknowledging work that still needs to be done.
 
 ---
 

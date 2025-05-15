@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document outlines the plan for refactoring `src/protocol.rs` into a more maintainable structure with multiple submodules. The file has grown too large and is difficult to edit.
+This document outlines the plan for refactoring `src/protocol.rs` into a more maintainable
+structure with multiple submodules. The file has grown too large and is difficult to edit.
 
 We will follow a layer-based separation approach, organizing code by abstraction layers.
 
@@ -10,7 +11,7 @@ We will follow a layer-based separation approach, organizing code by abstraction
 
 The new structure will be organized into these files:
 
-```
+```text
 src/protocol/
 ├── mod.rs              # Re-exports and documentation
 ├── base.rs             # Foundation: Nil, Cons, base traits

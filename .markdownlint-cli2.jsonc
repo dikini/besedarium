@@ -1,0 +1,23 @@
+{
+  // Default state for all rules
+  "default": true,
+  
+  // MD013/line-length - Line length
+  "MD013": {
+    "line_length": 100,
+    "heading_line_length": 100,
+    "code_block_line_length": 100,
+    "tables": false
+  },
+  
+  // MD029/ol-prefix - Ordered list item prefix
+  "MD029": false, // Disable ordered list numbering checks
+  
+  // MD033/no-inline-html - Allow specific inline HTML elements
+  "MD033": {
+    "allowed_elements": ["br", "N"]
+  },
+  
+  // Include all md files except node_modules
+  "globs": ["**/*.md", "!node_modules/**"]
+}

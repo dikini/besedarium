@@ -2,7 +2,7 @@
 
 ## Active Tasks
 
-- [ ] Fix markdown linting issues across documentation files
+- [ ] Fix markdown linting issues across documentation files (wip)
   - [ ] Address line length issues (over 80 characters)
   - [ ] Fix list formatting issues (missing blank lines)
   - [ ] Resolve heading formatting issues
