@@ -25,8 +25,8 @@ src/protocol/
 ### Phase 1: Preparation
 - [x] Create git branch `refactor/protocol-modules`
 - [x] Create TODO.md with detailed tasks
-- [ ] Create a GitHub issue documenting the need for refactoring
-- [ ] Create a draft PR linked to the issue and branch
+- [x] Create a GitHub issue documenting the need for refactoring (Issue #11)
+- [x] Create a draft PR linked to the issue and branch (PR #12)
 
 ### Phase 2: File Structure Setup
 - [ ] Create the `src/protocol` directory
