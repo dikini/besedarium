@@ -29,9 +29,9 @@ src/protocol/
 - [x] Create a draft PR linked to the issue and branch (PR #12)
 
 ### Phase 2: File Structure Setup
-- [ ] Create the `src/protocol` directory
-- [ ] Create an initial `mod.rs` file with basic re-exports
-- [ ] Set up empty module files with documentation headers
+- [x] Create the `src/protocol` directory
+- [x] Create an initial `mod.rs` file with basic re-exports
+- [x] Set up empty module files with documentation headers
 
 ### Phase 3: Code Migration
 - [ ] Move type-level foundational code to `base.rs` (Nil, Cons, etc.)
