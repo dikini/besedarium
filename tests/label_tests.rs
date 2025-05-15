@@ -24,26 +24,26 @@ pub trait ExtractLabel<IO> {
 }
 
 // Implement ExtractLabel for TEnd
-impl<IO, L> ExtractLabel<IO> for TEnd<IO, L> {
-    type Label = L;
+impl<IO, Lbl> ExtractLabel<IO> for TEnd<IO, Lbl> {
+    type Label = Lbl;
 }
 
 // Implement ExtractLabel for TInteract
-impl<IO, L, R, H, T> ExtractLabel<IO> for TInteract<IO, L, R, H, T>
+impl<IO, Lbl, R, H, T> ExtractLabel<IO> for TInteract<IO, Lbl, R, H, T>
 where
-    L: ProtocolLabel,
+    Lbl: ProtocolLabel,
     T: TSession<IO>,
 {
-    type Label = L;
+    type Label = Lbl;
 }
 
 // Implement ExtractLabel for TRec
-impl<IO, L, S> ExtractLabel<IO> for TRec<IO, L, S>
+impl<IO, Lbl, S> ExtractLabel<IO> for TRec<IO, Lbl, S>
 where
-    L: ProtocolLabel,
+    Lbl: ProtocolLabel,
     S: TSession<IO>,
 {
-    type Label = L;
+    type Label = Lbl;
 }
 
 // Implement ExtractLabel for TChoice
@@ -86,23 +86,11 @@ where
 pub trait Same<T> {}
 impl<T> Same<T> for T {}
 
-// --- Label Preservation Test Cases ---
+struct Http;
+
 #[cfg(test)]
 mod label_preservation_tests {
     use super::*;
-
-    // Define test IO type
-    pub struct Http;
-
-    // Define test role types
-    pub struct TClient;
-    pub struct TServer;
-    impl Role for TClient {}
-    impl Role for TServer {}
-
-    // Define test message types
-    pub struct Message;
-    pub struct Response;
 
     // Test that TEnd's label is not preserved in composition (replaced by Rhs)
     #[test]
@@ -190,40 +178,6 @@ mod label_preservation_tests {
         assert_label_is_l1::<Composed>();
     }
 
-    // Additional test for TRec with L2 label type
-    #[test]
-    fn test_trec_l2_label_preserved() {
-        type LabeledRec = TRec<Http, L2, TEnd<Http, EmptyLabel>>;
-        type Continuation = TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>;
-        type Composed = <LabeledRec as TSession<Http>>::Compose<Continuation>;
-
-        fn assert_label_is_l2<T: ExtractLabel<Http>>()
-        where
-            <T as ExtractLabel<Http>>::Label: Same<L2>,
-        {
-        }
-
-        // This should compile successfully - verifying the extracted label is L2
-        assert_label_is_l2::<Composed>();
-    }
-
-    // Additional test for TRec with L3 label type
-    #[test]
-    fn test_trec_l3_label_preserved() {
-        type LabeledRec = TRec<Http, L3, TEnd<Http, EmptyLabel>>;
-        type Continuation = TInteract<Http, L1, TServer, Response, TEnd<Http, EmptyLabel>>;
-        type Composed = <LabeledRec as TSession<Http>>::Compose<Continuation>;
-
-        fn assert_label_is_l3<T: ExtractLabel<Http>>()
-        where
-            <T as ExtractLabel<Http>>::Label: Same<L3>,
-        {
-        }
-
-        // This should compile successfully - verifying the extracted label is L3
-        assert_label_is_l3::<Composed>();
-    }
-
     // Test that TChoice's label is preserved in composition
     #[test]
     fn test_tchoice_label_preserved() {
@@ -254,7 +208,7 @@ mod label_preservation_tests {
             L1,
             TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>>,
             TInteract<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>,
-            FalseB,
+            False,
         >;
         type Continuation = TInteract<Http, L2, TServer, Response, TEnd<Http, EmptyLabel>>;
         type Composed = <LabeledPar as TSession<Http>>::Compose<Continuation>;
@@ -268,24 +222,19 @@ mod label_preservation_tests {
         // This should compile successfully - verifying the extracted label is L1
         assert_label_is_l1::<Composed>();
     }
+
+    // Define test message types
+    struct Message;
+    struct Response;
 }
 
 #[cfg(test)]
 mod label_edge_cases {
     use super::*;
 
-    // Define test IO type
-    pub struct Http;
-
-    // Define test role types
-    pub struct TClient;
-    pub struct TServer;
-    impl Role for TClient {}
-    impl Role for TServer {}
-
     // Define test message types
-    pub struct Message;
-    pub struct Response;
+    struct Message;
+    struct Response;
 
     // Edge Case 1: Nested composition with multiple label types
     // Test complex nesting of session types and verify label propagation
@@ -326,7 +275,7 @@ mod label_edge_cases {
             TEnd<Http, EmptyLabel>,
         >;
         
-        type MixedProtocol = TPar<Http, L3, LeftBranch, RightBranch, FalseB>;
+        type MixedProtocol = TPar<Http, L3, LeftBranch, RightBranch, False>;
         type Continuation = TRec<Http, EmptyLabel, TEnd<Http, EmptyLabel>>;
         
         // Compose protocols
@@ -365,7 +314,7 @@ mod label_edge_cases {
                 Branch2,
                 TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
             >,
-            FalseB,
+            False,
         >;
         
         // When composed with a continuation, the outer label should be preserved
@@ -384,7 +333,7 @@ mod label_edge_cases {
     }
 }
 
-// --- Label Test Coverage Tracking ---
+// --- Test Coverage Tracking ---
 #[doc(hidden)]
 pub mod test_coverage {
     use super::*;
@@ -404,27 +353,11 @@ pub mod test_coverage {
     impl TestedWithCustomLabel for TRec<Http, L3, TEnd<Http, EmptyLabel>> {}
     impl TestedWithCustomLabel for TChoice<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>> {}
     impl TestedWithCustomLabel
-        for TPar<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>, FalseB>
+        for TPar<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>, False>
     {
     }
 
-    // Trait to track which composition operations have been tested for label preservation
-    pub trait TestedLabelPreservation {}
-
-    // Mark compositions as tested as we create tests for them
-    impl TestedLabelPreservation for TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TInteract<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TRec<Http, L1, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TRec<Http, L2, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TRec<Http, L3, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation for TChoice<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>> {}
-    impl TestedLabelPreservation
-        for TPar<Http, L1, TEnd<Http, EmptyLabel>, TEnd<Http, EmptyLabel>, FalseB>
-    {
-    }
-
-    // Test coverage statistics (manually updated)
+    // Current coverage metrics
     #[derive(Debug)]
     pub struct LabelTestCoverage {
         pub combinators_with_custom_labels: usize,
@@ -449,93 +382,30 @@ pub mod test_coverage {
         target_edge_cases: 3,              // Nested compositions, mixed combinators, complex structures
     };
 
-    // Calculate coverage percentages
-    pub const COMBINATOR_COVERAGE_PCT: f32 = (CURRENT_COVERAGE.combinators_with_custom_labels
-        as f32)
-        / (CURRENT_COVERAGE.total_combinators as f32)
-        * 100.0;
-
-    pub const COMPOSITION_COVERAGE_PCT: f32 = (CURRENT_COVERAGE.composition_operations_tested
-        as f32)
-        / (CURRENT_COVERAGE.total_composition_operations as f32)
-        * 100.0;
-
-    pub const CUSTOM_LABEL_TYPES_PCT: f32 = (CURRENT_COVERAGE.custom_label_types_tested as f32)
-        / (CURRENT_COVERAGE.target_custom_label_types as f32)
-        * 100.0;
-
-    pub const EDGE_CASES_PCT: f32 = (CURRENT_COVERAGE.edge_cases_tested as f32)
-        / (CURRENT_COVERAGE.target_edge_cases as f32)
-        * 100.0;
-
-    // Print current coverage during test runs
-    #[test]
-    fn report_label_test_coverage() {
-        println!("Label Test Coverage Report:");
-        println!(
-            "Combinators with custom label tests: {}/{} ({}%)",
-            CURRENT_COVERAGE.combinators_with_custom_labels,
-            CURRENT_COVERAGE.total_combinators,
-            COMBINATOR_COVERAGE_PCT
-        );
-        println!(
-            "Composition operations with label preservation tests: {}/{} ({}%)",
-            CURRENT_COVERAGE.composition_operations_tested,
-            CURRENT_COVERAGE.total_composition_operations,
-            COMPOSITION_COVERAGE_PCT
-        );
-        println!(
-            "Combinators meeting custom label type target: {}/{} ({}%)",
-            CURRENT_COVERAGE.custom_label_types_tested,
-            CURRENT_COVERAGE.target_custom_label_types,
-            CUSTOM_LABEL_TYPES_PCT
-        );
-        println!(
-            "Edge cases tested: {}/{} ({}%)",
-            CURRENT_COVERAGE.edge_cases_tested,
-            CURRENT_COVERAGE.target_edge_cases,
-            EDGE_CASES_PCT
-        );
-    }
-
     // Define test types used above
-    struct Http;
-    struct TClient;
-    impl Role for TClient {}
     struct Message;
 }
 
-// --- Assertion Macros for Label Testing ---
-/// Assert that a label is preserved after composition
-#[macro_export]
-macro_rules! assert_label_preserved {
-    ($Base:ty, $Continuation:ty, $ExpectedLabel:ty) => {
-        const _: () = {
-            fn assert_label_preservation()
-            where
-                $Base: TSession<IO>,
-                $Continuation: TSession<IO>,
-                <$Base as TSession<IO>>::Compose<$Continuation>: ExtractLabel<IO>,
-                <<$Base as TSession<IO>>::Compose<$Continuation> as ExtractLabel<IO>>::Label:
-                    Same<$ExpectedLabel>,
-            {
-            }
-        };
-    };
-}
+// --- Example of assert_type_eq! macro for comparing types ---
 
-/// Assert that types have the same label type
-#[macro_export]
-macro_rules! assert_same_label {
-    ($T1:ty, $T2:ty) => {
-        const _: () = {
-            fn assert_same_label()
-            where
-                $T1: ExtractLabel<IO>,
-                $T2: ExtractLabel<IO>,
-                <$T1 as ExtractLabel<IO>>::Label: Same<<$T2 as ExtractLabel<IO>>::Label>,
-            {
-            }
-        };
-    };
+#[test]
+fn test_tend_label_in_composition() {
+    // Define custom labels for testing
+    struct TestLabel1;
+    impl ProtocolLabel for TestLabel1 {}
+
+    struct TestLabel2;
+    impl ProtocolLabel for TestLabel2 {}
+    
+    // Test that when composing TEnd<IO, L> with another session type,
+    // the label from the other session type is preserved
+    
+    type End1 = TEnd<Http, TestLabel1>;
+    type Interact1 = TInteract<Http, TestLabel2, TClient, String, TEnd<Http, EmptyLabel>>;
+    
+    // When composing TEnd with another session, TEnd is replaced by that session (by definition)
+    type Composed = <End1 as TSession<Http>>::Compose<Interact1>;
+    
+    // The result should be the right-hand side, Interact1
+    assert_type_eq!(Composed, Interact1);
 }

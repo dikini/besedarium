@@ -72,11 +72,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enumerated explicit `IsEpSkipTypeImpl` impls for each endpoint variant (`EpSkip`, `EpSend`, `EpRecv`, `EpChoice`, `EpPar`, `EpEnd`)
 - Updated docs/protocol-examples.md with real API examples using `TInteract`, `TChoice`, `TRec`, `TEnd`, and explicit local-projection types (`EpSend`, `EpRecv`, `EpChoice`, `EpSkip`). Documented skip-filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
 - Recorded new patterns in work/learnings.md after protocol-examples updates, including marker-type dispatch for `EpSkip` and explicit recursion modeling with `TRec`.
-- Refactored `TEnd<IO, L>` to `TEnd<IO, Lbl>` for parameter name consistency across combinators as part of Phase 2 of the label parameter refactoring.
+- Refactored `TEnd<IO, L>` to `TEnd<IO, Lbl>`, `TInteract<IO, L, R, H, T>` to `TInteract<IO, Lbl, R, H, T>`, and `TRec<IO, L, S>` to `TRec<IO, Lbl, S>` for parameter name consistency across combinators as part of Phase 2 of the label parameter refactoring.
 - Updated introspection code in `introspection.rs` to use consistent `Lbl` parameter naming for `RolesOf` and `LabelsOf` traits as part of Phase 3.
 - Updated projection trait implementations in `protocol.rs` to use consistent `Lbl` parameter naming for `ProjectRole` and related traits.
-- Refactored `TInteract` struct definition to use `Lbl` parameter naming consistently with other combinators.
-- Refactored `TRec` struct definition to use `Lbl` parameter naming consistently with other combinators.
+- Updated documentation and examples to use the standardized `Lbl` parameter name throughout the codebase.
 - Updated label parameter documentation in `protocol.rs` to reflect the new consistent naming convention.
 - Updated test coverage metrics in `work/metrics/label_coverage.md` to reflect the improved test coverage.
 - Enhanced learnings document with insights from Phase 2 and Phase 3 of the label parameter refactoring, focusing on test-first refactoring approach and parameter name consistency benefits.
