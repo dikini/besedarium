@@ -23,17 +23,20 @@ src/protocol/
 ## Tasks
 
 ### Phase 1: Preparation
+
 - [x] Create git branch `refactor/protocol-modules`
 - [x] Create TODO.md with detailed tasks
 - [x] Create a GitHub issue documenting the need for refactoring (Issue #11)
 - [x] Create a draft PR linked to the issue and branch (PR #12)
 
 ### Phase 2: File Structure Setup
+
 - [x] Create the `src/protocol` directory
 - [x] Create an initial `mod.rs` file with basic re-exports
 - [x] Set up empty module files with documentation headers
 
 ### Phase 3: Code Migration
+
 - [ ] Move type-level foundational code to `base.rs` (Nil, Cons, etc.)
   - [ ] Update imports
   - [ ] Run tests to verify correctness
@@ -51,6 +54,7 @@ src/protocol/
   - [ ] Run tests to verify correctness
 
 ### Phase 4: Cleanup and Verification
+
 - [ ] Update any remaining import paths across the codebase
 - [ ] Run comprehensive test suite
 - [ ] Run cargo clippy to ensure code quality
@@ -58,11 +62,12 @@ src/protocol/
 - [ ] Update documentation references if needed
 
 ### Phase 5: Finalization
+
 - [ ] Convert PR from draft to ready for review
 - [ ] Address review feedback
-- [ ] Merge to main branch
 
 ## Expected Timeline
+
 - Phase 1-2: 1 day
 - Phase 3: 2-3 days
 - Phase 4-5: 1 day

@@ -74,6 +74,7 @@ impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::False> fo
 ```
 
 This approach:
+
 - Avoids trait implementation conflicts
 - Provides precise control over implementation selection
 - Improves maintainability by separating distinct cases
@@ -107,6 +108,7 @@ impl Not for False { type Output = True; }
 ```
 
 These operations enable:
+
 - Complex type-level conditions
 - Composition of multiple boolean results
 - Rich type-level protocol analysis
@@ -188,6 +190,7 @@ where
 ```
 
 This pattern enables:
+
 - Recursive traversal of nested protocol structures
 - Boolean composition of role presence
 - Precise typing for projection decisions
@@ -301,6 +304,37 @@ Three primary patterns for session type runtime implementation:
 9. **Parameter Consistency** across the codebase improves readability and simplifies reasoning.
 
 10. **Edge Case Testing** reveals subtle design principles that may not be apparent from basic tests.
+
+## 5. Code Organization Insights
+
+### Modular Protocol System Structure
+
+The refactoring of the protocol system into smaller, purpose-specific files revealed several important insights:
+
+1. **Layer-Based Organization**: Separating the protocol system into conceptual layers improves maintainability:
+   - `base.rs`: Core traits and types used across the entire system
+   - `global.rs`: Global protocol type definitions and combinators
+   - `local.rs`: Local endpoint type definitions and behaviors
+   - `transforms.rs`: Transformation logic between global and local types
+   - `utils.rs`: Helper functions and utilities
+
+2. **Interface Stability**: By carefully designing the public module interfaces and re-exports, we maintained full backward compatibility while significantly improving the internal organization.
+
+3. **Documentation Cohesion**: Comments and documentation now align more closely with the code they explain, making it easier to understand specific components without having to search through a large file.
+
+4. **Testing Focus**: Tests can now target specific components more precisely, making it easier to understand test failures and add new tests for specific features.
+
+5. **Evolution Path**: The modular structure creates a clearer path for evolving individual components while maintaining the overall system architecture.
+
+### Style and Documentation Standards
+
+1. **Consistent Style**: Using `cargo fmt` and `cargo clippy` consistently ensures that the code follows Rust's standard style guidelines.
+
+2. **Documentation Style**: Separating markdown style fixes from code refactoring prevents scope creep and helps maintain focus on the primary task.
+
+3. **Progressive Enhancement**: Address foundational issues first (code structure) before tackling more superficial concerns (documentation formatting).
+
+4. **Technical Debt Management**: Tracking formatting issues as separate tasks helps maintain project momentum while acknowledging work that still needs to be done.
 
 ---
 

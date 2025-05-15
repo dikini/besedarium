@@ -48,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated README.md protocol examples and projection example to match the current API and pass doctests.
-- Updated Plan-labels.md to clarify that marker types (not const generics) are used for labels, and no migration is needed for this greenfield library.
 - Refactored integration tests to avoid macro name collisions.
 - Updated documentation and project plan to reflect completed tasks.
 - Refactored n-ary combinator macros and trait implementations to use canonical Rust pattern (no automatic `TEnd<IO>` appending, base case for Nil, recursive case for Cons).
@@ -65,6 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README title, headings, and docs to reflect the new project name "Besedarium".
 - Refactored combinator projection logic to use helper traits and avoid overlapping trait impls, improving maintainability and extensibility.
 - Updated documentation and README to include a dedicated section on projection from global to local session types.
+- Refactored the protocol system into a modular structure with separate files:
+  - Created a dedicated `protocol/` module with `base.rs`, `global.rs`, `local.rs`, `transforms.rs`, and `utils.rs`
+  - Separated core protocol types, traits, and functionality into logically organized files
+  - Improved code organization and maintainability without changing behavior
+  - Updated all code style to pass `cargo fmt` and `cargo clippy` checks
 - All documentation files in `docs/` have been reformatted for markdownlint compliance: long lines wrapped, spacing and heading issues fixed, and style improved for readability and consistency. No content changes were made.
 - All protocol/session combinators, endpoint types, and projection traits are now re-exported at the crate root for user and test compatibility.
 - Code formatting and style updated to follow rustfmt and clippy recommendations.
