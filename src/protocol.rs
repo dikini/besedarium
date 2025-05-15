@@ -30,35 +30,6 @@ use core::marker::PhantomData;
 /// ## See also
 /// - [`ToTPar`], [`ToTChoice`], [`Disjoint`], [`UniqueList`], [`ConcatRoles`]
 /// - Macros: `tpar!`, `tchoice!`
-
-/// # Resolving Overlapping Trait Implementations with Helper Traits
-///
-/// Rust's trait system does not allow overlapping or conflicting trait impls.
-/// This is a challenge for type-level programming, especially when projecting
-/// global protocols to local types, where we want to dispatch on type-level
-/// booleans (e.g., role equality) or other conditions.
-///
-/// ## Pattern: Helper Traits for Disambiguation
-/// - Instead of writing multiple impls for the same trait (which would overlap),
-///   we write a single impl that computes a type-level flag (e.g., `TrueB`/`FalseB`)
-///   and then delegates to a *helper trait* that is specialized for each case.
-/// - The main trait (e.g., `ProjectRole`) computes the flag and calls the helper
-///   (e.g., `ProjectInteract<Flag, ...>`), which has non-overlapping impls for each case.
-///
-/// ## Example: Projecting an Interaction
-/// - `ProjectRole<Me, IO, TInteract<IO, L, R, H, T>>` computes whether `Me` is the
-///   same as `R` (the role performing the action) using `RoleEq`.
-/// - It then dispatches to `ProjectInteract<Flag, Me, IO, R, H, T>`, where `Flag`
-///   is `TrueB` if `Me == R`, `FalseB` otherwise.
-/// - `ProjectInteract` has separate impls for `TrueB` and `FalseB`, so there is no overlap.
-///
-/// ## Why use this pattern?
-/// - Avoids Rust's coherence/orphan rules and overlapping impl errors.
-/// - Makes the logic explicit and easy to extend for new cases.
-/// - Keeps the main trait (e.g., `ProjectRole`) simple and compositional.
-///
-/// ## See also
-/// - [`ProjectRole`], [`ProjectInteract`], [`ProjectChoice`], [`ProjectPar`]
 ///
 /// Type-level empty list for n-ary combinators and role/label sets.
 /// Used as the base case for type-level lists.
@@ -84,14 +55,14 @@ pub trait TSession<IO>: sealed::Sealed {
 /// End of a protocol session.
 ///
 /// - `IO`: Protocol marker type.
-/// - `L`: Label for this end (default: EmptyLabel).
+/// - `Lbl`: Label for this end (default: EmptyLabel).
 ///
 /// Used to indicate protocol termination.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TEnd<IO, L = types::EmptyLabel>(PhantomData<(IO, L)>);
+pub struct TEnd<IO, Lbl = types::EmptyLabel>(PhantomData<(IO, Lbl)>);
 
-impl<IO, L> sealed::Sealed for TEnd<IO, L> {}
-impl<IO, L> TSession<IO> for TEnd<IO, L> {
+impl<IO, Lbl> sealed::Sealed for TEnd<IO, Lbl> {}
+impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
     type Compose<Rhs: TSession<IO>> = Rhs;
     const IS_EMPTY: bool = true;
 }
@@ -99,41 +70,41 @@ impl<IO, L> TSession<IO> for TEnd<IO, L> {
 /// Represents a single interaction in a protocol session.
 ///
 /// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `L`: Label for this interaction (for projection and debugging).
+/// - `Lbl`: Label for this interaction (for projection and debugging).
 /// - `R`: Role performing the action (sender or receiver).
 /// - `H`: Message type being sent or received.
 /// - `T`: Continuation protocol after this interaction.
 ///
 /// Used to model a single send/receive step in a protocol.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TInteract<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>>(
-    PhantomData<(IO, L, R, H, T)>,
+pub struct TInteract<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
+    PhantomData<(IO, Lbl, R, H, T)>,
 );
 
-impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
-    for TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
+    for TInteract<IO, Lbl, R, H, T>
 {
 }
-impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
-    for TInteract<IO, L, R, H, T>
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
+    for TInteract<IO, Lbl, R, H, T>
 {
-    type Compose<Rhs: TSession<IO>> = TInteract<IO, L, R, H, T::Compose<Rhs>>;
+    type Compose<Rhs: TSession<IO>> = TInteract<IO, Lbl, R, H, T::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
 /// Recursive session type for repeating protocol fragments.
 ///
 /// - `IO`: Protocol marker type.
-/// - `L`: Label for this recursion (for projection and debugging).
+/// - `Lbl`: Label for this recursion (for projection and debugging).
 /// - `S`: The protocol fragment to repeat (may refer to itself).
 ///
 /// Used to model loops or streaming protocols.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRec<IO, L: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, L, S)>);
+pub struct TRec<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
 
-impl<IO, L: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TRec<IO, L, S> {}
-impl<IO, L: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, L, S> {
-    type Compose<Rhs: TSession<IO>> = TRec<IO, L, S::Compose<Rhs>>;
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TRec<IO, Lbl, S> {}
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, Lbl, S> {
+    type Compose<Rhs: TSession<IO>> = TRec<IO, Lbl, S::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
@@ -412,7 +383,7 @@ pub trait ProjectRole<Me, IO, G: TSession<IO>> {
 }
 
 // Base case: projecting end-of-session yields EpEnd
-impl<Me, IO, L> ProjectRole<Me, IO, TEnd<IO, L>> for ()
+impl<Me, IO, Lbl> ProjectRole<Me, IO, TEnd<IO, Lbl>> for ()
 where
     Me: Role,
 {
@@ -420,10 +391,10 @@ where
 }
 
 // Projection for single interaction: dispatch on role equality
-impl<Me, IO, L, R, H, T> ProjectRole<Me, IO, TInteract<IO, L, R, H, T>> for ()
+impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R, H, T>> for ()
 where
     Me: Role,
-    L: types::ProtocolLabel,
+    Lbl: types::ProtocolLabel,
     R: Role,
     T: TSession<IO>,
     Me: RoleEq<R>,
@@ -477,7 +448,196 @@ pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
     type Out: EpSession<IO, Me>;
 }
 
-/// Helper trait for projecting a protocol parallel composition.
+// Projection implementation for TChoice - delegate to ProjectChoice helper
+impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    L: ContainsRole<Me>,
+    <L as ContainsRole<Me>>::Output: types::Bool,
+    R: ContainsRole<Me>,
+    <R as ContainsRole<Me>>::Output: types::Bool,
+    (): ProjectChoiceCase<
+        Me,
+        IO,
+        L,
+        R,
+        <L as ContainsRole<Me>>::Output,
+        <R as ContainsRole<Me>>::Output,
+    >,
+{
+    type Out = <() as ProjectChoiceCase<
+        Me,
+        IO,
+        L,
+        R,
+        <L as ContainsRole<Me>>::Output,
+        <R as ContainsRole<Me>>::Output,
+    >>::Out;
+}
+
+// Helper trait for handling different cases of ProjectChoice based on role presence
+pub trait ProjectChoiceCase<Me, IO, L: TSession<IO>, R: TSession<IO>, LContainsMe, RContainsMe> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Case 1: Both branches contain the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::True> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, L>,
+    (): ProjectRole<Me, IO, R>,
+{
+    type Out =
+        EpChoice<IO, Me, <() as ProjectRole<Me, IO, L>>::Out, <() as ProjectRole<Me, IO, R>>::Out>;
+}
+
+// Case 2: Only left branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::False> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, L>,
+{
+    type Out = <() as ProjectRole<Me, IO, L>>::Out;
+}
+
+// Case 3: Only right branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::False, types::True> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, R>,
+{
+    type Out = <() as ProjectRole<Me, IO, R>>::Out;
+}
+
+// Case 4: Neither branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::False, types::False> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+{
+    type Out = EpSkip<IO, Me>;
+}
+
+// --- Helper trait to check if a role is present in a protocol branch.
+/// Returns a type-level boolean indicating whether the role is present.
+pub trait ContainsRole<R> {
+    type Output: types::Bool;
+}
+
+/// Helper trait to check if a role is NOT present in a protocol branch.
+pub trait NotContainsRole<R> {}
+
+// End always contains no roles
+impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
+    type Output = types::False;
+}
+
+impl<IO, Lbl, R> NotContainsRole<R> for TEnd<IO, Lbl> {}
+
+// TInteract contains the role if either the current role or continuation contains it
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R1: RoleEq<R2>,
+    <R1 as RoleEq<R2>>::Output: types::Bool,
+    T: TSession<IO> + ContainsRole<R2>,
+    <T as ContainsRole<R2>>::Output: types::Bool,
+    // The following ensures Or can be used with these types
+    <R1 as RoleEq<R2>>::Output: types::BoolOr<<T as ContainsRole<R2>>::Output>,
+{
+    // True if either this role or the continuation contains the role
+    type Output = types::Or<<R1 as RoleEq<R2>>::Output, <T as ContainsRole<R2>>::Output>;
+}
+
+// TInteract doesn't contain the role if both the current role and continuation don't
+impl<IO, Lbl, H, T, R1, R2> NotContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R1: RoleEq<R2>,
+    <R1 as RoleEq<R2>>::Output: types::Bool + types::Not,
+    <<R1 as RoleEq<R2>>::Output as types::Not>::Output: types::Bool,
+    T: TSession<IO> + NotContainsRole<R2>,
+{
+}
+
+// TChoice contains the role if either branch contains it
+impl<IO, Lbl, L, R, RoleT> ContainsRole<RoleT> for TChoice<IO, Lbl, L, R>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + ContainsRole<RoleT>,
+    <L as ContainsRole<RoleT>>::Output: types::Bool,
+    R: TSession<IO> + ContainsRole<RoleT>,
+    <R as ContainsRole<RoleT>>::Output: types::Bool,
+    // The following ensures Or can be used with these types
+    <L as ContainsRole<RoleT>>::Output: types::BoolOr<<R as ContainsRole<RoleT>>::Output>,
+{
+    // True if either branch contains the role
+    type Output = types::Or<<L as ContainsRole<RoleT>>::Output, <R as ContainsRole<RoleT>>::Output>;
+}
+
+// TChoice doesn't contain the role if neither branch contains it
+impl<IO, Lbl, L, R, RoleT> NotContainsRole<RoleT> for TChoice<IO, Lbl, L, R>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + NotContainsRole<RoleT>,
+    R: TSession<IO> + NotContainsRole<RoleT>,
+{
+}
+
+// Use a single implementation with dispatch on L branch containment
+impl<IO, Lbl, L, R, IsDisjoint, RoleT> ContainsRole<RoleT> for TPar<IO, Lbl, L, R, IsDisjoint>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + ContainsRole<RoleT>,
+    <L as ContainsRole<RoleT>>::Output: types::Bool,
+    R: TSession<IO> + ContainsRole<RoleT>,
+    <R as ContainsRole<RoleT>>::Output: types::Bool,
+    // Use a helper trait to dispatch based on L branch containment
+    (): TParContainsRoleImpl<
+        <L as ContainsRole<RoleT>>::Output,
+        <R as ContainsRole<RoleT>>::Output,
+    >,
+{
+    type Output = <() as TParContainsRoleImpl<
+        <L as ContainsRole<RoleT>>::Output,
+        <R as ContainsRole<RoleT>>::Output,
+    >>::Output;
+}
+
+// Helper trait for TPar role containment logic
+pub trait TParContainsRoleImpl<LContains, RContains> {
+    type Output: types::Bool;
+}
+
+// If either branch contains the role, TPar contains it
+impl TParContainsRoleImpl<types::True, types::True> for () {
+    type Output = types::True;
+}
+
+impl TParContainsRoleImpl<types::True, types::False> for () {
+    type Output = types::True;
+}
+
+impl TParContainsRoleImpl<types::False, types::True> for () {
+    type Output = types::True;
+}
+
+// If neither branch contains the role, TPar doesn't contain it
+impl TParContainsRoleImpl<types::False, types::False> for () {
+    type Output = types::False;
+}
+
+// --- Helper trait for projecting a protocol parallel composition.
 ///
 /// - `Me`: The role being projected.
 /// - `IO`: Protocol marker type.
@@ -485,13 +645,6 @@ pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
 pub trait ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> {
     type Out: EpSession<IO, Me>;
 }
-
-// --- ContainsRole trait: type-level check if a role is present in a protocol branch ---
-/// Type-level trait to check if a role is present in a protocol branch.
-pub trait ContainsRole<R> {
-    type Output;
-}
-// Implementations for Nil, Cons, TInteract, TChoice, TPar, TRec, TEnd, etc. should exist elsewhere in the codebase.
 
 // --- ProjectParBranch: Helper trait to dispatch on role presence in a parallel branch ---
 /// Helper trait to project a parallel branch for a role, or skip if not present.
@@ -851,4 +1004,60 @@ where
     (): FilterSkips<IO, Me, T>,
 {
     type Out = Cons<H, <() as FilterSkips<IO, Me, T>>::Out>;
+}
+
+// Projection implementation for TPar - delegate to ProjectPar helper
+impl<Me, IO, Lbl, L, R, IsDisjoint> ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectPar<Me, IO, L, R>,
+{
+    type Out = <() as ProjectPar<Me, IO, L, R>>::Out;
+}
+
+// Implement ProjectPar by projecting both branches and composing the result
+impl<Me, IO, L, R> ProjectPar<Me, IO, L, R> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    // Determine if branches contain the role
+    L: ContainsRole<Me>,
+    <L as ContainsRole<Me>>::Output: types::Bool,
+    R: ContainsRole<Me>,
+    <R as ContainsRole<Me>>::Output: types::Bool,
+    // Project each branch conditionally based on role presence
+    (): ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>,
+    (): ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>,
+    // Get the resulting endpoint types
+    <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out:
+        EpSession<IO, Me> +
+        IsEpSkipVariant<IO, Me> +
+        IsEpEndVariant<IO, Me>,
+    <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out:
+        EpSession<IO, Me> +
+        IsEpSkipVariant<IO, Me> +
+        IsEpEndVariant<IO, Me>,
+    // Ensure the output types have the right marker types
+    <<() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out as IsEpSkipVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out as IsEpSkipVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out as IsEpEndVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out as IsEpEndVariant<IO, Me>>::Output: types::Bool,
+    // Compose the projected branches
+    (): ComposeProjectedParBranches<
+        IO,
+        Me,
+        <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out,
+        <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out
+    >,
+{
+    type Out = <() as ComposeProjectedParBranches<
+        IO,
+        Me,
+        <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out,
+        <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out
+    >>::Out;
 }

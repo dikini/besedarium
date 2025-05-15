@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `docs/label-refactoring.md`: A detailed strategy document for standardizing label parameter naming across session type combinators, including current state analysis, parameter usage audit, test suite analysis, implementation plan, and recommendations for label preservation.
 - Added `docs/runtime-implementation-patterns.md`: A reference guide for implementing local per-role runtimes in Rust, with detailed examples of how to handle complex session type combinators (choice/offer, parallel composition, and recursion) across different implementation approaches.
 - Added comparative analysis of runtime implementation patterns to `work/learnings.md`, identifying three primary approaches (Typed Channel Wrappers, Code Generation with Procedural Macros, and State Machine Builders) with their respective trade-offs and implementation considerations.
+- Added `work/metrics/label_coverage.md`: A tracking document for label parameter test coverage metrics, including combinator coverage, composition operation coverage, custom label type coverage, and edge case coverage.
+- Added comprehensive testing for label behavior in edge cases: nested compositions, mixed combinator interactions, and complex protocol structures with multiple branches and nested compositions.
+- Added additional tests for `TInteract` and `TRec` with multiple custom label types (`L1`, `L2`, `L3`) to achieve full test coverage.
+- Added pre-implementation tests for introspection functionality to verify behavior before and after label parameter refactoring.
+- Added pre-implementation tests for projection traits to ensure consistent behavior throughout the refactoring process.
+- Completed projection machinery by implementing missing `ProjectRole` for `TChoice` and `TPar`, enabling full end-to-end projection from global to local session types for all combinators. New helper traits (`ProjectChoiceCase`, `TParContainsRoleImpl`) provide type-level dispatch to handle different role containment scenarios.
+- Added type-level boolean operations (`Or`, `Not`, `BoolOr`) to support the projection machinery with proper type constraints.
+- Enhanced `ContainsRole`/`NotContainsRole` traits with rigorous type-level reasoning to determine role presence in nested protocol structures.
 
 ### Changed
 
@@ -64,6 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enumerated explicit `IsEpSkipTypeImpl` impls for each endpoint variant (`EpSkip`, `EpSend`, `EpRecv`, `EpChoice`, `EpPar`, `EpEnd`)
 - Updated docs/protocol-examples.md with real API examples using `TInteract`, `TChoice`, `TRec`, `TEnd`, and explicit local-projection types (`EpSend`, `EpRecv`, `EpChoice`, `EpSkip`). Documented skip-filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
 - Recorded new patterns in work/learnings.md after protocol-examples updates, including marker-type dispatch for `EpSkip` and explicit recursion modeling with `TRec`.
+- Refactored `TEnd<IO, L>` to `TEnd<IO, Lbl>`, `TInteract<IO, L, R, H, T>` to `TInteract<IO, Lbl, R, H, T>`, and `TRec<IO, L, S>` to `TRec<IO, Lbl, S>` for parameter name consistency across combinators as part of Phase 2 of the label parameter refactoring.
+- Updated introspection code in `introspection.rs` to use consistent `Lbl` parameter naming for `RolesOf` and `LabelsOf` traits as part of Phase 3.
+- Updated projection trait implementations in `protocol.rs` to use consistent `Lbl` parameter naming for `ProjectRole` and related traits.
+- Updated documentation and examples to use the standardized `Lbl` parameter name throughout the codebase.
+- Updated label parameter documentation in `protocol.rs` to reflect the new consistent naming convention.
+- Updated test coverage metrics in `work/metrics/label_coverage.md` to reflect the improved test coverage.
+- Enhanced learnings document with insights from Phase 2 and Phase 3 of the label parameter refactoring, focusing on test-first refactoring approach and parameter name consistency benefits.
 
 ### Removed
 

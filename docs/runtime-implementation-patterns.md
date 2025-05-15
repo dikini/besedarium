@@ -16,11 +16,11 @@ This guide explores different implementation approaches for these combinators, p
 
 Typed channel wrappers use Rust's type system to enforce protocol correctness at compile time. The channel's type encodes the current state of the protocol, and operations advance the type to the next state.
 
-### Choice/Offer Combinator
+### 1.1 Choice/Offer Combinator (Typed Channel Wrappers)
 
 The Choice/Offer combinator represents a point where one role makes a choice (sender) and another role offers different branches to handle that choice (receiver).
 
-#### Implementing Choice (Sender Side)
+#### 1.1.1 Implementing Choice (Sender Side)
 
 ```rust
 // Session type: EpChoice<Server, "greeting", (EpSend<Server, String, "hello", EpEnd>, EpSend<Server, i32, "count", EpEnd>)>
@@ -36,9 +36,8 @@ impl<Role, Label, Branches> TypedChannel<EpChoice<Role, Label, Branches>> {
         Branches: GetBranch<Idx, Output = B>,
     {
         // Send the branch selection over the channel
-        self.inner.send_branch_selection(branch_index.into_usize());
-        
-        // Return a channel typed with the selected branch's session type
+        // (In a real implementation, this would serialize and send the index/label)
+        // Here, we just change the type to the selected branch
         TypedChannel {
             inner: self.inner,
             _marker: PhantomData,
@@ -54,33 +53,25 @@ fn client_protocol(channel: TypedChannel<EpChoice<Server, "greeting", (EpSend<Se
     
     if use_hello {
         // Select first branch - note how the channel type changes
-        let channel: TypedChannel<EpSend<Server, String, "hello", EpEnd>> = 
-            channel.select::<_, Branch<0>>(Branch::<0>);
-            
-        // Now we can only send a String message
+        let channel = channel.select::<EpSend<Server, String, "hello", EpEnd>, _>(0);
         channel.send("Hello, server!".to_string());
     } else {
         // Select second branch
-        let channel: TypedChannel<EpSend<Server, i32, "count", EpEnd>> = 
-            channel.select::<_, Branch<1>>(Branch::<1>);
-            
-        // Now we can only send an i32 message
+        let channel = channel.select::<EpSend<Server, i32, "count", EpEnd>, _>(1);
         channel.send(42);
     }
 }
 ```
 
-#### Implementing Offer (Receiver Side)
+#### 1.1.2 Implementing Offer (Receiver Side)
 
 ```rust
 // Session type: EpOffer<Client, "greeting", (EpRecv<Client, String, "hello", EpEnd>, EpRecv<Client, i32, "count", EpEnd>)>
 impl<Role, Label, Branches> TypedChannel<EpOffer<Role, Label, Branches>> {
     pub fn offer<R>(self, handlers: BranchHandlers<Branches, R>) -> R {
-        // Receive the branch selection
-        let branch_index = self.inner.receive_branch_selection();
-        
-        // Dispatch to the appropriate handler based on the branch index
-        handlers.handle_branch(branch_index, self)
+        // Receive the branch selection (in a real implementation, this would deserialize)
+        // For demonstration, we assume branch 0 is always selected
+        handlers.handle_branch(0, self)
     }
 }
 
@@ -115,7 +106,7 @@ fn server_protocol(channel: TypedChannel<EpOffer<Client, "greeting", (EpRecv<Cli
 }
 ```
 
-#### Key Benefits of This Approach
+#### 1.1.3 Key Benefits of Typed Channel Wrappers
 
 1. **Type Safety**: Branch selection is verified at compile time
 2. **Explicit Branching**: The choice structure is clearly visible in the code
@@ -124,11 +115,11 @@ fn server_protocol(channel: TypedChannel<EpOffer<Client, "greeting", (EpRecv<Cli
 
 The Typed Channel Wrappers approach makes the Choice/Offer combinator explicit in the code, with clear branching patterns that mirror the underlying session type structure.
 
-### Parallel Composition Combinator
+### 1.2 Parallel Composition Combinator (Typed Channel Wrappers)
 
 Parallel composition represents concurrent protocol branches that can execute independently of each other. In session types, this is often represented by the `EpPar` combinator.
 
-#### Basic Implementation
+#### 1.2.1 Basic Implementation
 
 ```rust
 // Session type: EpPar<(EpSend<Server, String, "log", EpEnd>, EpRecv<Client, Request, "request", EpEnd>)>
@@ -223,7 +214,7 @@ fn server_protocol(channel: TypedChannel<EpPar<(
 }
 ```
 
-#### Alternative: Thread-Safe Parallel Channels
+#### 1.2.2 Alternative: Thread-Safe Parallel Channels
 
 For more ergonomic parallel execution, we can add thread-safety to our channels:
 
@@ -283,7 +274,7 @@ fn run_parallel_protocol(channel: TypedChannel<EpPar<(
 }
 ```
 
-#### Structured Concurrency for N-ary Parallel Composition
+#### 1.2.3 Structured Concurrency for N-ary Parallel Composition
 
 For protocols with more than two parallel branches:
 
@@ -364,7 +355,7 @@ fn handle_monitoring(channel: TypedChannel<EpPar<(
 }
 ```
 
-#### Key Benefits of This Approach
+#### 1.2.4 Key Benefits of Typed Channel Wrappers (Parallel)
 
 1. **Explicit Parallelism**: The parallel nature of the protocol branches is clearly visible
 2. **Type-Safety**: Each branch maintains its individual session type
@@ -373,11 +364,11 @@ fn handle_monitoring(channel: TypedChannel<EpPar<(
 
 The Typed Channel Wrappers approach makes parallel composition explicit in the code while maintaining type safety and allowing regular Rust code to be interleaved with protocol operations.
 
-### Recursion Combinator
+### 1.3 Recursion Combinator (Typed Channel Wrappers)
 
 Recursion in session types allows protocols to repeat or have cyclic behavior. This presents a unique challenge for Rust's type system since recursive types must be represented finitely.
 
-#### Using Type-Level Fixed-Point Recursion
+#### 1.3.1 Using Type-Level Fixed-Point Recursion
 
 ```rust
 // Define a recursive protocol using the EpRec combinator
@@ -484,9 +475,7 @@ fn server_query_handler(mut channel: TypedChannel<EpRec<ServerProtocol>>) {
 }
 ```
 
-#### Higher-Order Functions for Recursive Protocols
-
-Another approach leverages higher-order functions to handle recursion:
+#### 1.3.2 Higher-Order Functions for Recursive Protocols
 
 ```rust
 // Define the recursive protocol structure with explicit unwrapping
@@ -536,7 +525,7 @@ fn run_query_protocol(channel: TypedChannel<EpRec<QueryLoop>>) {
 }
 ```
 
-#### Encoding Recursion with State Machines
+#### 1.3.3 Encoding Recursion with State Machines
 
 A more explicit state machine approach:
 
@@ -630,7 +619,7 @@ fn chat_client() {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 1.3.4 Key Benefits of Typed Channel Wrappers (Recursion)
 
 1. **Explicit Recursion Control**: The recursion points and continuations are clearly visible in the code
 2. **Type Safety**: Maintains type safety across recursive calls
@@ -643,11 +632,11 @@ The Typed Channel Wrappers approach handles recursion by making the recursion po
 
 This approach uses Rust's procedural macros to generate protocol implementation code from session type definitions. This can significantly reduce boilerplate and create more ergonomic APIs.
 
-### Choice/Offer Combinator
+### 2.1 Choice/Offer Combinator (Code Generation)
 
 The Choice/Offer combinator is particularly well-suited for code generation since it involves repetitive pattern matching and dispatch logic that can be automated.
 
-#### Sender-Side (Choice) Implementation
+#### 2.1.1 Sender-Side (Choice) Implementation
 
 ```rust
 // Define the protocol with a proc macro
@@ -723,7 +712,7 @@ fn run_client() -> Result<(), ProtocolError> {
 }
 ```
 
-#### Receiver-Side (Offer) Implementation
+#### 2.1.2 Receiver-Side (Offer) Implementation
 
 ```rust
 // Server-side code is also generated from the protocol definition
@@ -787,7 +776,7 @@ fn run_server() -> Result<(), ProtocolError> {
 }
 ```
 
-#### Alternative: Trait-Based Protocol Generation
+#### 2.1.3 Alternative: Trait-Based Protocol Generation
 
 An alternative approach uses traits for each role:
 
@@ -889,7 +878,7 @@ fn use_bank_client() {
 }
 ```
 
-#### Domain-Specific Language with Custom Syntax
+#### 2.1.4 Domain-Specific Language with Custom Syntax
 
 For even more ergonomic protocol definitions, a DSL can be created:
 
@@ -1018,7 +1007,7 @@ fn customer_app() -> Result<(), Error> {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 2.1.5 Key Benefits of Code Generation (Choice/Offer)
 
 1. **Reduced Boilerplate**: Protocol structure is expressed concisely and implementation details are generated
 2. **Multiple Abstraction Levels**: Can expose low-level protocol operations or high-level business methods
@@ -1027,11 +1016,11 @@ fn customer_app() -> Result<(), Error> {
 
 The Code Generation approach makes the Choice/Offer combinator less explicit in the user's code but more declarative in the protocol definition. This approach is particularly useful for complex protocols where the implementation details would otherwise be tedious and error-prone.
 
-### Parallel Composition Combinator
+### 2.2 Parallel Composition Combinator (Code Generation)
 
 Parallel composition in session types allows concurrent execution of independent protocol branches. With code generation, we can create ergonomic APIs that hide much of the complexity while maintaining type safety.
 
-#### Basic Generated API
+#### 2.2.1 Basic Generated API
 
 ```rust
 // Define protocol with parallel branches using proc macro
@@ -1118,7 +1107,7 @@ async fn monitor_system() -> Result<(), ProtocolError> {
 }
 ```
 
-#### Customizable Branch Handlers
+#### 2.2.2 Customizable Branch Handlers
 
 Code generation also allows customization of how parallel branches are handled:
 
@@ -1172,7 +1161,7 @@ impl MonitoringProtocol {
 }
 ```
 
-#### Fork-Join Pattern
+#### 2.2.3 Fork-Join Pattern
 
 Code generation can also support a more explicit fork-join pattern:
 
@@ -1246,7 +1235,7 @@ impl DataProcessingProtocol for DataCoordinator {
 }
 ```
 
-#### Structured Concurrency Model
+#### 2.2.4 Structured Concurrency Model
 
 A more structured approach to concurrency can also be generated:
 
@@ -1324,7 +1313,7 @@ async fn run_server() -> Result<(), Error> {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 2.2.5 Key Benefits of Code Generation (Parallel)
 
 1. **Reduced Complexity**: Hides the details of parallel channel management
 2. **Separation of Protocol and Business Logic**: Protocol structure is defined separately from business logic
@@ -1333,11 +1322,11 @@ async fn run_server() -> Result<(), Error> {
 
 The Code Generation approach makes parallel composition more declarative, allowing developers to focus on the business logic within each branch rather than the mechanics of channel management and synchronization.
 
-### Recursion Combinator
+### 2.3 Recursion Combinator (Code Generation)
 
 Recursion in session types poses challenges for code generation since we need to represent potentially infinite protocols with finite code. Procedural macros can generate the necessary recursive structures while keeping the API intuitive.
 
-#### Declarative Recursion with Protocol DSL
+#### 2.3.1 Declarative Recursion with Protocol DSL
 
 ```rust
 // Define a recursive protocol using a DSL
@@ -1431,7 +1420,7 @@ impl ChatProtocol {
 }
 ```
 
-#### Component-Based Recursive Protocol
+#### 2.3.2 Component-Based Recursive Protocol
 
 ```rust
 // Define recursive protocol with components
@@ -1523,7 +1512,7 @@ fn upload_file() -> Result<(), Error> {
 }
 ```
 
-#### Trait-Based Recursive Protocols
+#### 2.3.3 Trait-Based Recursive Protocols
 
 ```rust
 // Define recursive protocol with traits
@@ -1627,7 +1616,7 @@ fn consume_data_stream() -> Result<(), Error> {
 }
 ```
 
-#### State Machine Generator
+#### 2.3.4 State Machine Generator
 
 More complex recursive protocols can benefit from explicit state machine generation:
 
@@ -1748,7 +1737,7 @@ fn database_client() -> Result<(), Error> {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 2.3.5 Key Benefits of Code Generation (Recursion)
 
 1. **Abstracted Recursion**: Recursion mechanics are hidden behind a clean API
 2. **Business Logic Integration**: Separates protocol mechanics from application logic
@@ -1761,11 +1750,11 @@ The Code Generation approach handles recursion by generating appropriate recursi
 
 This approach represents session types as explicit state machines with well-defined transitions. It makes the state of the protocol visible in the type system and provides a fluent, builder-style API for protocol operations.
 
-### Choice/Offer Combinator
+### 3.1 Choice/Offer Combinator (State Machine Builders)
 
 The Choice/Offer combinator represents a point where one party makes a choice and the other offers different branches to handle that choice. With state machine builders, these branches become explicit transitions to different states.
 
-#### Implementing Choice (Sender Side)
+#### 3.1.1 Implementing Choice (Sender Side)
 
 ```rust
 // Each protocol state is a distinct type
@@ -1879,7 +1868,7 @@ fn client_protocol() {
 }
 ```
 
-#### Implementing Offer (Receiver Side)
+#### 3.1.2 Implementing Offer (Receiver Side)
 
 ```rust
 // Server-side state machine states
@@ -1998,7 +1987,7 @@ fn server_protocol() {
 }
 ```
 
-#### Builder Pattern for More Complex Protocols
+#### 3.1.3 Builder Pattern for More Complex Protocols
 
 For protocols with many branches, a builder pattern can make the API more ergonomic:
 
@@ -2102,7 +2091,7 @@ fn complex_client_protocol() {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 3.1.4 Key Benefits of State Machine Builders (Choice/Offer)
 
 1. **Explicit State Transitions**: The protocol state is clearly represented in the type system
 2. **IDE Support**: Method discovery through autocomplete shows only valid operations for current state
@@ -2112,11 +2101,11 @@ fn complex_client_protocol() {
 
 The State Machine Builders approach makes the Choice/Offer combinator explicit in the type system, with clear state transitions that mirror the underlying session type structure. This approach is particularly good for visualizing the protocol flow in the code.
 
-### Parallel Composition Combinator
+### 3.2 Parallel Composition Combinator (State Machine Builders)
 
 The Parallel Composition combinator represents concurrent protocol branches that can execute independently. In the State Machine Builders approach, parallel composition is represented through explicit splitting and joining of state machines.
 
-#### Basic Parallel State Machine
+#### 3.2.1 Basic Parallel State Machine
 
 ```rust
 // State types for different protocol stages
@@ -2267,7 +2256,7 @@ fn server_protocol() {
 }
 ```
 
-#### Builder Pattern for Parallel Composition
+#### 3.2.2 Builder Pattern for Parallel Composition
 
 A more flexible builder pattern can make complex parallel protocols more manageable:
 
@@ -2407,7 +2396,7 @@ fn monitoring_protocol() {
 }
 ```
 
-#### Parallel State Machine with Asynchronous Operations
+#### 3.2.3 Parallel State Machine with Asynchronous Operations
 
 For integrating with async/await:
 
@@ -2564,7 +2553,7 @@ async fn process_protocol() {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 3.2.4 Key Benefits of State Machine Builders (Parallel)
 
 1. **Type-Safe Parallelism**: Each branch has its own state machine with appropriate types
 2. **Explicit Split and Join**: The parallel structure is clearly visible in the code
@@ -2574,11 +2563,11 @@ async fn process_protocol() {
 
 The State Machine Builders approach makes parallel composition explicit with clear split and join points, while maintaining type safety and allowing business logic to be interleaved with protocol operations.
 
-### Recursion Combinator
+### 3.3 Recursion Combinator (State Machine Builders)
 
 Recursion in session types enables protocol loops and cyclic behavior. The State Machine Builders approach represents recursion through explicit state transitions that loop back to previous states, creating clear recursive structures with type safety.
 
-#### Basic Recursive State Machine
+#### 3.3.1 Basic Recursive State Machine
 
 ```rust
 // States for a recursive chat protocol
@@ -2667,7 +2656,7 @@ fn chat_client() {
 }
 ```
 
-#### Type-Parameterized Recursive Protocols
+#### 3.3.2 Type-Parameterized Recursive Protocols
 
 For more complex recursive protocols, we can use type parameters to track recursive paths:
 
@@ -2804,7 +2793,7 @@ fn traverse_binary_tree() {
 }
 ```
 
-#### Recursive Builder Pattern
+#### 3.3.3 Recursive Builder Pattern
 
 A builder pattern can make recursive protocols more ergonomic:
 
@@ -2951,7 +2940,7 @@ fn file_transfer_protocol() {
 }
 ```
 
-#### Explicit Looping with State Restoration
+#### 3.3.4 Explicit Looping with State Restoration
 
 Another pattern uses explicit loop transitions with state restoration:
 
@@ -3067,7 +3056,7 @@ fn streaming_client() {
 
 ```
 
-#### Key Benefits of This Approach
+#### 3.3.5 Key Benefits of State Machine Builders (Recursion)
 
 1. **Explicit State Transitions**: Recursion points are clearly visible in the code
 2. **State Preservation**: Can maintain state across recursive calls
@@ -3081,11 +3070,11 @@ The State Machine Builders approach makes recursion explicit with clear state tr
 
 This approach uses actors to implement session types, where each actor encapsulates a role's behavior in a protocol. Actors maintain their protocol state internally and communicate through message passing, which aligns well with the message-passing nature of session types.
 
-### Choice/Offer Combinator
+### 4.1 Choice/Offer Combinator (Actor-Based Runtime)
 
 The Choice/Offer combinator represents a point where one actor makes a choice and another actor offers different branches to handle that choice. With actors, this is naturally modeled through message pattern matching.
 
-#### Implementing Choice (Sender Side)
+#### 4.1.1 Implementing Choice (Sender Side)
 
 ```rust
 // Actor that implements client role in a protocol with choice
@@ -3193,7 +3182,7 @@ fn client_system() {
 }
 ```
 
-#### Implementing Offer (Receiver Side)
+#### 4.1.2 Implementing Offer (Receiver Side)
 
 ```rust
 // Actor that implements server role in protocol with choice
@@ -3259,7 +3248,7 @@ impl Actor for ServerActor {
 }
 ```
 
-#### Using a Protocol Supervisor
+#### 4.1.3 Using a Protocol Supervisor
 
 For more complex protocols, a supervisor actor can coordinate the exchange:
 
@@ -3366,7 +3355,7 @@ fn supervised_protocol() {
 }
 ```
 
-#### Using Behavior Switching for Protocol Phases
+#### 4.1.4 Using Behavior Switching for Protocol Phases
 
 Actors can switch behavior to represent different protocol phases:
 
@@ -3458,11 +3447,11 @@ impl Actor for ProtocolActor {
 }
 ```
 
-### Parallel Composition Combinator
+### 4.2 Parallel Composition Combinator (Actor-Based Runtime)
 
 The Parallel Composition combinator represents concurrent protocol branches. The Actor-Based Runtime approach is particularly well-suited for parallel composition since actors are inherently concurrent and can execute protocol branches independently.
 
-#### Basic Actor-Based Parallel Composition
+#### 4.2.1 Basic Actor-Based Parallel Composition
 
 ```rust
 // Parent actor that manages parallel protocol branches
@@ -3603,7 +3592,7 @@ fn monitoring_system() {
 }
 ```
 
-#### Dynamic Protocol Branches with Routing
+#### 4.2.2 Dynamic Protocol Branches with Routing
 
 For more dynamic parallel composition, a routing actor can be used:
 
@@ -3742,7 +3731,7 @@ fn dynamic_parallel_protocol() {
 }
 ```
 
-#### Parallel Composition with Join Patterns
+#### 4.2.3 Parallel Composition with Join Patterns
 
 For more complex synchronization patterns in parallel composition:
 
@@ -3846,7 +3835,7 @@ fn join_pattern_protocol() {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 4.2.4 Key Benefits of Actor-Based Runtime (Parallel)
 
 1. **Natural Concurrency**: Actors are inherently concurrent, making parallel composition straightforward
 2. **Independent State**: Each branch maintains its own state in its actor
@@ -3857,11 +3846,11 @@ fn join_pattern_protocol() {
 
 The Actor-Based Runtime approach makes parallel composition implicit in the actor structure, with parent actors coordinating child actors that handle individual branches. This approach is particularly effective for protocols with complex concurrent behaviors and synchronization requirements.
 
-### Recursion Combinator
+### 4.3 Recursion Combinator (Actor-Based Runtime)
 
 Recursion in session types allows protocols to loop back and repeat behavior. In the Actor-Based Runtime approach, recursion is naturally represented through message-driven state transitions where actors can send messages to themselves to continue a protocol.
 
-#### Basic Recursive Actor
+#### 4.3.1 Basic Recursive Actor
 
 ```rust
 // Actor that implements a recursive protocol
@@ -3976,7 +3965,7 @@ fn recursive_protocol_system() {
 }
 ```
 
-#### Behavior-Switching Recursive Actor
+#### 4.3.2 Behavior-Switching Recursive Actor
 
 A more sophisticated approach uses behavior switching for recursive protocols:
 
@@ -4082,7 +4071,7 @@ fn streaming_protocol() {
 }
 ```
 
-#### Supervisor-Managed Recursive Protocol
+#### 4.3.3 Supervisor-Managed Recursive Protocol
 
 For more complex recursive protocols, a supervisor can manage the recursion:
 
@@ -4269,7 +4258,7 @@ fn supervised_recursive_protocol() {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 4.3.4 Key Benefits of Actor-Based Runtime (Recursion)
 
 1. **Natural Recursion**: Message passing provides a natural way to express recursion
 2. **State Management**: Actors maintain their state across recursive iterations
@@ -4284,11 +4273,11 @@ The Actor-Based Runtime approach handles recursion through self-messaging and be
 
 This approach uses higher-order functions and continuations to represent protocol steps. Each operation in the protocol takes a continuation function that determines what happens next, allowing for flexible composition of protocol behaviors.
 
-### Choice/Offer Combinator
+### 5.1 Choice/Offer Combinator (CPS)
 
 In the Continuation-Passing Style approach, the Choice/Offer combinator is represented as functions that accept branch-specific continuations. This makes branch selection and handling explicit while maintaining the callback-driven flow.
 
-#### Implementing Choice (Sender Side)
+#### 5.1.1 Implementing Choice (Sender Side)
 
 ```rust
 // Basic channel for CPS operations
@@ -4412,7 +4401,7 @@ fn client_protocol(channel: Channel) {
 }
 ```
 
-#### Implementing Offer (Receiver Side)
+#### 5.1.2 Implementing Offer (Receiver Side)
 
 ```rust
 // Offer operation that handles branch selection
@@ -4498,7 +4487,7 @@ fn server_protocol(channel: Channel) {
 }
 ```
 
-#### Composable Branch Handlers
+#### 5.1.3 Composable Branch Handlers
 
 To make complex protocols more manageable, we can use higher-order functions for branch handling:
 
@@ -4549,7 +4538,7 @@ fn composable_server_protocol(channel: Channel) {
 }
 ```
 
-#### Generic Branch Handling
+#### 5.1.4 Generic Branch Handling
 
 For protocols with many branches, a more generic approach can be used:
 
@@ -4649,7 +4638,7 @@ fn generic_server_protocol(channel: Channel) {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 5.1.5 Key Benefits of CPS (Choice/Offer)
 
 1. **Explicit Control Flow**: The protocol flow is made explicit through continuation functions
 2. **Composable Handlers**: Branch handlers can be composed and reused
@@ -4659,11 +4648,11 @@ fn generic_server_protocol(channel: Channel) {
 
 The Continuation-Passing Style approach makes the Choice/Offer combinator explicit through continuation functions that determine what happens after each protocol step. This approach is particularly powerful for protocols where different steps need to be composed in flexible ways.
 
-### Parallel Composition Combinator
+### 5.2 Parallel Composition Combinator (CPS)
 
 The Parallel Composition combinator represents concurrent protocol branches. In the Continuation-Passing Style approach, parallelism is expressed through continuations that handle each branch independently and synchronize results.
 
-#### Basic Parallel Operations
+#### 5.2.1 Basic Parallel Operations
 
 ```rust
 // Basic parallel channel operations
@@ -4738,7 +4727,7 @@ fn parallel_protocol(channel: Channel) {
 }
 ```
 
-#### Concurrent Execution with Threads
+#### 5.2.2 Concurrent Execution with Threads
 
 ```rust
 // Thread-based parallel execution
@@ -4809,7 +4798,7 @@ fn concurrent_protocol(channel: Channel) {
 }
 ```
 
-#### Asynchronous Parallel Operations
+#### 5.2.3 Asynchronous Parallel Operations
 
 ```rust
 // Async parallel operations
@@ -4887,7 +4876,7 @@ async fn async_protocol(channel: Channel) {
 }
 ```
 
-#### N-ary Parallel Composition
+#### 5.2.4 N-ary Parallel Composition
 
 ```rust
 // Support for arbitrary number of parallel branches
@@ -5001,7 +4990,7 @@ fn n_ary_parallel_protocol(channel: Channel) {
 }
 ```
 
-#### Composing Parallel and Sequential Operations
+#### 5.2.5 Composing Parallel and Sequential Operations
 
 ```rust
 // Combining parallel with sequential operations
@@ -5064,7 +5053,7 @@ fn complex_protocol(channel: Channel) {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 5.2.6 Key Benefits of CPS (Parallel)
 
 1. **Composable Parallelism**: Parallel operations can be composed with other operations
 2. **Natural Synchronization**: Continuations provide natural points for synchronizing parallel branches
@@ -5074,11 +5063,11 @@ fn complex_protocol(channel: Channel) {
 
 The Continuation-Passing Style approach makes parallel composition explicit through continuations that handle each branch and synchronize results. This approach is particularly effective for protocols that need to compose parallel and sequential operations in flexible ways.
 
-### Recursion Combinator
+### 5.3 Recursion Combinator (CPS)
 
 Recursion in the Continuation-Passing Style approach is implemented through higher-order functions that can reference themselves, creating looping behavior through repeated continuations.
 
-#### Basic Recursive Operations
+#### 5.3.1 Basic Recursive Operations
 
 ```rust
 // Basic recursion with explicit loop function
@@ -5123,7 +5112,7 @@ fn run_recursive_protocol(channel: Channel) {
 }
 ```
 
-#### Parameterized Recursive Protocols
+#### 5.3.2 Parameterized Recursive Protocols
 
 ```rust
 // Recursive protocol with state
@@ -5206,7 +5195,7 @@ fn run_stateful_protocol(channel: Channel) {
 }
 ```
 
-#### Recursion Through Closure Captures
+#### 5.3.3 Recursion Through Closure Captures
 
 ```rust
 // Recursion through closure captures
@@ -5252,7 +5241,7 @@ fn recursive_protocol(channel: Channel) {
 }
 ```
 
-#### Explicit State Machine with Recursion
+#### 5.3.4 Explicit State Machine with Recursion
 
 ```rust
 // Explicit state machine with recursion
@@ -5309,7 +5298,7 @@ fn run_protocol(channel: Channel) {
 }
 ```
 
-#### Recursion with External Control
+#### 5.3.5 Recursion with External Control
 
 ```rust
 // Recursion with external control flags
@@ -5372,7 +5361,7 @@ fn run_timed_protocol(channel: Channel) {
 }
 ```
 
-#### Recursion with Asynchronous Continuations
+#### 5.3.6 Recursion with Asynchronous Continuations
 
 ```rust
 // Recursive protocol with async continuations
@@ -5406,7 +5395,7 @@ async fn async_recursive_protocol(channel: Channel) {
 }
 ```
 
-#### Key Benefits of This Approach
+#### 5.3.7 Key Benefits of CPS (Recursion)
 
 1. **Natural Expression of Recursion**: Higher-order functions make recursion patterns explicit and clear
 2. **State Management**: Can maintain state across recursive calls through closure captures or explicit state parameters

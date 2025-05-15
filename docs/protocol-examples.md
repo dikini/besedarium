@@ -277,6 +277,7 @@ Client → Proxy : request {
 - Each role gets a local protocol, with the proxy making the choice and the others offering the corresponding branches.
 
 ### Example Local Projection (Client)
+
 ```rust
 // Client sends request then offers two symmetric reply branches
 type ClientLocal =
@@ -294,6 +295,7 @@ type ClientLocal =
 ```
 
 ### Example Local Projection (Proxy)
+
 ```rust
 // Proxy receives request, chooses forward or audit, then dispatches messages
 type ProxyLocal =
@@ -343,6 +345,7 @@ type ProxyLocal =
 ```
 
 ### Example Local Projection (Web Service)
+
 ```rust
 // Web Service offers forward or audit handling
 type WebServiceLocal =

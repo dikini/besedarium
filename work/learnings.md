@@ -1,179 +1,308 @@
 # Learnings & Patterns: Type-Level Rust Protocols
 
 This document captures core patterns, idioms, and constraints for type-level
-protocol programming in Rust, distilled from recent work on session-type
-dispatch and filtering.
+protocol programming in Rust, distilled from work on session types implementation.
 
-## 1. Trait-Based Dispatch with Marker Types
+## 1. Type-Level Programming Patterns
 
-Rust’s stable trait system forbids overlapping impls, negative bounds, and
-using associated types as generic parameters. We overcome these limits with:
+### Type-Level Dispatch Patterns
 
-1. Marker types for each case:
-
-   ```rust
-   pub struct IsEpSkipType;
-   pub struct IsNotEpSkipType;
-   ```
-
-2. A helper trait mapping each endpoint type to a marker:
-
-   ```rust
-   pub trait IsEpSkipTypeImpl<IO, Me: Role> { type TypeMarker; }
-
-   impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me> {
-       type TypeMarker = IsEpSkipType;
-   }
-   impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Me, H, T> {
-       type TypeMarker = IsNotEpSkipType;
-   }
-   // ... likewise for EpRecv, EpChoice, EpPar, EpEnd
-   ```
-
-3. A single‐impl facade trait that delegates to it:
-
-   ```rust
-   pub trait GetEpSkipTypeMarker<IO, Me: Role> { type TypeMarker; }
-   impl<IO, Me: Role, T> GetEpSkipTypeMarker<IO, Me> for T
-   where T: IsEpSkipTypeImpl<IO, Me>
-   {
-       type TypeMarker = <T as IsEpSkipTypeImpl<IO,Me>>::TypeMarker;
-   }
-   ```
-
-This pattern yields exactly two disjoint impls and keeps dispatch stable.
-
-## 2. Compile‐Time Type Equality (
-
-TypeEq
-trait)
-
-To enable `assert_type_eq!` assertions, use a “blanket + specific” approach:
+#### Marker Type Dispatch
 
 ```rust
-pub struct True;
-pub struct False;
-pub trait Bool {}
-impl Bool for True {} impl Bool for False {}
+// 1. Define marker types for each case
+pub struct IsEpSkipType;
+pub struct IsNotEpSkipType;
 
-/// Legacy aliases for tests
-pub type TrueB = True;
-pub type FalseB = False;
+// 2. Helper trait mapping types to markers
+pub trait IsEpSkipTypeImpl<IO, Me: Role> { type TypeMarker; }
 
-/// Only implemented when A == B
+impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me> {
+    type TypeMarker = IsEpSkipType;
+}
+impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Me, H, T> {
+    type TypeMarker = IsNotEpSkipType;
+}
+// ... other types
+
+// 3. Single-impl facade trait that delegates
+pub trait GetEpSkipTypeMarker<IO, Me: Role> { type TypeMarker; }
+impl<IO, Me: Role, T> GetEpSkipTypeMarker<IO, Me> for T
+where T: IsEpSkipTypeImpl<IO, Me>
+{
+    type TypeMarker = <T as IsEpSkipTypeImpl<IO,Me>>::TypeMarker;
+}
+```
+
+This pattern enables non-overlapping trait implementations where naive bounds would conflict.
+
+#### Helper Trait Specialization
+
+When trait implementations would overlap, use helper traits with concrete type parameters:
+
+```rust
+// Main trait delegates to specialized helper using concrete types
+impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    // ...constraints...
+    (): ProjectChoiceCase<
+        Me, IO, L, R,
+        <L as ContainsRole<Me>>::Output, // Concrete type parameter
+        <R as ContainsRole<Me>>::Output  // Concrete type parameter
+    >,
+{
+    type Out = <() as ProjectChoiceCase</*...*/>::Out;
+}
+
+// Helper trait with specialized implementations for each case
+pub trait ProjectChoiceCase<Me, IO, L: TSession<IO>, R: TSession<IO>, LContainsMe, RContainsMe> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Non-overlapping implementations
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::True> for () {
+    // Both branches contain role
+    type Out = EpChoice</*...*/>;
+}
+
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::False> for () {
+    // Only left branch contains role
+    type Out = <() as ProjectRole<Me, IO, L>>::Out;
+}
+
+// Additional non-overlapping cases...
+```
+
+This approach:
+- Avoids trait implementation conflicts
+- Provides precise control over implementation selection
+- Improves maintainability by separating distinct cases
+- Enables type-level dispatch without specialization or negative bounds
+
+### Type-Level Boolean Operations
+
+To support complex type-level decisions:
+
+```rust
+// Boolean OR type-level function
+pub type Or<A, B> = <A as BoolOr<B>>::Output;
+
+// Helper trait for boolean OR
+pub trait BoolOr<B> {
+    type Output: Bool;
+}
+
+impl BoolOr<True> for True { type Output = True; }
+impl BoolOr<False> for True { type Output = True; }
+impl BoolOr<True> for False { type Output = True; }
+impl BoolOr<False> for False { type Output = False; }
+
+// Boolean NOT type-level function
+pub trait Not {
+    type Output: Bool;
+}
+
+impl Not for True { type Output = False; }
+impl Not for False { type Output = True; }
+```
+
+These operations enable:
+- Complex type-level conditions
+- Composition of multiple boolean results
+- Rich type-level protocol analysis
+
+### Type-Level Maps and Folds
+
+Two fundamental patterns for type-level list processing:
+
+- **Map**: Transforms every element of a type list, preserving length
+- **Filter**: Removes elements failing a predicate, potentially shortening the list
+
+Example: Filter implementation to drop all `EpSkip<IO,Me>` instances:
+
+```rust
+pub trait FilterSkips<IO, Me: Role, List> { type Out; }
+
+// Base case: empty list
+impl<IO, Me: Role> FilterSkips<IO, Me, Nil> for () { type Out = Nil; }
+
+// Recursive case with dispatch on marker type
+impl<IO, Me: Role, H, T> FilterSkips<IO,Me,Cons<H,T>> for ()
+where
+    H: GetEpSkipTypeMarker<IO,Me>,
+    (): FilterSkipsCase<IO,Me,H,T,
+        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>,
+{
+    type Out = <() as FilterSkipsCase<IO,Me,H,T,
+        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>>::Out;
+}
+
+// Skip EpSkip elements
+impl<IO, Me: Role, T> FilterSkipsCase<IO,Me,EpSkip<IO,Me>,T,IsEpSkipType> for ()
+where (): FilterSkips<IO,Me,T>
+{
+    type Out = <() as FilterSkips<IO,Me,T>>::Out;
+}
+
+// Keep other elements
+impl<IO, Me: Role, H, T> FilterSkipsCase<IO,Me,H,T,IsNotEpSkipType> for ()
+where H: EpSession<IO,Me>, (): FilterSkips<IO,Me,T>
+{
+    type Out = Cons<H, <() as FilterSkips<IO,Me,T>>::Out>;
+}
+```
+
+### Type-Level Equality
+
+Essential for compile-time type assertions:
+
+```rust
 pub trait TypeEq<A> {}
 impl<T> TypeEq<T> for T {}
 ```
 
-Rust’s coherence rules pick the exact match impl and disallow others.
+Used for assertions like `assert_type_eq!(A, B)` which fail if A ≠ B.
 
-## 3. Type‐Level Filter vs. Map
+### Role Containment Checking
 
-- **Map**: transforms every element of a type‐list, preserving length.
-- **Filter**: keeps only elements satisfying a predicate, shortening the list.
-
-Example: drop all `EpSkip<IO,Me>` from `Cons<H,T>`:
+For determining if a protocol branch contains a specific role:
 
 ```rust
-pub trait FilterSkips<IO, Me: Role, List> { type Out; }
-impl<IO, Me: Role> FilterSkips<IO, Me, Nil> for () { type Out = Nil; }
-
-// Delegate to helper based on TypeMarker
-impl<IO, Me: Role, H, Tail> FilterSkips<IO,Me,Cons<H,Tail>> for ()
-where
-    H: GetEpSkipTypeMarker<IO,Me>,
-    (): FilterSkipsCase<IO,Me,H,Tail,
-        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>,
-{
-    type Out = <() as FilterSkipsCase<IO,Me,H,Tail,
-        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>>::Out;
+pub trait ContainsRole<R> {
+    type Output: types::Bool;
 }
 
-// If head is EpSkip → skip it
-impl<IO, Me: Role, Tail>
-    FilterSkipsCase<IO,Me, EpSkip<IO,Me>, Tail, IsEpSkipType> for ()
-where (): FilterSkips<IO,Me,Tail>
-{ type Out = <() as FilterSkips<IO,Me,Tail>>::Out; }
+// Base case: End contains no roles
+impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
+    type Output = types::False;
+}
 
-// Otherwise → keep it
-impl<IO, Me: Role, H, Tail>
-    FilterSkipsCase<IO,Me, H, Tail, IsNotEpSkipType> for ()
+// Recursive case: TInteract contains role if role matches or continuation does
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
 where
-    H: EpSession<IO,Me>,
-    (): FilterSkips<IO,Me,Tail>,
+    // ...constraints...
+    <R1 as RoleEq<R2>>::Output: types::BoolOr<<T as ContainsRole<R2>>::Output>,
 {
-    type Out = Cons<H, <() as FilterSkips<IO,Me,Tail>>::Out>;
+    type Output = types::Or<<R1 as RoleEq<R2>>::Output, <T as ContainsRole<R2>>::Output>;
 }
 ```
 
-## 4. Rust Trait System Constraints & Workarounds
+This pattern enables:
+- Recursive traversal of nested protocol structures
+- Boolean composition of role presence
+- Precise typing for projection decisions
 
-- **No specialization or negative bounds** on stable Rust.
-- **No associated types as generic parameters**.
-- **No overlapping impls** allowed.
+### Case-Based Composition Pattern
 
-Workarounds:
+For handling different combinations of endpoint types:
 
-- Use **sealed helper traits** and **marker types** for stable, mutual exclusion.
-- Expose a **facade trait** with a single impl to avoid overlap.
-- Enumerate explicit impls rather than blanket covers that break coherence.
+```rust
+pub trait ComposeProjectedParBranches<IO, Me: Role, L, R> /* constraints */ {
+    type Out: EpSession<IO, Me>;
+}
 
-## 5. Documentation & Planning
+impl<IO, Me: Role, L, R> ComposeProjectedParBranches<IO, Me, L, R> for ()
+where
+    // ...constraints...
+    (): ComposeProjectedParBranchesCase<
+        IsSkip<L, IO, Me>,  // Type-level query
+        IsSkip<R, IO, Me>,  // Type-level query
+        IsEnd<L, IO, Me>,   // Type-level query
+        IsEnd<R, IO, Me>,   // Type-level query
+        IO, Me, L, R,
+    >,
+{
+    type Out = <() as ComposeProjectedParBranchesCase</*...*/>::Out;
+}
+
+// Multiple specialized implementations for different cases
+```
+
+## 2. Rust Trait System Constraints & Workarounds
+
+### Key Limitations in Stable Rust
+
+- **No specialization**: Cannot provide specialized implementations for subsets
+- **No negative bounds**: Cannot constrain generics by what they are not
+- **No associated types as generic parameters**: Types must be direct
+- **No overlapping impls**: Must have disjoint implementation sets
+
+### Effective Workarounds
+
+- Use **sealed helper traits** with marker types for mutual exclusion
+- Create a **facade trait** with a single impl to avoid overlap
+- Use **explicit enumeration** rather than blanket implementations
+- Prefer **concrete type parameters** over complex bounds
+- Leverage **type-level booleans** for conditional logic
+
+## 3. Project Organization Patterns
+
+### Documentation & Planning
 
 - **Always plan** edits with:
-  - A list of affected files, traits, or functions
+  - Affected files/traits/functions
   - Change order and dependencies
   - Estimated edit count
-- **Document intent**: comment non‐obvious type‐level logic.
-- **Distinguish** algorithm patterns (map vs filter) in prose first.
-- Use examples and ensure doctests compile.
+- **Document intent** with comments for non-obvious logic
+- **Distinguish algorithms** (map vs. filter) in prose first
+- Use examples with doctests for clarity
 
-## 6. CI & Verification Workflow
+### Test-Driven Parameter Refactoring
 
-- Ensure every change is validated by:
-  - `cargo check` to catch compile errors
-  - `cargo fmt --all -- --check` to enforce formatting
-  - `cargo clippy` for linting and code quality checks
-  - `cargo test` (runtime, compile-fail, doctests, trybuild) for correctness
-- Use `trybuild` to automate macro edge-case and compile-fail tests.
-- Mark unstable or in-progress doctests as `ignore` to keep docs builds green.
+1. Create pre-implementation tests verifying current behavior
+2. Make parameter changes while preserving behavior
+3. Verify with post-implementation tests
+4. Systematically track test coverage metrics
 
-## 2025-05-13: Documentation updates for protocol-examples.md
-- Synced examples with actual `TSession` API: used `TInteract`, `TChoice`, `TRec`, `TEnd`, and `Var` generics.
-- Documented local projection internals: `EpSkip` filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
-- Clarified recursion model: flat global labels (`TRec<IO, Label, S>`) with explicit `Var<Label>` loops; absence of de Bruijn indices.
-- Revised examples in sections 1.1, 1.2, and 2 to Rust `EpSession` types for send/receive/choice patterns.
+### Label Parameter Standardization
 
-## 2025-05-14: Runtime Implementation Pattern Comparison 
+- Start with core types and related traits
+- Move outward to dependent systems
+- Finally update tests and examples
+- Ensure thorough test coverage before refactoring
 
-When implementing session types in Rust, we've identified three primary approaches, each with distinct trade-offs:
+### Runtime Implementation Approaches
+
+Three primary patterns for session type runtime implementation:
 
 1. **Typed Channel Wrappers**:
-   - Encode protocol state in type parameters
-   - Heavy reliance on Rust's type system for compile-time safety
-   - Interleaves business logic with protocol operations
-   - Complex type-level programming but high flexibility
+   - Protocol state encoded in type parameters
+   - Heavy reliance on Rust's type system
+   - High flexibility but complex type-level programming
 
 2. **Code Generation with Procedural Macros**:
-   - Minimizes boilerplate through automated code generation
-   - Typically uses callbacks/handlers for business logic integration
-   - Creates cleaner syntax for protocol definition
-   - May limit IDE support and introduce debugging challenges
+   - Minimizes boilerplate through code generation
+   - Uses callbacks/handlers for business logic integration
+   - Cleaner syntax but may limit IDE support
 
 3. **State Machine Builders**:
-   - Makes protocol states explicit as distinct types
-   - Provides strong IDE support through state-specific method discovery
-   - Uses builder patterns and fluent APIs for readable protocol definition
-   - Excellent for visualizing protocol flow in code structure
+   - Explicit protocol states as distinct types
+   - Strong IDE support through state method discovery
+   - Excellent for visualizing protocol flow
 
-Key implementation considerations:
-- Type safety and protocol enforcement should be prioritized regardless of approach
-- Project scale influences optimal choice (State Machines for small, Code Gen for large)
-- Developer experience varies significantly between approaches
-- Combined strategies often yield the best results for complex systems
+## 4. Key Insights
 
-These patterns can be mixed to create hybrid approaches that leverage the strengths of each implementation style while mitigating their weaknesses.
+1. **Type-Level Dispatch** is crucial for non-overlapping implementations and enables pattern-matching-like behavior in the type system.
+
+2. **Helper Traits** create indirection that resolves implementation conflicts and improves modularity.
+
+3. **Trait Design** should focus on composable, single-responsibility traits with clear boundaries.
+
+4. **Recursive Type Traversal** with proper terminal cases is essential for handling nested protocols.
+
+5. **Case Multiplication** means implementations grow with the product of case dimensions.
+
+6. **Type-Level Boolean Operations** enable complex decision logic that would be impossible with simple trait bounds.
+
+7. **Protocol Projection** decisions depend heavily on role presence, requiring sophisticated role containment checking.
+
+8. **Test-First Refactoring** with comprehensive metrics significantly reduces regression risk.
+
+9. **Parameter Consistency** across the codebase improves readability and simplifies reasoning.
+
+10. **Edge Case Testing** reveals subtle design principles that may not be apparent from basic tests.
 
 ---
+
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*
