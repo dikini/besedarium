@@ -1,487 +1,308 @@
 # Learnings & Patterns: Type-Level Rust Protocols
 
 This document captures core patterns, idioms, and constraints for type-level
-protocol programming in Rust, distilled from recent work on session-type
-dispatch and filtering.
+protocol programming in Rust, distilled from work on session types implementation.
 
-## 1. Trait-Based Dispatch with Marker Types
+## 1. Type-Level Programming Patterns
 
-Rust’s stable trait system forbids overlapping impls, negative bounds, and
-using associated types as generic parameters. We overcome these limits with:
+### Type-Level Dispatch Patterns
 
-1. Marker types for each case:
-
-   ```rust
-   pub struct IsEpSkipType;
-   pub struct IsNotEpSkipType;
-   ```
-
-2. A helper trait mapping each endpoint type to a marker:
-
-   ```rust
-   pub trait IsEpSkipTypeImpl<IO, Me: Role> { type TypeMarker; }
-
-   impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me> {
-       type TypeMarker = IsEpSkipType;
-   }
-   impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Me, H, T> {
-       type TypeMarker = IsNotEpSkipType;
-   }
-   // ... likewise for EpRecv, EpChoice, EpPar, EpEnd
-   ```
-
-3. A single‐impl facade trait that delegates to it:
-
-   ```rust
-   pub trait GetEpSkipTypeMarker<IO, Me: Role> { type TypeMarker; }
-   impl<IO, Me: Role, T> GetEpSkipTypeMarker<IO, Me> for T
-   where T: IsEpSkipTypeImpl<IO, Me>
-   {
-       type TypeMarker = <T as IsEpSkipTypeImpl<IO,Me>>::TypeMarker;
-   }
-   ```
-
-This pattern yields exactly two disjoint impls and keeps dispatch stable.
-
-## 2. Compile‐Time Type Equality (
-
-TypeEq
-trait)
-
-To enable `assert_type_eq!` assertions, use a “blanket + specific” approach:
+#### Marker Type Dispatch
 
 ```rust
-pub struct True;
-pub struct False;
-pub trait Bool {}
-impl Bool for True {} impl Bool for False {}
+// 1. Define marker types for each case
+pub struct IsEpSkipType;
+pub struct IsNotEpSkipType;
 
-/// Legacy aliases for tests
-pub type TrueB = True;
-pub type FalseB = False;
+// 2. Helper trait mapping types to markers
+pub trait IsEpSkipTypeImpl<IO, Me: Role> { type TypeMarker; }
 
-/// Only implemented when A == B
+impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me> {
+    type TypeMarker = IsEpSkipType;
+}
+impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Me, H, T> {
+    type TypeMarker = IsNotEpSkipType;
+}
+// ... other types
+
+// 3. Single-impl facade trait that delegates
+pub trait GetEpSkipTypeMarker<IO, Me: Role> { type TypeMarker; }
+impl<IO, Me: Role, T> GetEpSkipTypeMarker<IO, Me> for T
+where T: IsEpSkipTypeImpl<IO, Me>
+{
+    type TypeMarker = <T as IsEpSkipTypeImpl<IO,Me>>::TypeMarker;
+}
+```
+
+This pattern enables non-overlapping trait implementations where naive bounds would conflict.
+
+#### Helper Trait Specialization
+
+When trait implementations would overlap, use helper traits with concrete type parameters:
+
+```rust
+// Main trait delegates to specialized helper using concrete types
+impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    // ...constraints...
+    (): ProjectChoiceCase<
+        Me, IO, L, R,
+        <L as ContainsRole<Me>>::Output, // Concrete type parameter
+        <R as ContainsRole<Me>>::Output  // Concrete type parameter
+    >,
+{
+    type Out = <() as ProjectChoiceCase</*...*/>::Out;
+}
+
+// Helper trait with specialized implementations for each case
+pub trait ProjectChoiceCase<Me, IO, L: TSession<IO>, R: TSession<IO>, LContainsMe, RContainsMe> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Non-overlapping implementations
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::True> for () {
+    // Both branches contain role
+    type Out = EpChoice</*...*/>;
+}
+
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::False> for () {
+    // Only left branch contains role
+    type Out = <() as ProjectRole<Me, IO, L>>::Out;
+}
+
+// Additional non-overlapping cases...
+```
+
+This approach:
+- Avoids trait implementation conflicts
+- Provides precise control over implementation selection
+- Improves maintainability by separating distinct cases
+- Enables type-level dispatch without specialization or negative bounds
+
+### Type-Level Boolean Operations
+
+To support complex type-level decisions:
+
+```rust
+// Boolean OR type-level function
+pub type Or<A, B> = <A as BoolOr<B>>::Output;
+
+// Helper trait for boolean OR
+pub trait BoolOr<B> {
+    type Output: Bool;
+}
+
+impl BoolOr<True> for True { type Output = True; }
+impl BoolOr<False> for True { type Output = True; }
+impl BoolOr<True> for False { type Output = True; }
+impl BoolOr<False> for False { type Output = False; }
+
+// Boolean NOT type-level function
+pub trait Not {
+    type Output: Bool;
+}
+
+impl Not for True { type Output = False; }
+impl Not for False { type Output = True; }
+```
+
+These operations enable:
+- Complex type-level conditions
+- Composition of multiple boolean results
+- Rich type-level protocol analysis
+
+### Type-Level Maps and Folds
+
+Two fundamental patterns for type-level list processing:
+
+- **Map**: Transforms every element of a type list, preserving length
+- **Filter**: Removes elements failing a predicate, potentially shortening the list
+
+Example: Filter implementation to drop all `EpSkip<IO,Me>` instances:
+
+```rust
+pub trait FilterSkips<IO, Me: Role, List> { type Out; }
+
+// Base case: empty list
+impl<IO, Me: Role> FilterSkips<IO, Me, Nil> for () { type Out = Nil; }
+
+// Recursive case with dispatch on marker type
+impl<IO, Me: Role, H, T> FilterSkips<IO,Me,Cons<H,T>> for ()
+where
+    H: GetEpSkipTypeMarker<IO,Me>,
+    (): FilterSkipsCase<IO,Me,H,T,
+        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>,
+{
+    type Out = <() as FilterSkipsCase<IO,Me,H,T,
+        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>>::Out;
+}
+
+// Skip EpSkip elements
+impl<IO, Me: Role, T> FilterSkipsCase<IO,Me,EpSkip<IO,Me>,T,IsEpSkipType> for ()
+where (): FilterSkips<IO,Me,T>
+{
+    type Out = <() as FilterSkips<IO,Me,T>>::Out;
+}
+
+// Keep other elements
+impl<IO, Me: Role, H, T> FilterSkipsCase<IO,Me,H,T,IsNotEpSkipType> for ()
+where H: EpSession<IO,Me>, (): FilterSkips<IO,Me,T>
+{
+    type Out = Cons<H, <() as FilterSkips<IO,Me,T>>::Out>;
+}
+```
+
+### Type-Level Equality
+
+Essential for compile-time type assertions:
+
+```rust
 pub trait TypeEq<A> {}
 impl<T> TypeEq<T> for T {}
 ```
 
-Rust’s coherence rules pick the exact match impl and disallow others.
+Used for assertions like `assert_type_eq!(A, B)` which fail if A ≠ B.
 
-## 3. Type‐Level Filter vs. Map
+### Role Containment Checking
 
-- **Map**: transforms every element of a type‐list, preserving length.
-- **Filter**: keeps only elements satisfying a predicate, shortening the list.
-
-Example: drop all `EpSkip<IO,Me>` from `Cons<H,T>`:
+For determining if a protocol branch contains a specific role:
 
 ```rust
-pub trait FilterSkips<IO, Me: Role, List> { type Out; }
-impl<IO, Me: Role> FilterSkips<IO, Me, Nil> for () { type Out = Nil; }
-
-// Delegate to helper based on TypeMarker
-impl<IO, Me: Role, H, Tail> FilterSkips<IO,Me,Cons<H,Tail>> for ()
-where
-    H: GetEpSkipTypeMarker<IO,Me>,
-    (): FilterSkipsCase<IO,Me,H,Tail,
-        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>,
-{
-    type Out = <() as FilterSkipsCase<IO,Me,H,Tail,
-        <H as GetEpSkipTypeMarker<IO,Me>>::TypeMarker>>::Out;
+pub trait ContainsRole<R> {
+    type Output: types::Bool;
 }
 
-// If head is EpSkip → skip it
-impl<IO, Me: Role, Tail>
-    FilterSkipsCase<IO,Me, EpSkip<IO,Me>, Tail, IsEpSkipType> for ()
-where (): FilterSkips<IO,Me,Tail>
-{ type Out = <() as FilterSkips<IO,Me,Tail>>::Out; }
+// Base case: End contains no roles
+impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
+    type Output = types::False;
+}
 
-// Otherwise → keep it
-impl<IO, Me: Role, H, Tail>
-    FilterSkipsCase<IO,Me, H, Tail, IsNotEpSkipType> for ()
+// Recursive case: TInteract contains role if role matches or continuation does
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
 where
-    H: EpSession<IO,Me>,
-    (): FilterSkips<IO,Me,Tail>,
+    // ...constraints...
+    <R1 as RoleEq<R2>>::Output: types::BoolOr<<T as ContainsRole<R2>>::Output>,
 {
-    type Out = Cons<H, <() as FilterSkips<IO,Me,Tail>>::Out>;
+    type Output = types::Or<<R1 as RoleEq<R2>>::Output, <T as ContainsRole<R2>>::Output>;
 }
 ```
 
-## 4. Rust Trait System Constraints & Workarounds
+This pattern enables:
+- Recursive traversal of nested protocol structures
+- Boolean composition of role presence
+- Precise typing for projection decisions
 
-- **No specialization or negative bounds** on stable Rust.
-- **No associated types as generic parameters**.
-- **No overlapping impls** allowed.
+### Case-Based Composition Pattern
 
-Workarounds:
+For handling different combinations of endpoint types:
 
-- Use **sealed helper traits** and **marker types** for stable, mutual exclusion.
-- Expose a **facade trait** with a single impl to avoid overlap.
-- Enumerate explicit impls rather than blanket covers that break coherence.
+```rust
+pub trait ComposeProjectedParBranches<IO, Me: Role, L, R> /* constraints */ {
+    type Out: EpSession<IO, Me>;
+}
 
-## 5. Documentation & Planning
+impl<IO, Me: Role, L, R> ComposeProjectedParBranches<IO, Me, L, R> for ()
+where
+    // ...constraints...
+    (): ComposeProjectedParBranchesCase<
+        IsSkip<L, IO, Me>,  // Type-level query
+        IsSkip<R, IO, Me>,  // Type-level query
+        IsEnd<L, IO, Me>,   // Type-level query
+        IsEnd<R, IO, Me>,   // Type-level query
+        IO, Me, L, R,
+    >,
+{
+    type Out = <() as ComposeProjectedParBranchesCase</*...*/>::Out;
+}
+
+// Multiple specialized implementations for different cases
+```
+
+## 2. Rust Trait System Constraints & Workarounds
+
+### Key Limitations in Stable Rust
+
+- **No specialization**: Cannot provide specialized implementations for subsets
+- **No negative bounds**: Cannot constrain generics by what they are not
+- **No associated types as generic parameters**: Types must be direct
+- **No overlapping impls**: Must have disjoint implementation sets
+
+### Effective Workarounds
+
+- Use **sealed helper traits** with marker types for mutual exclusion
+- Create a **facade trait** with a single impl to avoid overlap
+- Use **explicit enumeration** rather than blanket implementations
+- Prefer **concrete type parameters** over complex bounds
+- Leverage **type-level booleans** for conditional logic
+
+## 3. Project Organization Patterns
+
+### Documentation & Planning
 
 - **Always plan** edits with:
-  - A list of affected files, traits, or functions
+  - Affected files/traits/functions
   - Change order and dependencies
   - Estimated edit count
-- **Document intent**: comment non‐obvious type‐level logic.
-- **Distinguish** algorithm patterns (map vs filter) in prose first.
-- Use examples and ensure doctests compile.
+- **Document intent** with comments for non-obvious logic
+- **Distinguish algorithms** (map vs. filter) in prose first
+- Use examples with doctests for clarity
 
-## 6. CI & Verification Workflow
+### Test-Driven Parameter Refactoring
 
-- Ensure every change is validated by:
-  - `cargo check` to catch compile errors
-  - `cargo fmt --all -- --check` to enforce formatting
-  - `cargo clippy` for linting and code quality checks
-  - `cargo test` (runtime, compile-fail, doctests, trybuild) for correctness
-- Use `trybuild` to automate macro edge-case and compile-fail tests.
-- Mark unstable or in-progress doctests as `ignore` to keep docs builds green.
+1. Create pre-implementation tests verifying current behavior
+2. Make parameter changes while preserving behavior
+3. Verify with post-implementation tests
+4. Systematically track test coverage metrics
 
-## 2025-05-13: Documentation updates for protocol-examples.md
+### Label Parameter Standardization
 
-- Synced examples with actual `TSession` API: used `TInteract`, `TChoice`, `TRec`, `TEnd`, and `Var` generics.
-- Documented local projection internals: `EpSkip` filtering via `FilterSkips` and branch composition via `ComposeProjectedParBranches`.
-- Clarified recursion model: flat global labels (`TRec<IO, Label, S>`) with explicit `Var<Label>` loops; absence of de Bruijn indices.
-- Revised examples in sections 1.1, 1.2, and 2 to Rust `EpSession` types for send/receive/choice patterns.
+- Start with core types and related traits
+- Move outward to dependent systems
+- Finally update tests and examples
+- Ensure thorough test coverage before refactoring
 
-## 2025-05-14: Runtime Implementation Pattern Comparison
+### Runtime Implementation Approaches
 
-When implementing session types in Rust, we've identified three primary approaches, each with distinct trade-offs:
+Three primary patterns for session type runtime implementation:
 
 1. **Typed Channel Wrappers**:
-   - Encode protocol state in type parameters
-   - Heavy reliance on Rust's type system for compile-time safety
-   - Interleaves business logic with protocol operations
-   - Complex type-level programming but high flexibility
+   - Protocol state encoded in type parameters
+   - Heavy reliance on Rust's type system
+   - High flexibility but complex type-level programming
 
 2. **Code Generation with Procedural Macros**:
-   - Minimizes boilerplate through automated code generation
-   - Typically uses callbacks/handlers for business logic integration
-   - Creates cleaner syntax for protocol definition
-   - May limit IDE support and introduce debugging challenges
+   - Minimizes boilerplate through code generation
+   - Uses callbacks/handlers for business logic integration
+   - Cleaner syntax but may limit IDE support
 
 3. **State Machine Builders**:
-   - Makes protocol states explicit as distinct types
-   - Provides strong IDE support through state-specific method discovery
-   - Uses builder patterns and fluent APIs for readable protocol definition
-   - Excellent for visualizing protocol flow in code structure
+   - Explicit protocol states as distinct types
+   - Strong IDE support through state method discovery
+   - Excellent for visualizing protocol flow
 
-Key implementation considerations:
+## 4. Key Insights
 
-- Type safety and protocol enforcement should be prioritized regardless of approach
-- Project scale influences optimal choice (State Machines for small, Code Gen for large)
-- Developer experience varies significantly between approaches
-- Combined strategies often yield the best results for complex systems
+1. **Type-Level Dispatch** is crucial for non-overlapping implementations and enables pattern-matching-like behavior in the type system.
 
-These patterns can be mixed to create hybrid approaches that leverage the strengths of each implementation style while mitigating their weaknesses.
+2. **Helper Traits** create indirection that resolves implementation conflicts and improves modularity.
 
-## Label Parameter Refactoring: Learnings and Insights
+3. **Trait Design** should focus on composable, single-responsibility traits with clear boundaries.
 
-### Phase 1: Preparation and Analysis (May 14, 2025)
+4. **Recursive Type Traversal** with proper terminal cases is essential for handling nested protocols.
 
-#### Patterns Observed
+5. **Case Multiplication** means implementations grow with the product of case dimensions.
 
-1. **Label Parameter Usage Patterns**:
-   - The codebase has two competing naming conventions for label parameters:
-     - `L` for `TEnd`, `TInteract`, and `TRec`
-     - `Lbl` for `TChoice` and `TPar`
-   - This inconsistency makes code harder to read, especially in complex nested types
-   - Labels primarily serve documentation and debugging purposes, acting as type-level metadata
+6. **Type-Level Boolean Operations** enable complex decision logic that would be impossible with simple trait bounds.
 
-2. **Label Preservation Patterns**:
-   - Labels are preserved during composition operations (`TSession::Compose`) for all combinators except `TEnd`
-   - `TEnd<IO, L>::Compose<Rhs>` returns `Rhs`, discarding the label `L` entirely
-   - All other combinators carefully preserve their label through composition operations
+7. **Protocol Projection** decisions depend heavily on role presence, requiring sophisticated role containment checking.
 
-3. **Label and Projection Patterns**:
-   - Endpoint types (`EpSend`, `EpRecv`, etc.) don't include label parameters
-   - Labels are present in global session types but lost in projection to endpoint types
-   - This creates a disconnect between global and local protocol representations
+8. **Test-First Refactoring** with comprehensive metrics significantly reduces regression risk.
 
-4. **Label Testing Patterns**:
-   - Most tests use `EmptyLabel` as the default label parameter
-   - Few tests specifically validate label behavior during composition
-   - Tests primarily validate uniqueness constraints rather than preservation behavior
+9. **Parameter Consistency** across the codebase improves readability and simplifies reasoning.
 
-#### Key Insights
-
-1. **Systematic Testing is Essential**:
-   - To safely refactor parameter names, we need strong tests validating behavior preservation
-   - Our new test infrastructure with `ExtractLabel` and `Same` traits enables explicit verification of label behavior
-   - The test coverage metrics we established provide a clear way to track our testing progress
-
-2. **Type-Level Programming Complexity**:
-   - Label parameters are deeply integrated into the type system through trait bounds and associated types
-   - Any change must carefully propagate through all dependent traits and types
-   - The introspection system (`LabelsOf` trait) and projection system have complex interactions with label parameters
-
-3. **Test Metric Approach**:
-   - Using type-level traits like `TestedWithCustomLabel` provides a compile-time verification of test coverage
-   - The combination of manual metrics tracking and automated test output provides good visibility
-   - Setting explicit coverage targets helps ensure thorough testing
-
-4. **Mapping the Codebase**:
-   - Creating a detailed mapping of all label usages is critical for comprehensive refactoring
-   - Five key areas were identified for focused attention:
-     1. Core type definitions
-     2. Trait implementations
-     3. Projection machinery
-     4. Introspection system
-     5. Tests and examples
-   - The mapping revealed potential challenges, particularly in areas where `L` is used both as a label and as a left branch parameter
-
-#### Implementation Learnings
-
-1. **Test Infrastructure Design**:
-   - Creating generic traits like `ExtractLabel` provides flexibility for testing various label behaviors
-   - Type-level assertions using traits like `Same` enable compile-time verification
-   - The modular approach of testing each combinator separately simplifies reasoning about behavior
-
-2. **Metrics Collection**:
-   - Separating metrics into distinct categories (combinator coverage, composition coverage, etc.) provides clearer insights
-   - Establishing baseline measurements helps identify areas needing more attention
-   - The coverage tracking implementation provides a template for future test infrastructure
-
-3. **Branching Strategy**:
-   - Using a dedicated feature branch (`feat/label-refactoring`) isolates this breaking change
-   - This allows focused testing without disrupting main development
-   - Branch protection and systematic testing will be essential as we proceed
-
-#### Next Steps and Recommendations
-
-1. **Improve Test Coverage**:
-   - Add tests for `TInteract` and `TRec` with additional custom label types to meet our target
-   - Implement tests for identified edge cases (nested compositions, mixed combinator interactions, complex structures)
-   - These improvements will ensure more comprehensive coverage before proceeding with the actual refactoring
-
-2. **Prioritize Simple Combinators First**:
-   - Begin the actual refactoring with `TEnd` as it has the simplest implementation
-   - Its unique behavior (not preserving labels in composition) makes it a good test case
-   - After gaining experience with the simplest case, proceed with `TInteract` and `TRec`
-
-3. **Consider Broader Impact**:
-   - This refactoring provides an opportunity to establish better label handling conventions
-   - Future work might explore preserving labels in projection, which would require endpoint types to include label parameters
-   - Documentation should clearly explain the role of labels in the protocol system
-
-4. **Be Vigilant About Parameter Ambiguity**:
-   - In `TChoice` and `TPar`, both `Lbl` (label) and `L` (left branch) parameters exist
-   - Careful attention is needed to ensure they aren't confused during refactoring
-   - Clear documentation will help future developers understand the distinction
-
-### Phase 2: Test Enhancement and Initial Refactoring (May 14, 2025)
-
-#### Completed Work
-
-1. **Enhanced Test Coverage**:
-   - Added comprehensive tests for `TInteract` and `TRec` with all three custom label types (`L1`, `L2`, `L3`)
-   - Implemented edge case tests for:
-     - Nested compositions with multiple label types
-     - Mixed combinator interactions (e.g., `TPar` with `TChoice` inside)
-     - Complex protocol structures with multi-level nesting
-   - Updated coverage metrics to reflect these improvements
-   - Achieved 100% coverage across all defined metrics
-
-2. **Refactored `TEnd<IO, L>` to `TEnd<IO, Lbl>`**:
-   - Successfully changed parameter name in type definition
-   - Updated documentation to reflect the new parameter name
-   - Updated trait implementations to use the new parameter name
-   - All tests still pass, confirming backward compatibility
-
-#### Key Insights
-
-1. **Test-First Refactoring is Effective**:
-   - By significantly improving test coverage before refactoring, we gained confidence in our changes
-   - Edge case tests were particularly valuable, uncovering subtleties in label propagation
-   - The comprehensive test suite now serves as a reliable safety net for further refactoring
-
-2. **Parameter Name Consistency Matters**:
-   - The consistent use of `Lbl` across combinators makes type definitions more readable
-   - It becomes easier to reason about the role of each parameter when they follow a consistent convention
-   - Type errors become more meaningful with consistent parameter names
-
-3. **Edge Cases Reveal Design Principles**:
-   - Testing nested compositions revealed that the outermost label always takes precedence
-   - This confirms the hierarchical nature of the protocol combinators
-   - Understanding this pattern is crucial for correctly implementing projection and composition
-
-4. **Metrics Drive Development**:
-   - Having explicit coverage metrics guided our testing efforts effectively
-   - The detailed breakdown (by combinator, by custom label type, by edge case) provided clear targets
-   - Automating the metrics reporting in tests helps maintain awareness of coverage quality
-
-#### Challenges Encountered
-
-1. **Multi-Parameter Type Classes**:
-   - Keeping track of which traits have `L` vs. `Lbl` parameters requires careful attention
-   - Our comprehensive mapping from Phase 1 was essential for navigating these dependencies
-   - We needed to ensure changes to `TEnd` didn't break any type-level computations
-
-2. **Test Design Complexity**:
-   - Creating meaningful edge case tests requires deep understanding of the type system
-   - We needed to model realistic protocol scenarios while isolating the behavior being tested
-   - Type-level assertions required careful construction to test exactly what we wanted
-
-3. **Documentation Synchronization**:
-   - Keeping documentation in sync with code changes is critical but challenging
-   - We updated both inline documentation and the metrics document
-   - This multi-document approach requires discipline but provides valuable context
-
-#### Next Phase Planning
-
-1. **Continue with Remaining Combinators**:
-   - Next step is to refactor `TInteract<IO, L, R, H, T>` to `TInteract<IO, Lbl, R, H, T>`
-   - Then proceed to `TRec<IO, L, S>` to `TRec<IO, Lbl, S>`
-   - `TChoice` and `TPar` already use the `Lbl` convention and don't need changes
-
-2. **Testing Strategy**:
-   - Run the full test suite after each combinator refactoring
-   - Pay special attention to projection tests, as they rely heavily on combinator types
-   - Update any examples or documentation using the old parameter names
-
-3. **Documentation Updates**:
-   - Continue updating the label_coverage.md metrics with each phase
-   - Consider adding a section in the main documentation about the label parameter convention
-   - Update code comments to reflect the new parameter naming convention
-
-4. **Consistency Checklist**:
-   - For each remaining refactoring step, verify:
-     - Type definition and documentation
-     - Trait implementations
-     - Type aliases and examples
-     - Tests specifically targeting that combinator
-
-### Phase 3: Projection and Introspection Refactoring (May 14, 2025)
-
-#### Completed Work
-
-1. **Pre-Implementation Tests for Introspection**:
-   - Created comprehensive tests for the `LabelsOf` and `RolesOf` traits
-   - Verified their behavior with existing parameter naming conventions
-   - Added tests that would detect any regression during refactoring
-
-2. **Updated Introspection Code**:
-   - Successfully refactored the `RolesOf` trait implementations to use `Lbl` parameter naming
-   - Updated the `LabelsOf` trait implementations with the consistent parameter name
-   - All introspection tests pass, confirming backward compatibility
-
-3. **Pre-Implementation Tests for Projection**:
-   - Created dedicated tests for projection traits with `TEnd` and `TInteract`
-   - Tested edge cases in projection machinery that rely on label parameters
-   - Established a baseline for expected projection behavior
-
-4. **Updated Projection Traits**:
-   - Refactored `ProjectRole` implementations for `TEnd` and `TInteract`
-   - Updated trait bounds and type constraints consistently
-   - All projection tests pass with the refactored parameter names
-
-5. **Updated Struct Definitions**:
-   - Refactored `TInteract` struct definition to use `Lbl` parameter naming
-   - Updated documentation to reflect the new parameter naming convention
-   - Refactored `TRec` struct definition to use `Lbl` parameter naming
-   - All struct-related trait implementations updated consistently
-
-#### Key Insights
-
-1. **Introspection System Complexity**:
-   - The `RolesOf` and `LabelsOf` traits are more deeply integrated with the type system than initially apparent
-   - Their implementations depend on recursive trait resolution and proper parameter propagation
-   - Consistent parameter naming greatly improves the readability and maintainability of this code
-
-2. **Pre-Implementation Testing Value**:
-   - Creating tests before implementation proved invaluable for introspection and projection
-   - Tests caught subtle issues in our understanding of the current implementation
-   - They provided a clear baseline against which to measure our changes
-
-3. **Dependencies in Projection System**:
-   - The projection system relies on intricate relationships between multiple traits
-   - Each trait focuses on a specific aspect of the projection process:
-     - `ProjectRole` handles the high-level projection from global to local types
-     - `ProjectInteract` specializes in single interaction projections
-     - `IsSkip` and `IsEnd` provide type-level predicates for endpoint types
-   - Consistent parameter naming makes these relationships clearer
-
-4. **Incremental Testing Approach**:
-   - Starting with simpler tests that work with the current implementation
-   - Gradually expanding to cover more complex cases
-   - This approach helped identify where projection implementations were incomplete
-
-5. **Documentation Importance**:
-   - Clear documentation of parameter names and their purposes is essential
-   - Updated doc comments throughout the codebase to maintain consistency
-   - This improves future maintainability and makes the code more approachable
-
-#### Challenges Encountered
-
-1. **Projection Implementation Gaps**:
-   - We discovered that `ProjectRole` is not fully implemented for all combinators
-   - Specifically, `TChoice` and `TPar` lack implementations, causing test failures
-   - We adjusted our tests to focus on the implemented functionality
-
-2. **Test Adaptation for Current State**:
-   - Some tests needed to be modified to work with the current implementation
-   - This required understanding which parts of the projection system are complete
-   - The adjusted tests still provide valuable verification of the refactoring
-
-3. **Parameter Constraints Propagation**:
-   - Each parameter change needs to propagate through multiple trait bounds
-   - Special care is needed to ensure all constraints are updated consistently
-   - The compiler provides valuable guidance but requires careful attention to error messages
-
-4. **Balancing Thoroughness with Progress**:
-   - Finding the right level of testing was a challenge
-   - Too detailed, and we'd end up testing unimplemented features
-   - Too shallow, and we might miss important interactions
-
-#### Refactoring Patterns Identified
-
-1. **Progressive Parameter Standardization**:
-   - Start with core types and related traits
-   - Move outward to dependent systems (introspection, projection)
-   - Finally update tests and examples
-
-2. **Trait Bound Examination**:
-   - For each type definition change, carefully examine all trait bounds
-   - Update related trait implementations with consistent parameter names
-   - Check for subtle relationships between traits that might be affected
-
-3. **Documentation Synchronization**:
-   - Update doc comments alongside code changes
-   - Ensure examples in documentation reflect new parameter names
-   - Keep changelog updated with each phase completion
-
-4. **Test-Driven Parameter Refactoring**:
-   - Create pre-implementation tests to verify current behavior
-   - Make parameter changes while keeping behavior identical
-   - Verify with post-implementation tests
-
-#### Future Recommendations
-
-1. **Complete Projection Implementation**:
-   - Implement `ProjectRole` for `TChoice` and `TPar` to complete the projection system
-   - Add corresponding tests once implemented
-   - This would allow more comprehensive testing of label parameter usage
-
-2. **Consider Label Preservation in Projection**:
-   - The current projection system loses label information
-   - A future enhancement could preserve labels in endpoint types
-   - This would provide better traceability between global and local types
-
-3. **Expand Test Coverage**:
-   - Continue adding tests for complex interactions between projection and labels
-   - Test label propagation through nested projections
-   - These tests will help catch any subtle issues in future refactorings
-
-4. **Documentation Improvements**:
-   - Add a dedicated section on label parameters in the library documentation
-   - Provide examples of how labels can be used effectively
-   - Explain the label preservation semantics clearly
+10. **Edge Case Testing** reveals subtle design principles that may not be apparent from basic tests.
 
 ---
 
-These learnings from Phase 3 complement our earlier insights and will guide any future work on the session type system, particularly regarding projection and introspection.
-
----
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*

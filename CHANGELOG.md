@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added additional tests for `TInteract` and `TRec` with multiple custom label types (`L1`, `L2`, `L3`) to achieve full test coverage.
 - Added pre-implementation tests for introspection functionality to verify behavior before and after label parameter refactoring.
 - Added pre-implementation tests for projection traits to ensure consistent behavior throughout the refactoring process.
+- Completed projection machinery by implementing missing `ProjectRole` for `TChoice` and `TPar`, enabling full end-to-end projection from global to local session types for all combinators. New helper traits (`ProjectChoiceCase`, `TParContainsRoleImpl`) provide type-level dispatch to handle different role containment scenarios.
+- Added type-level boolean operations (`Or`, `Not`, `BoolOr`) to support the projection machinery with proper type constraints.
+- Enhanced `ContainsRole`/`NotContainsRole` traits with rigorous type-level reasoning to determine role presence in nested protocol structures.
 
 ### Changed
 

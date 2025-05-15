@@ -56,6 +56,45 @@ pub trait TypeEq<A> {}
 
 impl<T> TypeEq<T> for T {}
 
+/// Boolean OR type-level function
+/// Returns `True` if either A or B is `True`, otherwise `False`
+pub type Or<A, B> = <A as BoolOr<B>>::Output;
+
+/// Helper trait for implementing boolean OR at the type level
+pub trait BoolOr<B> {
+    type Output: Bool;
+}
+
+impl BoolOr<True> for True {
+    type Output = True;
+}
+
+impl BoolOr<False> for True {
+    type Output = True;
+}
+
+impl BoolOr<True> for False {
+    type Output = True;
+}
+
+impl BoolOr<False> for False {
+    type Output = False;
+}
+
+/// Boolean NOT type-level function
+/// Returns `True` if input is `False`, otherwise `False`
+pub trait Not {
+    type Output: Bool;
+}
+
+impl Not for True {
+    type Output = False;
+}
+
+impl Not for False {
+    type Output = True;
+}
+
 /// Marker trait for user-definable protocol labels.
 ///
 /// Implement this trait for any type you want to use as a protocol label.

@@ -448,7 +448,200 @@ pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
     type Out: EpSession<IO, Me>;
 }
 
-/// Helper trait for projecting a protocol parallel composition.
+// Projection implementation for TChoice - delegate to ProjectChoice helper
+impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    L: ContainsRole<Me>,
+    <L as ContainsRole<Me>>::Output: types::Bool,
+    R: ContainsRole<Me>,
+    <R as ContainsRole<Me>>::Output: types::Bool,
+    (): ProjectChoiceCase<
+        Me, 
+        IO, 
+        L, 
+        R,
+        <L as ContainsRole<Me>>::Output,
+        <R as ContainsRole<Me>>::Output
+    >,
+{
+    type Out = <() as ProjectChoiceCase<
+        Me,
+        IO,
+        L,
+        R,
+        <L as ContainsRole<Me>>::Output,
+        <R as ContainsRole<Me>>::Output
+    >>::Out;
+}
+
+// Helper trait for handling different cases of ProjectChoice based on role presence
+pub trait ProjectChoiceCase<Me, IO, L: TSession<IO>, R: TSession<IO>, LContainsMe, RContainsMe> {
+    type Out: EpSession<IO, Me>;
+}
+
+// Case 1: Both branches contain the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::True> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, L>,
+    (): ProjectRole<Me, IO, R>,
+{
+    type Out = EpChoice<
+        IO,
+        Me,
+        <() as ProjectRole<Me, IO, L>>::Out,
+        <() as ProjectRole<Me, IO, R>>::Out
+    >;
+}
+
+// Case 2: Only left branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::True, types::False> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, L>,
+{
+    type Out = <() as ProjectRole<Me, IO, L>>::Out;
+}
+
+// Case 3: Only right branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::False, types::True> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectRole<Me, IO, R>,
+{
+    type Out = <() as ProjectRole<Me, IO, R>>::Out;
+}
+
+// Case 4: Neither branch contains the role
+impl<Me, IO, L, R> ProjectChoiceCase<Me, IO, L, R, types::False, types::False> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+{
+    type Out = EpSkip<IO, Me>;
+}
+
+// --- Helper trait to check if a role is present in a protocol branch.
+/// Returns a type-level boolean indicating whether the role is present.
+pub trait ContainsRole<R> {
+    type Output: types::Bool;
+}
+
+/// Helper trait to check if a role is NOT present in a protocol branch.
+pub trait NotContainsRole<R> {}
+
+// End always contains no roles
+impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
+    type Output = types::False;
+}
+
+impl<IO, Lbl, R> NotContainsRole<R> for TEnd<IO, Lbl> {}
+
+// TInteract contains the role if either the current role or continuation contains it
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R1: RoleEq<R2>,
+    <R1 as RoleEq<R2>>::Output: types::Bool,
+    T: TSession<IO> + ContainsRole<R2>,
+    <T as ContainsRole<R2>>::Output: types::Bool,
+    // The following ensures Or can be used with these types
+    <R1 as RoleEq<R2>>::Output: types::BoolOr<<T as ContainsRole<R2>>::Output>,
+{
+    // True if either this role or the continuation contains the role
+    type Output = types::Or<<R1 as RoleEq<R2>>::Output, <T as ContainsRole<R2>>::Output>;
+}
+
+// TInteract doesn't contain the role if both the current role and continuation don't
+impl<IO, Lbl, H, T, R1, R2> NotContainsRole<R2> for TInteract<IO, Lbl, R1, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R1: RoleEq<R2>,
+    <R1 as RoleEq<R2>>::Output: types::Bool + types::Not,
+    <<R1 as RoleEq<R2>>::Output as types::Not>::Output: types::Bool,
+    T: TSession<IO> + NotContainsRole<R2>,
+{
+}
+
+// TChoice contains the role if either branch contains it
+impl<IO, Lbl, L, R, RoleT> ContainsRole<RoleT> for TChoice<IO, Lbl, L, R>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + ContainsRole<RoleT>,
+    <L as ContainsRole<RoleT>>::Output: types::Bool,
+    R: TSession<IO> + ContainsRole<RoleT>,
+    <R as ContainsRole<RoleT>>::Output: types::Bool,
+    // The following ensures Or can be used with these types
+    <L as ContainsRole<RoleT>>::Output: types::BoolOr<<R as ContainsRole<RoleT>>::Output>,
+{
+    // True if either branch contains the role
+    type Output = types::Or<<L as ContainsRole<RoleT>>::Output, <R as ContainsRole<RoleT>>::Output>;
+}
+
+// TChoice doesn't contain the role if neither branch contains it
+impl<IO, Lbl, L, R, RoleT> NotContainsRole<RoleT> for TChoice<IO, Lbl, L, R>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + NotContainsRole<RoleT>,
+    R: TSession<IO> + NotContainsRole<RoleT>,
+{
+}
+
+// Use a single implementation with dispatch on L branch containment
+impl<IO, Lbl, L, R, IsDisjoint, RoleT> ContainsRole<RoleT> for TPar<IO, Lbl, L, R, IsDisjoint>
+where
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO> + ContainsRole<RoleT>,
+    <L as ContainsRole<RoleT>>::Output: types::Bool,
+    R: TSession<IO> + ContainsRole<RoleT>,
+    <R as ContainsRole<RoleT>>::Output: types::Bool,
+    // Use a helper trait to dispatch based on L branch containment
+    (): TParContainsRoleImpl<
+        <L as ContainsRole<RoleT>>::Output,
+        <R as ContainsRole<RoleT>>::Output
+    >,
+{
+    type Output = <() as TParContainsRoleImpl<
+        <L as ContainsRole<RoleT>>::Output,
+        <R as ContainsRole<RoleT>>::Output
+    >>::Output;
+}
+
+// Helper trait for TPar role containment logic
+pub trait TParContainsRoleImpl<LContains, RContains> {
+    type Output: types::Bool;
+}
+
+// If either branch contains the role, TPar contains it
+impl TParContainsRoleImpl<types::True, types::True> for () {
+    type Output = types::True;
+}
+
+impl TParContainsRoleImpl<types::True, types::False> for () {
+    type Output = types::True;
+}
+
+impl TParContainsRoleImpl<types::False, types::True> for () {
+    type Output = types::True;
+}
+
+// If neither branch contains the role, TPar doesn't contain it
+impl TParContainsRoleImpl<types::False, types::False> for () {
+    type Output = types::False;
+}
+
+// --- Helper trait for projecting a protocol parallel composition.
 ///
 /// - `Me`: The role being projected.
 /// - `IO`: Protocol marker type.
@@ -456,13 +649,6 @@ pub trait ProjectChoice<Me, IO, L: TSession<IO>, R: TSession<IO>> {
 pub trait ProjectPar<Me, IO, L: TSession<IO>, R: TSession<IO>> {
     type Out: EpSession<IO, Me>;
 }
-
-// --- ContainsRole trait: type-level check if a role is present in a protocol branch ---
-/// Type-level trait to check if a role is present in a protocol branch.
-pub trait ContainsRole<R> {
-    type Output;
-}
-// Implementations for Nil, Cons, TInteract, TChoice, TPar, TRec, TEnd, etc. should exist elsewhere in the codebase.
 
 // --- ProjectParBranch: Helper trait to dispatch on role presence in a parallel branch ---
 /// Helper trait to project a parallel branch for a role, or skip if not present.
@@ -822,4 +1008,60 @@ where
     (): FilterSkips<IO, Me, T>,
 {
     type Out = Cons<H, <() as FilterSkips<IO, Me, T>>::Out>;
+}
+
+// Projection implementation for TPar - delegate to ProjectPar helper
+impl<Me, IO, Lbl, L, R, IsDisjoint> ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    (): ProjectPar<Me, IO, L, R>,
+{
+    type Out = <() as ProjectPar<Me, IO, L, R>>::Out;
+}
+
+// Implement ProjectPar by projecting both branches and composing the result
+impl<Me, IO, L, R> ProjectPar<Me, IO, L, R> for ()
+where
+    Me: Role,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    // Determine if branches contain the role
+    L: ContainsRole<Me>,
+    <L as ContainsRole<Me>>::Output: types::Bool,
+    R: ContainsRole<Me>,
+    <R as ContainsRole<Me>>::Output: types::Bool,
+    // Project each branch conditionally based on role presence
+    (): ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>,
+    (): ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>,
+    // Get the resulting endpoint types
+    <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out: 
+        EpSession<IO, Me> + 
+        IsEpSkipVariant<IO, Me> + 
+        IsEpEndVariant<IO, Me>,
+    <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out:
+        EpSession<IO, Me> + 
+        IsEpSkipVariant<IO, Me> + 
+        IsEpEndVariant<IO, Me>,
+    // Ensure the output types have the right marker types
+    <<() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out as IsEpSkipVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out as IsEpSkipVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out as IsEpEndVariant<IO, Me>>::Output: types::Bool,
+    <<() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out as IsEpEndVariant<IO, Me>>::Output: types::Bool,
+    // Compose the projected branches
+    (): ComposeProjectedParBranches<
+        IO, 
+        Me, 
+        <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out,
+        <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out
+    >,
+{
+    type Out = <() as ComposeProjectedParBranches<
+        IO,
+        Me,
+        <() as ProjectParBranch<<L as ContainsRole<Me>>::Output, Me, IO, L>>::Out,
+        <() as ProjectParBranch<<R as ContainsRole<Me>>::Output, Me, IO, R>>::Out
+    >>::Out;
 }
