@@ -38,7 +38,6 @@ implemented in rust stable.
 - Use line wrapping at 80-100 characters for readability.
 - Ensure code examples in docs are up to date and compile (doctest where possible).
 - Use clear section headings and bullet points for structure.
-- Wrap lines at 100 characters for readability
 - be careful with list identation
   - Use 2 spaces for top-level lists
   - Use 4 spaces for nested lists (2 additional spaces per level)
@@ -51,12 +50,13 @@ implemented in rust stable.
   - Always add blank lines before and after lists
   - This prevents markdown parsers from merging adjacent content
 - Wrap URLs in angle brackets `<http://example.com>` or use reference-style links
+- Use footnotes for citations
 
 ## Code Style
 
 - Follow Rust’s standard formatting (rustfmt).
 - Use idiomatic Rust patterns and avoid unnecessary complexity.
-- All code must pass `cargo clippy` and `cargo test` before merging.
+- All code must build `cargo build`, pass `cargo fmt --all -- --check`,`cargo clippy` and `cargo test` before merging.
 
 ## Protocol & Type-Level Design
 
@@ -64,6 +64,41 @@ implemented in rust stable.
 safety.
 - Add compile-time assertions (e.g., `assert_type_eq!`, `assert_disjoint!`) for protocol invariants.
 - Document any non-trivial type-level logic.
+
+### Rust Trait System Constraints
+
+Be aware of these stable Rust limitations when implementing protocol code:
+
+- **No specialization**: Cannot provide specialized implementations for subsets of types
+- **No negative bounds**: Cannot constrain generics by what they are not
+- **No associated types as generic parameters**: Types must be directly specified
+- **No overlapping impls**: Must have disjoint implementation sets
+
+### Core Type-Level Programming Patterns
+
+When implementing type-level functionality, prefer these established patterns:
+
+- **Marker Type Dispatch**: Use marker types to represent cases and delegate implementations
+  when different behavior is needed for specific types
+- **Helper Trait Case Analysis**: Create helper traits with specialized implementations for each
+  case combination when protocol projection requires different behavior based on multiple computed
+  properties
+- **Recursive Type Structure Traversal**: Use recursive trait implementations with proper base cases
+  for analyzing nested, recursive protocol structures
+- **Type-Level Boolean Logic**: Implement boolean operators as traits with associated types for
+  combining multiple type-level conditions in protocol analysis
+
+### Critical Implementation Principles
+
+Adhere to these principles when implementing protocol-related code:
+
+- **Type-Level Dispatch** is fundamental for handling different protocol cases without specialization
+- **Helper Traits** resolve implementation conflicts through indirection
+- **Recursive Type Traversal** requires careful handling of base cases and conditionals
+- **Edge Case Testing** must be comprehensive to reveal subtle protocol implementation issues
+- **Protocol Projection** decisions must account for role presence in multiple communication paths
+- **Compositional Design** with small, focused traits improves modularity and evolution
+- **Type Safety at Compile Time** is achievable through proper trait bounds and assertions
 
 ## Commit & PR Workflow
 
