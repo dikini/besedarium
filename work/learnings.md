@@ -357,3 +357,49 @@ project momentum while acknowledging work that still needs to be done.
 
 *Consult this summary before any future protocol‐projection or
 type‐level work to maintain stability, clarity, and correctness.*
+
+## Markdown Linting Best Practices
+
+### Common Issues and Solutions
+
+1. **Line Length (MD013)**
+   - Wrap lines at 100 characters for readability
+   - Use `fold -s -w 100` to wrap text while preserving indentation
+   - Script: `./scripts/fix_markdown.sh` handles this automatically
+
+2. **List Indentation (MD007)**
+   - Use 2 spaces for top-level lists
+   - Use 4 spaces for nested lists (2 additional spaces per level)
+   - Consistent indentation is critical for proper rendering
+
+3. **Ordered List Numbering (MD029)**
+   - Use consistent numbering style (1, 2, 3 or 1, 1, 1)
+   - Fix with search and replace or the fix_markdown.sh script
+   - Consider converting to bullet points when sequential numbering isn't important
+
+4. **Blank Lines Around Lists (MD032)**
+   - Always add blank lines before and after lists
+   - This prevents markdown parsers from merging adjacent content
+
+5. **Bare URLs (MD034)**
+   - Wrap URLs in angle brackets `<http://example.com>` or use reference-style links
+   - Use `sed` to replace bare URLs: `sed -E 's/(^|[^(<])((http|https|ftp):\/\/[^ )]*)([^)>]|$)/\1<\2>\4/g'`
+
+### Useful Commands
+
+```bash
+# Fix line wrapping at 100 chars
+fold -s -w 100 input.md > output.md
+
+# Remove trailing spaces (MD009)
+sed -i 's/[ \t]*$//' filename.md
+
+# Fix bare URLs (MD034)
+sed -i -E 's/(^|[^(<])((http|https|ftp):\/\/[^ )]*)([^)>]|$)/\1<\2>\4/g' filename.md
+
+# Fix list indentation (MD007)
+sed -i 's/^   -/  -/' filename.md  # 3-space to 2-space indentation
+sed -i 's/^     -/    -/' filename.md  # 5-space to 4-space indentation
+```
+
+These patterns help maintain consistent documentation formatting that passes markdownlint checks.

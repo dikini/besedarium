@@ -38,6 +38,19 @@ implemented in rust stable.
 - Use line wrapping at 80-100 characters for readability.
 - Ensure code examples in docs are up to date and compile (doctest where possible).
 - Use clear section headings and bullet points for structure.
+- Wrap lines at 100 characters for readability
+- be careful with list identation
+   - Use 2 spaces for top-level lists
+   - Use 4 spaces for nested lists (2 additional spaces per level)
+   - Consistent indentation is critical for proper rendering
+- Ordered List Numbering
+   - Use consistent numbering style (1, 2, 3 or 1, 1, 1)
+   - Fix with search and replace or the fix_markdown.sh script
+   - Consider converting to bullet points when sequential numbering isn't important
+- Blank Lines Around Lists
+   - Always add blank lines before and after lists
+   - This prevents markdown parsers from merging adjacent content
+- Wrap URLs in angle brackets `<http://example.com>` or use reference-style links
 
 ## Code Style
 
@@ -106,37 +119,38 @@ during a session.
 
 ### MAKING EDITS
 
- - Focus on one conceptual change at a time
- - Show clear "before" and "after" snippets when proposing changes
- - Include concise explanations of what changed and why
- - Always check if the edit maintains the project's coding style
+- Focus on one conceptual change at a time
+- Show clear "before" and "after" snippets when proposing changes
+- Include concise explanations of what changed and why
+- Always check if the edit maintains the project's coding style
 
 ### Edit sequence
 
- 1. [First specific change] - Purpose: [why]
- 2. [Second specific change] - Purpose: [why]
+1. [First specific change] - Purpose: [why]
+2. [Second specific change] - Purpose: [why]
 
 ### EXECUTION PHASE
 
- - After each individual edit, clearly indicate progress:
-   "✅ Completed edit [#] of [total]."
- - If you discover additional needed changes during editing:
-   - STOP and update the plan
-   - Get approval before continuing
+- After each individual edit, clearly indicate progress:
+  "✅ Completed edit [#] of [total]."
+- If you discover additional needed changes during editing:
+  - STOP and update the plan
+  - Get approval before continuing
 
 ### REFACTORING GUIDANCE
 
- When refactoring large files:
- - Break work into logical, independently functional chunks
- - Ensure each intermediate state maintains functionality
- - Consider temporary duplication as a valid interim step
- - Always indicate the refactoring pattern being applied
+When refactoring large files:
+
+- Break work into logical, independently functional chunks
+- Ensure each intermediate state maintains functionality
+- Consider temporary duplication as a valid interim step
+- Always indicate the refactoring pattern being applied
 
 ### RATE LIMIT AVOIDANCE
 
- - For very large files, suggest splitting changes across multiple sessions
- - Prioritize changes that are logically complete units
- - Always provide clear stopping points
+- For very large files, suggest splitting changes across multiple sessions
+- Prioritize changes that are logically complete units
+- Always provide clear stopping points
 
 ## Feedback & Improvements
 
@@ -144,4 +158,4 @@ during a session.
 
 ---
 
-*Last updated: 2025-05-13*
+Last updated: 2025-05-13
