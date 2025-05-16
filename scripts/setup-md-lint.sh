@@ -1,3 +1,26 @@
+#!/bin/bash
+
+# Script to set up markdownlint-cli2 for the project
+# Usage: ./scripts/setup-md-lint.sh
+
+set -e
+
+echo "Setting up markdownlint-cli2..."
+
+# Check if npm is installed
+if ! command -v npm &> /dev/null; then
+  echo "Error: npm is not installed. Please install Node.js and npm first."
+  exit 1
+fi
+
+# Install markdownlint-cli2 locally
+echo "Installing markdownlint-cli2..."
+npm install --no-save markdownlint-cli2
+
+# Create config file if it doesn't exist
+if [ ! -f .markdownlint-cli2.yaml ]; then
+  echo "Creating default .markdownlint-cli2.yaml configuration..."
+  cat > .markdownlint-cli2.yaml << 'EOL'
 config:
   # First, set the default
   default: true
@@ -32,3 +55,16 @@ config:
   # Disable this rule in the CLI project, because 1. 1. 1. 1. numbering
   # is rendered verbatim in CLI output
   ol-prefix: false                  # MD029
+EOL
+else
+  echo ".markdownlint-cli2.yaml already exists."
+fi
+
+# Make scripts executable
+chmod +x ./scripts/md-lint.sh
+chmod +x ./scripts/fix_markdown.sh
+
+echo "Setup complete! You can now run markdown linting with:"
+echo "  ./scripts/md-lint.sh"
+echo "Or fix issues automatically with:"
+echo "  ./scripts/md-lint.sh --fix"

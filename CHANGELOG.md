@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Project Status (as of May 16, 2025)
+
+- **Documentation**: Comprehensive, with README.md, module-level docs, and detailed explanation files in docs/
+- **Codebase Structure**: Modular architecture with protocol/, types.rs, and introspection.rs
+- **Test Coverage**: Extensive tests for type-level functionality, including compile-fail tests
+- **Tooling**: Markdown linting configured with markdownlint-cli2
+- **Next Steps**: Implementing runtime support for protocols, addressing known issues with TPar/EpPar
+
 ### Added
 
 - All protocol examples in README.md and documentation now use the correct 5-argument form for
@@ -20,6 +28,12 @@ with choice, concurrent sub-sessions, and Mixed marker usage. These are now repo
 tests in cargo test output.
 - README.md with approachable, non-academic documentation and mermaid diagrams for all main
 protocol examples.
+
+### Fixed
+
+- Fixed circular imports issue with `protocol_original.rs` that was causing build failures
+- Removed leftover empty `protocol.rs` file that was conflicting with the new module structure
+- Removed superfluous `protocol_original.rs` compatibility layer
 - README.md is now included as module-level documentation via `#![doc =
 include_str!("../README.md")]` for docs.rs and cargo doc.
 - `extract_roles!` macro for compile-time role extraction from protocol types.
@@ -81,6 +95,18 @@ different role containment scenarios.
 with proper type constraints.
 - Enhanced `ContainsRole`/`NotContainsRole` traits with rigorous type-level reasoning to determine
 role presence in nested protocol structures.
+- Fixed all failing doctests by updating or removing outdated examples that used the old 4-argument
+form for `TInteract` and `TEnd`.
+- Ignored outdated doctests for `ToTChoice` and `ToTPar` examples to ensure doc builds pass.
+- Resolved trait overlap and type equality issues in n-ary combinators and macros.
+- Ensured all tests compile and pass with the new pattern.
+- Resolved duplicate imports and module visibility issues after modularization.
+- All code and documentation pass `cargo check`, `cargo build`, `cargo fmt`, and `cargo clippy`
+(except for known/ignored test failures).
+- Resolved overlapping trait impl errors in `IsEpSkipTypeImpl` by replacing the former blanket impl
+with explicit per-type impls
+- Aligned boolean alias names in tests to match `TrueB`/`FalseB`, fixing compile errors in
+`compile.rs`
 
 ### Changed
 
@@ -153,21 +179,6 @@ refactoring, focusing on test-first refactoring approach and parameter name cons
 ### Removed
 
 - Removed main.rs and moved all logic to lib.rs for a library-only crate structure.
-
-### Fixed
-
-- Fixed all failing doctests by updating or removing outdated examples that used the old 4-argument
-form for `TInteract` and `TEnd`.
-- Ignored outdated doctests for `ToTChoice` and `ToTPar` examples to ensure doc builds pass.
-- Resolved trait overlap and type equality issues in n-ary combinators and macros.
-- Ensured all tests compile and pass with the new pattern.
-- Resolved duplicate imports and module visibility issues after modularization.
-- All code and documentation pass `cargo check`, `cargo build`, `cargo fmt`, and `cargo clippy`
-(except for known/ignored test failures).
-- Resolved overlapping trait impl errors in `IsEpSkipTypeImpl` by replacing the former blanket impl
-with explicit per-type impls
-- Aligned boolean alias names in tests to match `TrueB`/`FalseB`, fixing compile errors in
-`compile.rs`
 
 ### Known Issues
 

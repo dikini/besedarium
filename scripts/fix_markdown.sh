@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # Script to automatically fix common markdown linting issues
+# This script serves as a complement to markdownlint-cli2
 # Usage: ./scripts/fix_markdown.sh <file_path>
 
 set -e
 
 if [ -z "$1" ]; then
   echo "Usage: $0 <file_path>"
+  echo "For automatic fixes using markdownlint-cli2, use: ./scripts/md-lint.sh --fix"
   exit 1
 fi
 

@@ -40,16 +40,16 @@ implemented in rust stable.
 - Use clear section headings and bullet points for structure.
 - Wrap lines at 100 characters for readability
 - be careful with list identation
-   - Use 2 spaces for top-level lists
-   - Use 4 spaces for nested lists (2 additional spaces per level)
-   - Consistent indentation is critical for proper rendering
+  - Use 2 spaces for top-level lists
+  - Use 4 spaces for nested lists (2 additional spaces per level)
+  - Consistent indentation is critical for proper rendering
 - Ordered List Numbering
-   - Use consistent numbering style (1, 2, 3 or 1, 1, 1)
-   - Fix with search and replace or the fix_markdown.sh script
-   - Consider converting to bullet points when sequential numbering isn't important
+  - Use consistent numbering style (1, 2, 3 or 1, 1, 1)
+  - Fix with search and replace or the fix_markdown.sh script
+  - Consider converting to bullet points when sequential numbering isn't important
 - Blank Lines Around Lists
-   - Always add blank lines before and after lists
-   - This prevents markdown parsers from merging adjacent content
+  - Always add blank lines before and after lists
+  - This prevents markdown parsers from merging adjacent content
 - Wrap URLs in angle brackets `<http://example.com>` or use reference-style links
 
 ## Code Style
