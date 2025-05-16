@@ -2,7 +2,10 @@
 
 ## Overview
 
-This document outlines the plan for adding user-definable labels to protocol combinators in Besedarium. The goal is to improve protocol clarity, enable better code generation and projection, and enforce label uniqueness at compile time, while keeping the system ergonomic and flexible for library users.
+This document outlines the plan for adding user-definable labels to protocol combinators in
+Besedarium. The goal is to improve protocol clarity, enable better code generation and projection,
+and enforce label uniqueness at compile time, while keeping the system ergonomic and flexible for
+library users.
 
 ---
 
@@ -34,9 +37,11 @@ This document outlines the plan for adding user-definable labels to protocol com
 ## 4. Enforcing Uniqueness
 
 - **Type Guards/Traits:**
-  - Implement type-level checks (traits/macros) that ensure all labels in a protocol are unique, regardless of how they are defined.
+  - Implement type-level checks (traits/macros) that ensure all labels in a protocol are unique,
+regardless of how they are defined.
 - **Macro Support (Optional):**
-  - Provide a macro for protocol definition that checks for duplicate labels at compile time, but always allow users to supply their own.
+  - Provide a macro for protocol definition that checks for duplicate labels at compile time, but
+always allow users to supply their own.
 - **Runtime Check (fallback):**
   - Not used; all checks are at compile time.
 
@@ -52,7 +57,8 @@ This document outlines the plan for adding user-definable labels to protocol com
 
 ## 7. Optional: Tooling Support
 
-- Consider writing a linter or codegen tool to help users generate unique labels and check protocols (future work).
+- Consider writing a linter or codegen tool to help users generate unique labels and check
+protocols (future work).
 
 ---
 
@@ -72,22 +78,32 @@ type MyProtocol = TRec<Http, StartLabel, ...>;
 
 ## Summary Table
 
-| Step                     | Choice/Option              | User-definable? | Notes                     |
-|--------------------------|----------------------------|-----------------|---------------------------|
-| Label representation     | Marker types (structs)     | Yes             | Users define their own    |
-| Placeholder labels       | EmptyLabel                 | Yes             | Convention, not enforced  |
-| Uniqueness enforcement   | Traits/macros              | Yes             | Works with user labels    |
-| Test/dev labels          | Temporary, separate module | Yes             | Remove before release     |
+| Step                     | Choice/Option              | User-definable? | Notes
+  |
+|--------------------------|----------------------------|-----------------|-------------------------
+--|
+| Label representation     | Marker types (structs)     | Yes             | Users define their own
+  |
+| Placeholder labels       | EmptyLabel                 | Yes             | Convention, not
+enforced  |
+| Uniqueness enforcement   | Traits/macros              | Yes             | Works with user labels
+  |
+| Test/dev labels          | Temporary, separate module | Yes             | Remove before release
+  |
 
 ---
 
 ## Guidance
 
-- **Default to user-definable labels:** All protocol labels should be supplied by users, not hardcoded in the library.
-- **Document conventions:** Clearly explain how to define and use labels, and how to use the empty label as a placeholder.
-- **Enforce uniqueness:** Use type-level or macro-based checks to ensure all labels in a protocol are unique.
+- **Default to user-definable labels:** All protocol labels should be supplied by users, not
+hardcoded in the library.
+- **Document conventions:** Clearly explain how to define and use labels, and how to use the empty
+label as a placeholder.
+- **Enforce uniqueness:** Use type-level or macro-based checks to ensure all labels in a protocol
+are unique.
 - **No migration needed:** This is a greenfield library.
-- **Keep test/dev labels separate:** Make it easy to remove or replace any built-in labels before release.
+- **Keep test/dev labels separate:** Make it easy to remove or replace any built-in labels before
+release.
 
 ---
 

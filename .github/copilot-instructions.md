@@ -2,23 +2,27 @@
 
 ## General Guidelines
 
-- **Mandatory planning.**  
+- **Mandatory planning.**
   1. ALWAYS start by creating a detailed plan BEFORE making any edits
   2. Your plan MUST include:
      - All functions/sections/types that need modification
      - The order in which changes should be applied
      - Dependencies between changes
      - Estimated number of separate edits required
-- **rust stable only** - use only features available in rust stable. Always verify your code can be implemented in rust stable.
-- **Prioritize clarity and correctness.**  
-  Use clear, succinct, but descriptive language. Make sure that concepts are explained in a professional, but not high-brow academic style.
-- **Document your intent.**  
-  Add comments or docstrings to clarify non-obvious code, especially for protocol logic and type-level programming.
-- **Prefer explicitness over cleverness.**  
+- **rust stable only** - use only features available in rust stable. Always verify your code can be
+implemented in rust stable.
+- **Prioritize clarity and correctness.**
+  Use clear, succinct, but descriptive language. Make sure that concepts are explained in a
+  professional, but not high-brow academic style.
+- **Document your intent.**
+  Add comments or docstrings to clarify non-obvious code, especially for protocol logic and
+  type-level programming.
+- **Prefer explicitness over cleverness.**
   Readability and maintainability are more important than brevity or “tricks.”
 - **Consult your learnings.**
   - Always consult your learnings memory work/learnings.md
-  - After a plan is finalized, update work/learnings.md with your current insights, learnings, patterns
+  - After a plan is finalized, update work/learnings.md with your current insights, learnings,
+  patterns
   - Format your plan as:
 
 ```markdown
@@ -43,24 +47,28 @@
 
 ## Protocol & Type-Level Design
 
-- When designing type-level or macro-heavy code, double-check trait bounds, recursion, and type safety.
+- When designing type-level or macro-heavy code, double-check trait bounds, recursion, and type
+safety.
 - Add compile-time assertions (e.g., `assert_type_eq!`, `assert_disjoint!`) for protocol invariants.
 - Document any non-trivial type-level logic.
 
 ## Commit & PR Workflow
 
-- Summarize Copilot’s involvement in your PR description if it generated significant code or documentation.
+- Summarize Copilot’s involvement in your PR description if it generated significant code or
+documentation.
 - All PRs must be reviewed by a human before merging.
 - Use draft PRs for work-in-progress.
 
 ## Security & Safety
 
-- Never suggest code, documentation, or other artifacts that include secrets, credentials, or unsafe code.
+- Never suggest code, documentation, or other artifacts that include secrets, credentials, or
+unsafe code.
 - Review all dependencies and generated code for potential vulnerabilities.
 
 ## Required Code Test & Verification Steps
 
-Before submitting code or documentation, you must run and pass all of the following commands locally:
+Before submitting code or documentation, you must run and pass all of the following commands
+locally:
 
 - `cargo check` — Ensure the code compiles without errors.
 - `cargo build` — Build the project to catch any build-time issues.
@@ -68,7 +76,8 @@ Before submitting code or documentation, you must run and pass all of the follow
 - `cargo fmt --all -- --check` — Check that all code is properly formatted.
 - `cargo clippy` — Run the linter to catch common mistakes and improve code quality.
 
-All code must pass these checks before a pull request is submitted or merged. These steps are also enforced in CI.
+All code must pass these checks before a pull request is submitted or merged. These steps are also
+enforced in CI.
 
 ## Work progress planning, tracking and learning
 
@@ -76,17 +85,20 @@ All code must pass these checks before a pull request is submitted or merged. Th
 
 ### TASKS
 
-- maintain a running tasks tasklist in work/TASKS.md in markdown format, using github style checkboxes to indicate completion.
+- maintain a running tasks tasklist in work/TASKS.md in markdown format, using github style
+checkboxes to indicate completion.
 - add (wip) to the task you are currently working on to indicate task completion.
 - consult the tasks/TASKS.md when suggesting next work. Prioritise:
   - continuation of the current work
   - subtasks
   - similar or related tasks
-- for large tasks, which may contain subtasks maintain an own task specific tasklist in work/tasks/[taskname]
+- for large tasks, which may contain subtasks maintain an own task specific tasklist in
+work/tasks/[taskname]
 
 ### Learnings
 
-- Maintain a running learnings and patterns document of the concepts, ideas, tricks you've learned during a session.
+- Maintain a running learnings and patterns document of the concepts, ideas, tricks you've learned
+during a session.
 - Update regularly.
 - Mandatory updates after successful task completion.
 - Write all learnings, patterns, concepts to work/learnings.md

@@ -2,21 +2,27 @@
 
 ## Overview
 
-In session type theory, the `Par` (parallel composition) combinator allows two protocol fragments to proceed concurrently. A crucial safety property is that the sets of roles participating in each branch must be **disjoint**—no role may appear in both branches. This ensures linearity, prevents race conditions, and guarantees protocol progress and completion.
+In session type theory, the `Par` (parallel composition) combinator allows two protocol fragments
+to proceed concurrently. A crucial safety property is that the sets of roles participating in each
+branch must be **disjoint**—no role may appear in both branches. This ensures linearity, prevents
+race conditions, and guarantees protocol progress and completion.
 
 ---
 
 ## Why Disjoint Role Sets Matter
 
 - **Linearity:** Each role must have a single, unambiguous sequence of actions.
-- **Safety:** If a role appears in both branches, it would be required to act in two places at once, violating linearity and potentially causing deadlocks or protocol violations.
-- **Progress:** Disjointness ensures that all branches can proceed independently and synchronize correctly at the end.
+- **Safety:** If a role appears in both branches, it would be required to act in two places at
+once, violating linearity and potentially causing deadlocks or protocol violations.
+- **Progress:** Disjointness ensures that all branches can proceed independently and synchronize
+correctly at the end.
 
 ---
 
 ## Enforcing Disjointness at the Type Level in Rust
 
-Rust's type system can encode type-level sets and traits to enforce disjointness at compile time. Below is a minimal example for four roles (`A`, `B`, `C`, `D`).
+Rust's type system can encode type-level sets and traits to enforce disjointness at compile time.
+Below is a minimal example for four roles (`A`, `B`, `C`, `D`).
 
 ### Type-Level List and Role Definitions
 
@@ -104,10 +110,14 @@ where
 
 ## References
 
-- Honda, K., Yoshida, N., & Carbone, M. (2008). [Multiparty Asynchronous Session Types](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/).
-- Gay, S. J., & Vasconcelos, V. T. (2010). [Linear type theory for asynchronous session types](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf).
-- Scalas, A., & Yoshida, N. (2016). [Lightweight Session Programming in Scala](https://www.doc.ic.ac.uk/~cn06/papers/2016-ecoop.pdf).
-- Rust type-level programming: [The Typenum crate](https://docs.rs/typenum/latest/typenum/) and [The typelist crate](https://docs.rs/typelist/latest/typelist/).
+- Honda, K., Yoshida, N., & Carbone, M. (2008). [Multiparty Asynchronous Session
+Types](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/).
+- Gay, S. J., & Vasconcelos, V. T. (2010). [Linear type theory for asynchronous session
+types](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf).
+- Scalas, A., & Yoshida, N. (2016). [Lightweight Session Programming in
+Scala](https://www.doc.ic.ac.uk/~cn06/papers/2016-ecoop.pdf).
+- Rust type-level programming: [The Typenum crate](https://docs.rs/typenum/latest/typenum/) and
+[The typelist crate](https://docs.rs/typelist/latest/typelist/).
 
 ---
 
@@ -116,6 +126,7 @@ where
 - The `Par` combinator enables parallel protocol composition.
 - Disjoint role sets are essential for safety and progress.
 - Rust's type system can enforce this property at compile time using type-level programming.
-- This approach prevents protocol errors and ensures robust, deadlock-free concurrent session protocols.
+- This approach prevents protocol errors and ensures robust, deadlock-free concurrent session
+protocols.
 
 ---

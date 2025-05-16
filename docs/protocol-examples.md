@@ -427,7 +427,7 @@ and recursion.
 
 ## 4. References
 
-- [A Very Gentle Introduction to Multiparty Session 
+- [A Very Gentle Introduction to Multiparty Session
 Types][msession-types-intro]
 - [Comprehensive Multiparty Session Types](https://arxiv.org/pdf/1902.00544)
 

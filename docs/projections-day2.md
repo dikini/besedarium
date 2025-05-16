@@ -49,9 +49,10 @@ endpoint types:
 
 1. **Current Issue**: Our projection only handles the sender side of `TInteract`. When projecting
 `TInteract<IO, R1, Msg, Cont>`, we need to:
-  - Add `EpSend` to R1's list (sender)
-  - Add `EpRecv` to the receiving role's list
-  - Leave other role lists unchanged
+
+   - Add `EpSend` to R1's list (sender)
+   - Add `EpRecv` to the receiving role's list
+   - Leave other role lists unchanged
 
 2. **Complex Structure**: The n-dimensional output structure makes it tricky to update multiple
 positions for a single `TInteract` node.
