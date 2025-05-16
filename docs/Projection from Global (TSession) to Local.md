@@ -1,6 +1,9 @@
 # Projection from Global (TSession) to Local Session Types
 
-This document summarizes the discussion on implementing a type-level fold to project a global session (`TSession`) onto local session types for each role. It outlines the necessary traits, type-level lists, and the technique to avoid overlapping trait implementations.
+This document summarizes the discussion on implementing a type-level fold to project a
+global session (`TSession`) onto local session types for each role. It outlines the
+necessary traits, type-level lists, and the technique to avoid overlapping trait
+implementations.
 
 ---
 
@@ -15,7 +18,7 @@ Use `Cons<Role, Tail>` to build a finite list of all roles, ending with `Nil`.
 
 ---
 
-### 2. Per-Role Projection Trait (`ProjectRole`)
+## 2. Per-Role Projection Trait (`ProjectRole`)
 
 Define a trait that projects a global `TSession` onto a single role `Me`:
 
@@ -30,9 +33,9 @@ impl<Me, IO> ProjectRole<Me, IO, TEnd<IO>> for () {
 }
 ```
 
-#### 2.1 Handling `TInteract` (Send/Receive) without Overlap
+### 2.1 Handling `TInteract` (Send/Receive) without Overlap
 
-##### 2.1.1 Define Type-Level Booleans
+#### 2.1.1 Define Type-Level Booleans
 
 ```rust
 pub struct True;
@@ -43,7 +46,7 @@ impl Bool for True {}
 impl Bool for False {}
 ```
 
-##### 2.1.2 Compute Role Equality at Type Level
+#### 2.1.2 Compute Role Equality at Type Level
 
 ```rust
 pub trait RoleEq<Other: Role> {
@@ -61,7 +64,7 @@ impl<A: Role, B: Role> RoleEq<B> for A {
 }
 ```
 
-##### 2.1.3 Helper Trait to Dispatch on the Boolean Flag
+#### 2.1.3 Helper Trait to Dispatch on the Boolean Flag
 
 ```rust
 pub trait ProjectInteract<Flag: Bool, Me: Role, IO, R: Role, H, T: TSession<IO>> {
@@ -87,7 +90,7 @@ where
 }
 ```
 
-##### 2.1.4 Single `ProjectRole` Impl for `TInteract`
+#### 2.1.4 Single `ProjectRole` Impl for `TInteract`
 
 ```rust
 impl<Me, IO, R: Role, H, T: TSession<IO>>
@@ -101,11 +104,12 @@ where
 }
 ```
 
-This avoids overlapping impls by dispatching inside the helper trait based on the computed `Flag`.
+This avoids overlapping impls by dispatching inside the helper trait based on the computed
+`Flag`.
 
 ---
 
-### 3. Projection for Other Global Combinators
+## 3. Projection for Other Global Combinators
 
 For each global combinator, add a `ProjectRole` impl:
 
@@ -142,7 +146,7 @@ where
 
 ---
 
-### 4. Type-Level Map Over Roles (`MapRoles`)
+## 4. Type-Level Map Over Roles (`MapRoles`)
 
 ```rust
 pub trait MapRoles<Roles, IO, G: TSession<IO>> {

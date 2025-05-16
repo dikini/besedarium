@@ -2,24 +2,31 @@
 
 ## Problem Statement
 
-**How can we guarantee, at compile time, that the threads (branches) of a parallel composition (`TPar`) in a session-typed protocol are disjoint in their roles?**
+**How can we guarantee, at compile time, that the threads (branches) of a parallel composition
+(`TPar`) in a session-typed protocol are disjoint in their roles?**
 
-This is crucial for protocol safety: if two parallel threads share a role, that role would be required to act in two places at once, violating linearity and potentially causing deadlocks or protocol violations.
+This is crucial for protocol safety: if two parallel threads share a role, that role would be
+required to act in two places at once, violating linearity and potentially causing deadlocks or
+protocol violations.
 
 ---
 
 ## Considerations for Disjointness Checks
 
 - **Role Extraction:**
-  Each session type (`TSession`) must be able to expose the set of roles it uses, typically as a type-level list.
+  Each session type (`TSession`) must be able to expose the set of roles it uses, typically as a
+  type-level list.
 - **Disjointness Checking:**
   There must be a way to check, at the type level, that two (or more) sets of roles are disjoint.
 - **Compositionality:**
-  Disjointness must be preserved or re-checked after composing sessions, whether by composing two `TPar`s or by composing a branch of a `TPar` with an arbitrary `TSession`.
+  Disjointness must be preserved or re-checked after composing sessions, whether by composing two
+  `TPar`s or by composing a branch of a `TPar` with an arbitrary `TSession`.
 - **Ergonomics:**
-  The API should be ergonomic for users, with compile-time errors when disjointness is violated and minimal boilerplate for common cases.
+  The API should be ergonomic for users, with compile-time errors when disjointness is violated
+  and minimal boilerplate for common cases.
 - **Default Safety:**
-  By default, `TPar` branches are **not safe**. Only after an explicit check should a `TPar` be considered safe.
+  By default, `TPar` branches are **not safe**. Only after an explicit check should a `TPar` be
+  considered safe.
 
 ---
 
@@ -40,13 +47,14 @@ This is crucial for protocol safety: if two parallel threads share a role, that 
 ### 2. Composing a Branch of TPar with a TSession
 
 - **Issue:**
-  Composing a branch (e.g., the left thread) of a `TPar` with a new session may introduce new roles, potentially violating disjointness.
+  Composing a branch (e.g., the left thread) of a `TPar` with a new session may introduce new
+  roles, potentially violating disjointness.
 - **Example:**
 
   ```rust
   type Par = TPar<A, B, False>;
-  type NewPar = TPar<A::Compose<C>, B, False>;
-  // Need to check that roles in A::Compose<C> and B are disjoint.
+  type NewPar = TPar<A::ComposeC, B, False>;
+  // Need to check that roles in A::ComposeC and B are disjoint.
   ```
 
 ---
@@ -223,9 +231,11 @@ where
 
 ## References
 
-- Honda, K., Yoshida, N., & Carbone, M. (2008). [Multiparty Asynchronous Session Types](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
+- Honda, K., Yoshida, N., & Carbone, M. (2008). [Multiparty Asynchronous Session
+Types](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
 - [Session Types in Rust (blog post)](https://blog.sessiontypes.com/)
 
 ---
 
-*Discussion and summary by [GitHub Copilot](https://github.com/features/copilot) and user dikini, 2025.*
+*Discussion and summary by [GitHub Copilot](https://github.com/features/copilot) and user dikini,
+2025.*

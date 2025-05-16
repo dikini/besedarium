@@ -174,23 +174,18 @@ pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
+// Update protocol module reference to use the directory module
 mod protocol;
 pub use protocol::*;
 mod introspection;
 mod types;
 pub use types::*;
 
-// Re-export key protocol roles and endpoint types for crate users and tests
+// Re-export key introspection traits
 pub use introspection::{LabelsOf, RolesOf};
-pub use protocol::{
-    AssertDisjoint, TChoice, TEnd, TInteract, TPar, TRec, TSession, ToTChoice, ToTPar, UniqueList,
-};
+
+// Note: Most protocol types are now re-exported via protocol/mod.rs
+// so we don't need to repeat those here.
+
 // Re-export canonical type-level booleans from types
 pub use types::{Bool, False, True};
-// Re-export concrete roles and traits for tests
-pub use protocol::{Role, RoleEq, TBroker, TClient, TServer, TWorker, Void};
-// Re-export endpoint types and projection traits
-pub use protocol::{
-    EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, ProjectChoice, ProjectInteract,
-    ProjectPar, ProjectRole,
-};

@@ -4,7 +4,7 @@
 
 ## Code Quality
 
-**Tags:** idiomatic, modular, clear, extensible, type-safe  
+**Tags:** idiomatic, modular, clear, extensible, type-safe
 **Score:** 8.5/10
 
 - Well-structured and idiomatic Rust.
@@ -16,7 +16,7 @@
 
 ## Completeness of Implementation (MPST Features & Protocol Correctness)
 
-**Tags:** foundational, extensible, binary/n-ary, partial-mpst, safe  
+**Tags:** foundational, extensible, binary/n-ary, partial-mpst, safe
 **Score:** 6/10
 
 - Core global protocol specification is present.
@@ -27,7 +27,7 @@
 
 ## Implementation Code (Corner Cases, Features, DX, Cleanliness)
 
-**Tags:** ergonomic, clean, maintainable, macro-powered, safe  
+**Tags:** ergonomic, clean, maintainable, macro-powered, safe
 **Score:** 8/10
 
 - Macros and type-level lists make n-ary combinators ergonomic.
@@ -40,7 +40,7 @@
 
 ## Documentation
 
-**Tags:** needs-examples, needs-human-docs, academic-leaning, improvable  
+**Tags:** needs-examples, needs-human-docs, academic-leaning, improvable
 **Score:** 4.5/10
 
 - Lacks comprehensive, developer-friendly examples.
@@ -54,9 +54,12 @@
 ## Additional Notes
 
 - **Global/Projection Machinery:**
-  - The current codebase is focused on global protocol specification only (purely declarative, no runtime).
-  - When adding projections, care must be taken to balance DX and the integration of generated vs. handwritten code.
-  - Binary types and duality are straightforward; local runtime choreography will be the main challenge.
+  - The current codebase is focused on global protocol specification only (purely declarative, no
+runtime).
+  - When adding projections, care must be taken to balance DX and the integration of generated vs.
+handwritten code.
+  - Binary types and duality are straightforward; local runtime choreography will be the main
+challenge.
   - The global API should be finalized before tackling projections and runtime aspects.
 
 ---
@@ -67,7 +70,8 @@ A strong and extensible foundation for global session types in Rust.
 **Highest priorities:**
 
 - Improve documentation and examples for real-world developers.
-- Plan and implement global-to-local projection machinery with careful attention to developer experience.
+- Plan and implement global-to-local projection machinery with careful attention to developer
+experience.
 
 ---
 

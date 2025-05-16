@@ -1,6 +1,9 @@
 # Label Parameter Refactoring Strategy
 
-This document outlines a comprehensive strategy for refactoring the label parameter naming across session type combinators in the Besedarium library. The goal is to standardize on using `Lbl` instead of `L` for label parameters throughout all session type combinators and related projection machinery.
+This document outlines a comprehensive strategy for refactoring the label parameter naming across
+session type combinators in the Besedarium library. The goal is to standardize on using `Lbl`
+instead of `L` for label parameters throughout all session type combinators and related projection
+machinery.
 
 ## Current State Analysis
 
@@ -26,7 +29,8 @@ Currently, the codebase exhibits inconsistent naming conventions for label param
 
 ## Comprehensive Parameter Usage Audit
 
-This section provides a detailed audit of all label parameter usages throughout the codebase, which will inform our refactoring strategy.
+This section provides a detailed audit of all label parameter usages throughout the codebase, which
+will inform our refactoring strategy.
 
 ### Core Type Definitions
 
@@ -42,7 +46,8 @@ This section provides a detailed audit of all label parameter usages throughout 
 
 #### TSession Implementations
 
-Each combinator implements `TSession<IO>`, preserving the label parameter in the `Compose` associated type:
+Each combinator implements `TSession<IO>`, preserving the label parameter in the `Compose`
+associated type:
 
 ```rust
 // TEnd
@@ -52,8 +57,8 @@ impl<IO, L> TSession<IO> for TEnd<IO, L> {
 }
 
 // TInteract
-impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO> 
-    for TInteract<IO, L, R, H, T> 
+impl<IO, L: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
+    for TInteract<IO, L, R, H, T>
 {
     type Compose<Rhs: TSession<IO>> = TInteract<IO, L, R, H, T::Compose<Rhs>>;
     // Label L preserved ^
@@ -68,8 +73,8 @@ impl<IO, L: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, L, 
 }
 
 // TChoice
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> TSession<IO> 
-    for TChoice<IO, Lbl, L, R> 
+impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> TSession<IO>
+    for TChoice<IO, Lbl, L, R>
 {
     type Compose<Rhs: TSession<IO>> = TChoice<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>>;
     // Label Lbl preserved ^
@@ -77,8 +82,8 @@ impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> TSession<I
 }
 
 // TPar
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO> 
-    for TPar<IO, Lbl, L, R, IsDisjoint> 
+impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO>
+    for TPar<IO, Lbl, L, R, IsDisjoint>
 {
     type Compose<Rhs: TSession<IO>> = TPar<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
     // Label Lbl preserved ^
@@ -88,7 +93,8 @@ impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint
 
 #### Default Label Usage in ToTChoice and ToTPar
 
-When constructing `TChoice` and `TPar` from type lists using the `ToTChoice` and `ToTPar` traits, an `EmptyLabel` is used as the default label:
+When constructing `TChoice` and `TPar` from type lists using the `ToTChoice` and `ToTPar` traits,
+an `EmptyLabel` is used as the default label:
 
 ```rust
 // In ToTChoice implementation
@@ -106,7 +112,8 @@ impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
 
 ### Projection Machinery
 
-The projection machinery uses label parameters in trait bounds but does not preserve them in the resulting endpoint types:
+The projection machinery uses label parameters in trait bounds but does not preserve them in the
+resulting endpoint types:
 
 ```rust
 // Base case: projecting end-of-session yields EpEnd
@@ -135,7 +142,8 @@ where
 
 ### Introspection Usage
 
-The `introspection.rs` module extensively uses label parameters for collecting and manipulating protocol metadata:
+The `introspection.rs` module extensively uses label parameters for collecting and manipulating
+protocol metadata:
 
 ```rust
 // RolesOf implementation for TInteract
@@ -240,11 +248,13 @@ Based on this audit, here's the impact of the proposed refactoring:
 4. **Introspection Code**: 10+ introspection trait implementations will need updates
 5. **Test and Examples**: Numerous test cases and examples may need updates
 
-The most complex part will be ensuring that all interdependent traits and implementations are updated consistently, especially where label parameters are used in associated types.
+The most complex part will be ensuring that all interdependent traits and implementations are
+updated consistently, especially where label parameters are used in associated types.
 
 ## Test Suite Audit
 
-This section analyzes the current test suite with a focus on label parameter usage and how the proposed refactoring would impact the tests.
+This section analyzes the current test suite with a focus on label parameter usage and how the
+proposed refactoring would impact the tests.
 
 ### Test Structure Overview
 
@@ -317,7 +327,9 @@ The test suite is organized into several components:
 
 ### Test Metrics for Label-Related Functionality
 
-To ensure thorough testing of label-related functionality during the refactoring process, we should establish specific test metrics. These metrics will help track test coverage and identify areas that need additional testing.
+To ensure thorough testing of label-related functionality during the refactoring process, we should
+establish specific test metrics. These metrics will help track test coverage and identify areas
+that need additional testing.
 
 #### Proposed Test Metrics
 
@@ -349,17 +361,19 @@ To ensure thorough testing of label-related functionality during the refactoring
    // Example: Label Test Tracking with type-level assertions
    mod label_test_tracker {
        use super::*;
-       
+
        // Track which combinators have been tested with custom labels
        trait TestedWithCustomLabel {}
        impl TestedWithCustomLabel for TEnd<Http, CustomLabel1> {}
-       impl TestedWithCustomLabel for TInteract<Http, CustomLabel2, TClient, Message, TEnd<Http, EmptyLabel>> {}
+       impl TestedWithCustomLabel for TInteract<Http, CustomLabel2, TClient, Message,
+       TEnd<Http, EmptyLabel>> {}
        // ... add implementations as tests are created
-       
+
        // Can use compile-time assertions to ensure coverage
        const _: () = {
            // This will fail to compile until TRec has been tested with a custom label
-           fn assert_trec_tested_with_custom_label() where TRec<Http, CustomLabel3, TEnd<Http>>: TestedWithCustomLabel {}
+           fn assert_trec_tested_with_custom_label() where TRec<Http, CustomLabel3,
+           TEnd<Http>>: TestedWithCustomLabel {}
        };
    }
    ```
@@ -390,20 +404,20 @@ To ensure thorough testing of label-related functionality during the refactoring
        struct L1; impl ProtocolLabel for L1 {}
        struct L2; impl ProtocolLabel for L2 {}
        struct L3; impl ProtocolLabel for L3 {}
-       
+
        // Test matrix: combinators × labels
        #[test]
        fn test_tend_with_l1() {
            type T = TEnd<Http, L1>;
            // Test assertions
        }
-       
+
        #[test]
        fn test_tend_with_l2() {
            type T = TEnd<Http, L2>;
            // Test assertions
        }
-       
+
        // Continue with all combinations
    }
    ```
@@ -415,23 +429,24 @@ To ensure thorough testing of label-related functionality during the refactoring
    ```rust
    mod label_coverage_stats {
        use super::*;
-       
+
        // Use type traits to track test coverage
        trait Tested {}
-       
+
        // Mark types as tested
        impl Tested for TEnd<Http, CustomLabel> {}
        // ...other implementations
-       
+
        // Compile-time counter
        struct Counter<const N: usize>;
-       
+
        // Count tested combinators
        type TestedCount = /* type-level counting mechanism */;
-       
+
        // This will output coverage percentage in compile error
        // Only for development use
-       // const COVERAGE: f32 = 100.0 * (TestedCount::VALUE as f32) / (TotalCombinators::VALUE as f32);
+       // const COVERAGE: f32 = 100.0 * (TestedCount::VALUE as f32) /
+       (TotalCombinators::VALUE as f32);
    }
    ```
 
@@ -441,45 +456,45 @@ To ensure thorough testing of label-related functionality during the refactoring
 // Example of systematic label testing with metrics tracking
 mod label_metrics_tests {
     use super::*;
-    
+
     // Define test labels
     struct TestLabel1; impl ProtocolLabel for TestLabel1 {}
     struct TestLabel2; impl ProtocolLabel for TestLabel2 {}
-    
+
     // Helper trait to extract label type from a session type
     trait ExtractLabel<IO> {
         type Label;
     }
-    
+
     impl<IO, L> ExtractLabel<IO> for TEnd<IO, L> {
         type Label = L;
     }
-    
-    impl<IO, L, R, H, T> ExtractLabel<IO> for TInteract<IO, L, R, H, T> 
+
+    impl<IO, L, R, H, T> ExtractLabel<IO> for TInteract<IO, L, R, H, T>
     where T: TSession<IO> {
         type Label = L;
     }
-    
+
     // Similar implementations for other combinators
-    
+
     // Test that verifies label preservation in composition
     #[test]
     fn test_label_preservation_in_composition() {
         // Define types with explicit labels
         type S1 = TInteract<Http, TestLabel1, TClient, Message, TEnd<Http, EmptyLabel>>;
         type S2 = TInteract<Http, TestLabel2, TServer, Response, TEnd<Http, EmptyLabel>>;
-        
+
         // Composed type
         type Composed = <S1 as TSession<Http>>::Compose<S2>;
-        
+
         // Verify the first label is preserved
         // This requires custom type traits to extract the label from Composed
         type PreservedLabel = <Composed as ExtractLabel<Http>>::Label;
-        
+
         // Static assertion (you'd need a helper trait for this)
         assert_type_eq!(PreservedLabel, TestLabel1);
     }
-    
+
     // Track coverage with a struct
     struct CoverageTracker {
         tend_custom_label: bool,
@@ -487,12 +502,12 @@ mod label_metrics_tests {
         trec_custom_label: bool,
         tchoice_custom_label: bool,
         tpar_custom_label: bool,
-        
+
         tend_composition: bool,
         tinteract_composition: bool,
         // ...and so on
     }
-    
+
     // This could be updated manually or semi-automatically as tests are added
     const COVERAGE: CoverageTracker = CoverageTracker {
         tend_custom_label: true,
@@ -500,13 +515,14 @@ mod label_metrics_tests {
         trec_custom_label: false,
         // ...rest of the fields
     };
-    
+
     // Calculate coverage percentage (manually)
     // const COVERAGE_PERCENTAGE: f32 = /* count true values */ / /* total fields */ * 100.0;
 }
 ```
 
-By implementing these metrics and approaches, we can ensure systematic test coverage of label-related functionality throughout the refactoring process.
+By implementing these metrics and approaches, we can ensure systematic test coverage of
+label-related functionality throughout the refactoring process.
 
 ### Recommended Test Additions
 
@@ -536,11 +552,11 @@ mod label_composition_test {
     use super::*;
     struct L1; impl ProtocolLabel for L1 {}
     struct L2; impl ProtocolLabel for L2 {}
-    
+
     type Base = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
     type Continuation = TInteract<Http, L2, TServer, Response, TEnd<Http, EmptyLabel>>;
     type Composed = <Base as TSession<Http>>::Compose<Continuation>;
-    
+
     // Verify first label is preserved
     // This would need a helper trait to extract the label at a specific position
 }
@@ -550,15 +566,15 @@ mod label_introspection_test {
     use super::*;
     struct L1; impl ProtocolLabel for L1 {}
     struct L2; impl ProtocolLabel for L2 {}
-    
+
     type Protocol = TInteract<
-        Http, 
-        L1, 
-        TClient, 
-        Message, 
+        Http,
+        L1,
+        TClient,
+        Message,
         TInteract<Http, L2, TServer, Response, TEnd<Http, EmptyLabel>>
     >;
-    
+
     // Use LabelsOf to verify the extracted labels match the expected list
     type ExpectedLabels = Cons<L1, Cons<L2, Cons<EmptyLabel, Nil>>>;
     // Would need a way to assert type equality between <Protocol as LabelsOf>::Labels and ExpectedLabels
@@ -568,13 +584,13 @@ mod label_introspection_test {
 mod label_parameter_refactoring_test {
     use super::*;
     struct TestLabel; impl ProtocolLabel for TestLabel {}
-    
+
     // Current structure
     type BeforeRefactor = TInteract<Http, TestLabel, TClient, Message, TEnd<Http, TestLabel>>;
-    
+
     // After refactoring (to be uncommented after refactoring)
     // type AfterRefactor = TInteract<Http, TestLabel, TClient, Message, TEnd<Http, TestLabel>>;
-    
+
     // Test that behavior remains identical
 }
 ```
@@ -659,7 +675,8 @@ Before beginning this refactoring, ensure:
 
 ### Phase 1: Preparation and Analysis ✅
 
-1. **Create a dedicated branch** for the refactoring work ✅ (created branch `feat/label-refactoring`)
+1. **Create a dedicated branch** for the refactoring work ✅ (created branch
+`feat/label-refactoring`)
 
 2. **Develop foundational test infrastructure** ✅
    - Created helper traits/utilities for comparing and extracting label types
@@ -668,13 +685,16 @@ Before beginning this refactoring, ensure:
    - Created test coverage tracking mechanism
 
 3. **Establish test metrics** to measure test coverage of label-related functionality ✅
-   - **Define coverage criteria**: Created specific metrics for what constitutes "complete" label testing
+   - **Define coverage criteria**: Created specific metrics for what constitutes "complete"
+   label testing
      - Combinator Coverage: Each combinator must have dedicated label tests
      - Composition Operation Coverage: Each composition operation must verify label preservation
-     - Custom Label Type Coverage: Each combinator should be tested with at least 3 different label types
+     - Custom Label Type Coverage: Each combinator should be tested with at least 3 different
+     label types
      - Label Edge Case Coverage: Edge cases like nested compositions should have tests
 
-   - **Create a tracking mechanism**: Implemented type-level trait implementations to mark tested components
+   - **Create a tracking mechanism**: Implemented type-level trait implementations to mark
+   tested components
      - Created `TestedWithCustomLabel` and `TestedLabelPreservation` traits
      - Added a test coverage statistics structure
      - Implemented a coverage report generator test
@@ -847,7 +867,8 @@ Before beginning this refactoring, ensure:
 
 ## Label Preservation Strategy
 
-As part of this refactoring, consider addressing the current limitation of label non-preservation during projection:
+As part of this refactoring, consider addressing the current limitation of label non-preservation
+during projection:
 
 1. **Option 1: Add Labels to Endpoint Types**
    - Modify endpoint types to include label parameters: `EpSend<IO, Lbl, R, H, T>`
@@ -868,17 +889,26 @@ As part of this refactoring, consider addressing the current limitation of label
 
 Based on the comprehensive parameter usage audit and test suite analysis, we recommend:
 
-1. **Start with a Smaller Scope**: Begin by standardizing only the global combinator names without changing endpoint types
-2. **Use a Phased Approach**: Implement changes one combinator at a time, verifying correctness at each step
+1. **Start with a Smaller Scope**: Begin by standardizing only the global combinator names without
+changing endpoint types
+2. **Use a Phased Approach**: Implement changes one combinator at a time, verifying correctness at
+each step
 3. **Prioritize Test Coverage**: Add the recommended tests for label behavior before making changes
-4. **Follow Test-Driven Development**: Develop tests before implementation for each phase to ensure behavior preservation
-5. **Implement Test Metrics**: Use the proposed test metrics approach to systematically track test coverage
-6. **Consider Label Preservation**: Address the label loss during projection as a separate enhancement
-7. **Document Label Semantics**: Clearly define the meaning and purpose of labels throughout the system
-8. **Address Potential Conflicts**: Pay special attention to cases where `L` is used both as a label parameter and as a left branch parameter (in `TChoice` and `TPar`)
-9. **Update Introspection First**: The `introspection.rs` module contains the most label-dependent code and should be refactored early in the process
+4. **Follow Test-Driven Development**: Develop tests before implementation for each phase to ensure
+behavior preservation
+5. **Implement Test Metrics**: Use the proposed test metrics approach to systematically track test
+coverage
+6. **Consider Label Preservation**: Address the label loss during projection as a separate
+enhancement
+7. **Document Label Semantics**: Clearly define the meaning and purpose of labels throughout the
+system
+8. **Address Potential Conflicts**: Pay special attention to cases where `L` is used both as a
+label parameter and as a left branch parameter (in `TChoice` and `TPar`)
+9. **Update Introspection First**: The `introspection.rs` module contains the most label-dependent
+code and should be refactored early in the process
 10. **Create Test Helpers**: Develop helper traits or macros to make label-related testing easier
-11. **Modularize Tests**: Restructure tests to isolate label-related functionality for easier testing and maintenance
+11. **Modularize Tests**: Restructure tests to isolate label-related functionality for easier
+testing and maintenance
 
 ## Next Steps
 
@@ -890,7 +920,8 @@ Based on the comprehensive parameter usage audit and test suite analysis, we rec
 6. Begin with the simplest combinator (`TEnd`) as a proof of concept
 7. Re-evaluate the plan after initial implementation experience
 
-This refactoring, while extensive, will improve code readability, maintainability, and consistency. It also presents an opportunity to enhance the overall label handling strategy in Besedarium.
+This refactoring, while extensive, will improve code readability, maintainability, and consistency.
+It also presents an opportunity to enhance the overall label handling strategy in Besedarium.
 
 ---
 

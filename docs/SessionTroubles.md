@@ -2,11 +2,16 @@
 
 ## Analysis
 
-- **Your current approach** is a type-level cons-list (`TInteract<R, H, T>`) parametrized by a `Role` (`R`), a head element (`H`), and a tail (`T`).
-- This is similar to the `TList` pattern from crates like `tlist` or `frunk`, but with an extra parameter for roles.
-- The recursion and trait bounds become more complex as you add parameters (like `R` for roles, or later `IO` for I/O types).
-- Rust generics are universally quantified at the `impl` level, but you cannot express "for all R" inside an associated type unless you make `R` a parameter of that type.
-- Trait bounds for recursive associated types can be tricky; you must ensure all recursive types implement the required traits.
+- **Your current approach** is a type-level cons-list (`TInteract<R, H, T>`) parametrized by a
+`Role` (`R`), a head element (`H`), and a tail (`T`).
+- This is similar to the `TList` pattern from crates like `tlist` or `frunk`, but with an extra
+parameter for roles.
+- The recursion and trait bounds become more complex as you add parameters (like `R` for roles, or
+later `IO` for I/O types).
+- Rust generics are universally quantified at the `impl` level, but you cannot express "for all R"
+inside an associated type unless you make `R` a parameter of that type.
+- Trait bounds for recursive associated types can be tricky; you must ensure all recursive types
+implement the required traits.
 
 ## Suggestions for Type-Level Containers Parametrized by Role
 

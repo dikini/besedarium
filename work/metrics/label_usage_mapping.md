@@ -1,6 +1,7 @@
 # Label Parameter Usage Mapping
 
-This document provides a comprehensive mapping of all label parameter usages throughout the codebase, which will guide the label parameter refactoring effort.
+This document provides a comprehensive mapping of all label parameter usages throughout the
+codebase, which will guide the label parameter refactoring effort.
 
 ## Core Type Definitions
 
@@ -14,7 +15,8 @@ This document provides a comprehensive mapping of all label parameter usages thr
 
 ## TSession Implementations
 
-Each combinator implements `TSession<IO>` with composition behavior that preserves the label parameter:
+Each combinator implements `TSession<IO>` with composition behavior that preserves the label
+parameter:
 
 ### TEnd
 
@@ -89,7 +91,8 @@ impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
 
 ## Introspection Module
 
-The `introspection.rs` module extensively uses label parameters for collecting and manipulating protocol metadata:
+The `introspection.rs` module extensively uses label parameters for collecting and manipulating
+protocol metadata:
 
 ### RolesOf Implementations
 
@@ -116,13 +119,15 @@ impl<IO, L: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + LabelsOf> La
     type Labels = protocol::Cons<L, <T as LabelsOf>::Labels>;
 }
 
-impl<IO, Lbl: types::ProtocolLabel, L: protocol::TSession<IO> + LabelsOf, R: protocol::TSession<IO> + LabelsOf> 
+impl<IO, Lbl: types::ProtocolLabel, L: protocol::TSession<IO> + LabelsOf, 
+     R: protocol::TSession<IO> + LabelsOf> 
     LabelsOf for protocol::TChoice<IO, Lbl, L, R>
 {
     type Labels = protocol::Cons<Lbl, <L as LabelsOf>::Labels>;
 }
 
-impl<IO, Lbl: types::ProtocolLabel, L: protocol::TSession<IO> + LabelsOf, R: protocol::TSession<IO> + LabelsOf, IsDisjoint> 
+impl<IO, Lbl: types::ProtocolLabel, L: protocol::TSession<IO> + LabelsOf, 
+     R: protocol::TSession<IO> + LabelsOf, IsDisjoint> 
     LabelsOf for protocol::TPar<IO, Lbl, L, R, IsDisjoint>
 {
     type Labels = protocol::Cons<Lbl, <L as LabelsOf>::Labels>;
@@ -242,7 +247,7 @@ type Global = TInteract<
 
 Based on this detailed mapping, the refactoring will impact:
 
-1. **Type Definitions (3)**: 
+1. **Type Definitions (3)**:
    - `TEnd<IO, L>` → `TEnd<IO, Lbl>`
    - `TInteract<IO, L, R, H, T>` → `TInteract<IO, Lbl, R, H, T>`
    - `TRec<IO, L, S>` → `TRec<IO, Lbl, S>`
@@ -258,14 +263,16 @@ Based on this detailed mapping, the refactoring will impact:
    - Compile-time assertions
 
 4. **Unique Challenges**:
-   - In `TChoice` and `TPar`, both `Lbl` (label) and `L` (left branch) parameters exist, which requires careful handling to avoid confusion
-   
+   - In `TChoice` and `TPar`, both `Lbl` (label) and `L` (left branch) parameters exist, which
+     requires careful handling to avoid confusion
+
 5. **Areas Requiring Special Attention**:
    - The `introspection.rs` module relies heavily on label parameters
    - Projection machinery uses label parameters in bounds
    - Compile-fail tests that check error messages
 
-This mapping will serve as a guide during the implementation of the refactoring to ensure all usages of label parameters are consistently updated.
+This mapping will serve as a guide during the implementation of the refactoring to ensure all
+usages of label parameters are consistently updated.
 
 ---
 
