@@ -1,34 +1,58 @@
-# Tasks
+# Besedarium Project Tasks
 
 ## Active Tasks
 
-- [x] Documentation consolidation and improvement
-  - [x] Replace learnings.md with the more concise learnings_summary.md
-  - [x] Update CHANGELOG.md with current project status
-  - [x] Update documentation to use lean-context style
+- [x] **Label preservation** during projection for better traceability and debugging
+  - [x] Update local endpoint type definitions to include label parameters
+  - [x] Modify ProjectRole trait implementation to propagate labels
+  - [x] Update helper traits to handle labels during projection
+  - [x] Add utility traits for label access and comparison
+  - [x] Update macros and helper functions
+  - [x] Create test cases for label preservation
+  - [x] Update documentation
 
-- [x] Fix markdown linting issues with markdownlint-cli2
-  - [x] Configure project-wide markdownlint-cli2 rules in `.markdownlint-cli2.yaml`
-  - [x] Create proper markdown linting scripts (`md-lint.sh` and `setup-md-lint.sh`)
-  - [x] Remove empty `protocol_original.rs` file
-  - [x] Fix list formatting and indentation issues  
-  - [x] Resolve duplicate heading issues
-  - [x] Fix trailing spaces and other minor issues
+## Planned Tasks
 
-- [x] Fix markdown linting issues across documentation files (previous tool)
-  - [x] Address line length issues (over 80 characters)
-  - [x] Fix list formatting issues (missing blank lines)
-  - [x] Resolve heading formatting issues
-  - [x] Fix minor issues (trailing spaces, missing newlines)
+- [ ] **Enhanced recursion support** with explicit variables and potential for mutual recursion
+  - [ ] Design explicit recursion variable representation (TMu/TVar style)
+  - [ ] Implement mutual recursion capabilities
+  - [ ] Support scoped recursion blocks
+  - [ ] Update projection machinery for recursion variables
+
+- [ ] **Branch merging** for optimized choice projection
+  - [ ] Implement branch equivalence detection
+  - [ ] Create merge algorithm for equivalent choice branches
+  - [ ] Update projection to utilize branch merging
+
+- [ ] **Internal/external choice distinction** for clearer protocol semantics
+  - [ ] Define separate types for internal vs external choice
+  - [ ] Update projection to distinguish choice types
+  - [ ] Provide composable combinators for both choice types
+
+- [ ] **Protocol verification tools** for static analysis
+  - [ ] Deadlock freedom verification
+  - [ ] Progress guarantees
+  - [ ] Well-formedness checks
+
+- [ ] **Init** Global session combinator
+  - [ ] Design API for initialization combinator
+  - [ ] Implement projection to all local roles
+  - [ ] Consider runtime channel integration
+
+- [ ] **Metadata** type parameter for configuration
+  - [ ] Add metadata type parameter to global types
+  - [ ] Implement projection strategies (whole/piece-wise)
+  - [ ] Create utilities for metadata access
 
 ## Completed Tasks
 
-- [x] Refactor `protocol.rs` into smaller submodules
-  - [x] Create plan and structure for protocol module refactoring
-  - [x] Create GitHub issue documenting the refactoring need (Issue #11)
-  - [x] Create draft pull request for implementation (PR #12)
-  - [x] Implement initial layer-based module structure
-  - [x] Migrate code from protocol.rs to appropriate modules
-  - [x] Complete comprehensive testing of the refactored structure
-  - [x] Fixed build errors related to circular imports in protocol_original.rs
-  - [x] Removed superfluous protocol_original.rs file
+- [x] Core global combinators implementation
+- [x] N-ary extensions for choice and parallel composition
+- [x] Core endpoint types implementation
+- [x] Basic projection machinery
+
+## Technical Improvements
+
+- [ ] Optimize compile-time performance for complex protocols
+- [ ] Improve type error messages for protocol errors
+- [ ] Add more comprehensive test suite

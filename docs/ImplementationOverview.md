@@ -43,29 +43,34 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TInteract<IO, R, H, T: TSession<IO>>(PhantomData<(IO, R, H, T)>);
+  pub struct TInteract<IO, Lbl: ProtocolLabel, R, H, T: TSession<IO>>(
+      PhantomData<(IO, Lbl, R, H, T)>,
+  );
   ```
 
-  - `IO`: protocol marker (e.g., Http, Mqtt)
-  - `R`: role performing the action
-  - `H`: message type
-  - `T`: continuation
+  - `IO`: Protocol marker (e.g., Http, Mqtt)
+  - `Lbl`: Label for this interaction (for projection and debugging)
+  - `R`: Role performing the action (sender or receiver)
+  - `H`: Message type being sent or received
+  - `T`: Continuation protocol after this interaction
 - **Pros:**
   - Simple, compositional building block for protocols.
   - Encodes both the actor and the message at the type level.
+  - Labeling supports protocol projection and debugging.
 - **Cons:**
-  - Requires explicit role and message types for each step.
+  - Requires explicit role, label, and message types for each step.
 - **Properties Ensured:**
   - Linearity (each step is explicit and unique in the protocol).
   - Type safety for message and role.
 - **Example:**
 
   ```rust
-  type Handshake = TInteract<Http, TClient, Message, TInteract<Http, TServer, Response,
-  TEnd<Http>>>;
+  type Handshake = TInteract<Http, HandshakeLabel, TClient, Message,
+      TInteract<Http, ResponseLabel, TServer, Response, TEnd<Http>>>;
+  // Projects to local types for each role using the projection machinery (see below).
   ```
 
-- **Diagram:**
+  - **Diagram:**
 
   ```mermaid
   sequenceDiagram
@@ -81,13 +86,18 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TChoice<IO, L: TSession<IO>, R: TSession<IO>>(PhantomData<(IO, L, R)>);
+  pub struct TChoice<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>(
+      PhantomData<(IO, Lbl, L, R)>,
+  );
   ```
 
-  - Used recursively for n-ary choices via macros.
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this choice (for projection and debugging)
+  - `L`, `R`: The two protocol branches
 - **Pros:**
   - Expressive for modeling protocol alternatives.
-  - N-ary choices supported via macros.
+  - N-ary choices supported via macros and type-level lists.
+  - Labeling supports protocol projection and debugging.
 - **Cons:**
   - Manual construction of deeply nested choices can be verbose (mitigated by macros).
 - **Properties Ensured:**
@@ -95,13 +105,14 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Example:**
 
   ```rust
-  type Choice = tchoice!(Http;
-      TInteract<Http, TClient, Message, TEnd<Http>>,
-      TInteract<Http, TServer, Response, TEnd<Http>>,
-  );
+  type Choice = TChoice<Http, ChoiceLabel,
+      TInteract<Http, L1, TClient, Message, TEnd<Http>>,
+      TInteract<Http, L2, TServer, Response, TEnd<Http>>
+  >;
+  // Each branch is projected to the local type for each role.
   ```
 
-- **Diagram:**
+  - **Diagram:**
 
   ```mermaid
   flowchart TD
@@ -120,14 +131,19 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TPar<IO, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(PhantomData<(IO, L, R,
-  IsDisjoint)>);
+  pub struct TPar<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
+      PhantomData<(IO, Lbl, L, R, IsDisjoint)>,
+  );
   ```
 
-  - `IsDisjoint` is a type-level boolean indicating if the branches are disjoint in their roles.
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this parallel composition
+  - `L`, `R`: The two protocol branches to run in parallel
+  - `IsDisjoint`: Type-level boolean indicating if branches are disjoint
 - **Pros:**
   - Enables modeling of concurrent or independent protocol flows.
   - Disjointness is enforced at compile time via traits and macros.
+  - Labeling supports protocol projection and debugging.
 - **Cons:**
   - Requires explicit disjointness checks (assert_disjoint!).
   - N-ary parallel composition can be verbose without macros.
@@ -137,15 +153,15 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Example:**
 
   ```rust
-  type Workflow = tpar!(Http;
-      TInteract<Http, TClient, Message, TInteract<Http, TServer, Response, TEnd<Http>>>,
-      TInteract<Http, TBroker, Publish, TEnd<Http>>,
-      TInteract<Http, TWorker, Notify, TEnd<Http>>
-  );
-  assert_disjoint!(par Workflow);
+  type Workflow = TPar<Http, ParLabel,
+      TInteract<Http, L1, TClient, Message, TInteract<Http, L2, TServer, Response, TEnd<Http>>>,
+      TInteract<Http, L3, TBroker, Publish, TEnd<Http>>,
+      TrueB // or FalseB, depending on disjointness check
+  >;
+  // Each branch is projected independently to local types for each role.
   ```
 
-- **Diagram:**
+  - **Diagram:**
 
   ```mermaid
   flowchart TD
@@ -163,11 +179,17 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TRec<IO, S: TSession<IO>>(PhantomData<(IO, S)>);
+  pub struct TRec<IO, Lbl: ProtocolLabel, S: TSession<IO>>(
+      PhantomData<(IO, Lbl, S)>,
+  );
   ```
 
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this recursion (for projection and debugging)
+  - `S`: The protocol fragment to repeat (may refer to itself)
 - **Pros:**
   - Enables modeling of streaming, loops, or repeated protocol fragments.
+  - Labeling supports protocol projection and debugging.
 - **Cons:**
   - No mutual recursion (only single recursion supported).
 - **Properties Ensured:**
@@ -175,10 +197,11 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Example:**
 
   ```rust
-  type Streaming = TRec<Http, TInteract<Http, TClient, Message, TEnd<Http>>>;
+  type Streaming = TRec<Http, StreamLabel, TInteract<Http, L1, TClient, Message, TEnd<Http>>>;
+  // Recursion is preserved in the local projection.
   ```
 
-- **Diagram:**
+  - **Diagram:**
 
   ```mermaid
   flowchart TD
@@ -194,15 +217,22 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TEnd<IO>(PhantomData<IO>);
+  pub struct TEnd<IO, Lbl = EmptyLabel>(PhantomData<(IO, Lbl)>);
   ```
 
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this end (default: EmptyLabel)
 - **Pros:**
   - Simple, unambiguous protocol termination.
 - **Cons:**
   - None.
 - **Properties Ensured:**
   - Explicit protocol termination.
+- **Example:**
+
+  ```rust
+  type Done = TEnd<Http>;
+  ```
 
 ---
 
@@ -210,41 +240,287 @@ and trybuild tests ensure that safety properties are enforced and violations are
 
 ## Overview
 
-Local (endpoint) types describe the protocol from the perspective of a single role. Besedarium
-provides machinery to project a global protocol to the local type for any role, ensuring that each
-participant follows the correct sequence of actions.
+Local (endpoint) types describe the protocol from the perspective of a single role. Besedarium provides type-level machinery to project a global protocol to the local type for any role, ensuring that each participant follows the correct sequence of actions. This projection is performed entirely at the type level, using type-level lists, booleans, and trait dispatch.
 
-## Endpoint Combinators
+### Endpoint Combinators
 
-- `EpSend<IO, R, H, T>`: Send action for role R
-- `EpRecv<IO, R, H, T>`: Receive action for role R
-- `EpChoice<IO, R, L, Rb>`: Local choice/branching
-- `EpPar<IO, R, L, Rb>`: Local parallel composition
-- `EpEnd<IO, R>`: Local protocol termination
+- **EpSend**: Endpoint sending operation
 
-### Projection Machinery
+  ```rust
+  pub struct EpSend<IO, Lbl: ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+  ```
 
-- `ProjectRole<Me, IO, G>`: Trait to project a global protocol G to the local session type for role
-Me.
-- Uses type-level role equality (`RoleEq`) to determine send/receive.
-- Compile-time assertions (e.g., `assert_type_eq!`) ensure correctness.
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this interaction (for traceability and debugging)
+  - `R`: Role performing the send
+  - `H`: Message type being sent
+  - `T`: Continuation after sending
 
-### Example: Projection
+- **EpRecv**: Endpoint receiving operation
+
+  ```rust
+  pub struct EpRecv<IO, Lbl: ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+  ```
+
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this interaction (for traceability and debugging)
+  - `R`: Role performing the receive
+  - `H`: Message type being received
+  - `T`: Continuation after receiving
+
+- **EpChoice**: Endpoint protocol choice (branching/offer)
+
+  ```rust
+  pub struct EpChoice<IO, Lbl: ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+  ```
+
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this choice (for traceability and debugging)
+  - `Me`: The role being projected
+  - `L`, `R`: The two local protocol branches
+
+- **EpPar**: Endpoint parallel composition
+
+  ```rust
+  pub struct EpPar<IO, Lbl: ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+  ```
+
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this parallel composition (for traceability and debugging)
+  - `Me`: The role being projected
+  - `L`, `R`: The two local protocol branches
+
+- **EpEnd**: Endpoint protocol termination
+
+  ```rust
+  pub struct EpEnd<IO, Lbl: ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+  ```
+
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this endpoint (for traceability and debugging)
+  - `R`: Role for which the protocol ends
+
+- **EpSkip**: No-op type for roles not involved in a branch
+
+  ```rust
+  pub struct EpSkip<IO, Lbl: ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+  ```
+
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this skip operation (for traceability and debugging)
+  - `R`: Role that is skipping this branch
+  - Used to improve type-level precision for projections (not always enabled in runtime code)
+
+### Notes
+
+- All endpoint combinators implement the `EpSession<IO, R>` trait for the appropriate role.
+- Labels are used throughout for traceability, debugging, and to support correct projection from global types.
+- The design supports type-level checks for whether a local type is an `EpSkip` or `EpEnd` variant, which can be useful for endpoint interpreters and code generation.
+
+---
+
+## Projection Machinery: From Global to Local Types
+
+### Overview
+
+The core of Besedarium's type-level protocol analysis is the machinery for projecting a global protocol
+ type to the local (endpoint) type for a given role. This is achieved entirely at the type level using
+ traits, type-level booleans, and recursive trait dispatch. The projection machinery ensures that each
+ participant in a protocol receives a local type that precisely describes its required actions, and that
+ uninvolved roles are handled correctly.
+
+#### Key Traits and Helpers
+
+- **`ProjectRole`**: The main trait for projecting a global protocol onto a specific role, producing the local endpoint type for that role.
+
+- **`ProjectInteract`**: Helper trait for projecting a single interaction, dispatching on whether the role is the sender or receiver.
+
+- **`ProjectChoice` / `ProjectChoiceCase`**: Helpers for projecting protocol choices, handling all cases of role presence in branches.
+
+- **`ProjectPar` / `ProjectParCase`**: Helpers for projecting parallel compositions, handling all cases of role presence in branches.
+
+- **`ProjectRoleOrSkip`**: Helper for projecting a branch or producing an `EpSkip` if the role is not present.
+
+- **`ComposeProjectedParBranches` / `ComposeProjectedParBranchesCase`**: Helpers for composing projected parallel branches, handling `EpSkip` and `EpEnd` cases.
+
+- **`ContainsRole` / `NotContainsRole`**: Type-level predicates to check if a role is present in a protocol branch.
+
+- **`GetProtocolLabel` / `GetLocalLabel`**: Extractors for protocol and endpoint labels, used for label preservation.
+
+### Main Projection Trait: `ProjectRole`
 
 ```rust
-struct Alice;
-struct Bob;
-impl Role for Alice {}
-impl Role for Bob {}
-impl RoleEq<Alice> for Alice { type Output = True; }
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Bob> for Bob { type Output = True; }
-
-type Global = TInteract<Http, Alice, Message, TInteract<Http, Bob, Response, TEnd<Http>>>;
-type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
-// AliceLocal = EpSend<Http, Alice, Message, EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>>
+pub trait ProjectRole<Me, IO, G: TSession<IO>> {
+    type Out: EpSession<IO, Me>;
+}
 ```
+
+- `Me`: The role being projected
+
+- `IO`: Protocol marker type
+
+- `G`: The global protocol type
+
+- `Out`: The resulting local endpoint type for `Me`
+
+#### Example: Projecting a Simple Protocol
+
+```rust
+// Global protocol: Alice sends Message, then Bob sends Response
+// type Global = TInteract<Http, EmptyLabel, Alice, Message,
+//     TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>>;
+// Project onto Alice:
+type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
+// Result: EpSend<..., EpRecv<..., EpEnd<...>>>
+```
+
+### Projection for Each Global Combinator
+
+#### 1. `TEnd`
+
+- Projects to `EpEnd` for the role, preserving the label.
+
+```rust
+impl<Me, IO, Lbl> ProjectRole<Me, IO, TEnd<IO, Lbl>> for () {
+    type Out = EpEnd<IO, Lbl, Me>;
+}
+```
+
+#### 2. `TInteract`
+
+- If the role is the sender, projects to `EpSend`.
+
+- If the role is not the sender, projects to `EpRecv`.
+
+- Uses `ProjectInteract` to dispatch based on role equality.
+
+```rust
+impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R, H, T>> for ()
+where
+    Me: RoleEq<R>,
+    (): ProjectInteract<<Me as RoleEq<R>>::Output, Me, IO, Lbl, R, H, T>,
+{
+    type Out = <() as ProjectInteract<<Me as RoleEq<R>>::Output, Me, IO, Lbl, R, H, T>>::Out;
+}
+```
+
+#### 3. `TChoice`
+
+- Projects to `EpChoice` if the role is present in either branch.
+
+- If the role is present in only one branch, the other branch is projected as `EpSkip`.
+
+- If the role is in neither branch, projects to `EpSkip`.
+
+- Uses `ContainsRole` and `ProjectChoiceCase` for case analysis.
+
+```rust
+impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+where
+    L: ContainsRole<Me>,
+    R: ContainsRole<Me>,
+    (): ProjectChoiceCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>,
+{
+    type Out = <() as ProjectChoiceCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>>::Out;
+}
+```
+
+#### 4. `TPar`
+
+- Projects to `EpPar` if the role is present in both branches.
+
+- If the role is present in only one branch, projects that branch directly.
+
+- If the role is in neither branch, projects to `EpSkip`.
+
+- Uses `ContainsRole` and `ProjectParCase` for case analysis.
+
+```rust
+impl<Me, IO, Lbl, L, R, IsDisjoint> ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
+where
+    L: ContainsRole<Me>,
+    R: ContainsRole<Me>,
+    (): ProjectParCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>,
+{
+    type Out = <() as ProjectParCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>>::Out;
+}
+```
+
+#### 5. `TRec`
+
+- Recursion is preserved in the local projection.
+
+### Role Presence: `ContainsRole` and `NotContainsRole`
+
+- `ContainsRole<R>`: Type-level predicate returning `True` if role `R` is present in a protocol branch.
+
+- `NotContainsRole<R>`: True if role `R` is not present.
+
+- Used to determine whether to project a branch or produce an `EpSkip`.
+
+#### Example
+
+```rust
+impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
+    type Output = types::False;
+}
+// For TInteract, all roles are considered present (sender or receiver)
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T> {
+    type Output = types::True;
+}
+```
+
+### Handling `EpSkip` and `EpEnd` in Endpoint Composition
+
+- `EpSkip` is used when a role is not involved in a branch (e.g., in a parallel or choice branch).
+
+- `EpEnd` marks protocol termination for a role.
+
+- The machinery includes helpers (`ComposeProjectedParBranches`, etc.) to combine branches and handle cases where one or both are `EpSkip` or `EpEnd`.
+
+#### Example: Composing Parallel Branches
+
+```rust
+// If both branches are EpSkip, output EpSkip
+impl<IO, Me, Lbl1, Lbl2> ComposeProjectedParBranchesCase<types::True, types::True, types::False, types::False, IO, Me, EpSkip<IO, Lbl1, Me>, EpSkip<IO, Lbl2, Me>> for () {
+    type Out = EpSkip<IO, Lbl1, Me>;
+}
+// If one branch is EpSkip, return the other branch
+// If both are projected, create EpPar
+```
+
+### Type-Level Dispatch and Label Preservation
+
+- All projection logic is implemented using trait dispatch and type-level booleans.
+
+- Labels from the global protocol are preserved in the local types for traceability and debugging.
+
+- Helper traits (`GetProtocolLabel`, `GetLocalLabel`) extract labels for use in endpoint combinators.
+
+### Example: Full Projection Flow
+
+```rust
+// Given a global protocol:
+type Global = TPar<Http, ParLabel,
+    TInteract<Http, L1, Alice, Msg, TEnd<Http>>,
+    TInteract<Http, L2, Bob, Ack, TEnd<Http>>,
+    TrueB>;
+// Project onto Alice:
+type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
+// Result: EpSend<Http, L1, Alice, Msg, EpEnd<Http, L1, Alice>>
+```
+
+### Summary
+
+- **Type safe:** All projection is checked at compile time.
+
+- **Compositional:** Each protocol combinator has a corresponding projection rule.
+
+- **Extensible:** New combinators and projection rules can be added as needed.
+
+- **Traceable:** Labels are preserved for debugging and code generation.
+
+For more details, see the source code in `src/protocol/transforms.rs` and the projection tests.
 
 ---
 
@@ -270,7 +546,7 @@ system.
 
 - **Increased runtime complexity:** The endpoint state machine must recognize and handle EpSkip
 states, even though they do nothing.
-- **More verbose state machines:** The presence of explicit no-op states can make the runtime
+- **More verbose state machines:** The presence of explicit skip states can make the runtime
 control flow harder to follow, especially in complex protocols.
 - **Potential confusion:** Developers may not immediately distinguish between EpSkip (no-op) and
 EpEnd (termination), leading to ambiguity if not documented and handled carefully.
@@ -364,18 +640,3 @@ mutual recursion        |
 runtime choreography    |
 
 ---
-
-## References
-
-- [Multiparty Asynchronous Session Types (Honda et al.,
-2008)](https://www.cs.kent.ac.uk/people/staff/srm25/research/multiparty/)
-- [Linear type theory for asynchronous session types (Gay & Vasconcelos,
-2010)](https://www.dcs.gla.ac.uk/~simon/publications/linear-session-types.pdf)
-- [Propositions as sessions (Wadler, 2012)][wadler-2012]
-- [Session Types in Rust (blog post)](https://blog.sessiontypes.com/)
-
-[wadler-2012]: https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions.pdf
-
----
-
-Prepared by GitHub Copilot, 2025

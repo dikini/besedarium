@@ -151,6 +151,11 @@ during a session.
 - Mandatory updates after successful task completion.
 - Write all learnings, patterns, concepts to work/learnings.md
 - Use descriptive language. They are not just documentation, but running help.
+- at the end of the work on a PR - when all work/TASKS.md tasks are complete, update
+work/learnings.md. Revise and summarise the content of the learnings file in such a way
+that it is suitable for context injection into an LLM context window. Make sure that we don't
+lose any important information, like code insights, code patterns, type level programming, etc...
+
 
 ### MAKING EDITS
 
@@ -189,7 +194,8 @@ When refactoring large files:
 
 ## Feedback & Improvements
 
-- Suggest improvements to these instructions as the project evolves.
+- Explicitly suggest improvements to these instructions as the project evolves.
+- If you have suggested improvements, add them to work/TASKS.md for review
 
 ---
 

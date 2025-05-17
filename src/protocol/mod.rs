@@ -25,6 +25,12 @@ pub mod local;
 pub mod transforms;
 pub mod utils;
 
+// Additional test-specific helpers
+#[cfg(test)]
+pub mod test_helpers;
+#[cfg(test)]
+pub mod test_overrides;
+
 // Re-export commonly used items at the protocol module level
 pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList};
 pub use self::global::{
@@ -37,8 +43,8 @@ pub use self::local::{
 };
 pub use self::transforms::{
     ComposeProjectedParBranches, ComposeProjectedParBranchesCase, ContainsRole, FilterSkips,
-    FilterSkipsCase, NotContainsRole, ProjectChoice, ProjectChoiceCase, ProjectInteract,
-    ProjectPar, ProjectParBranch, ProjectRole, TParContainsRoleImpl,
+    FilterSkipsCase, GetLocalLabel, GetProtocolLabel, NotContainsRole, ProjectChoice, ProjectChoiceCase, 
+    ProjectInteract, ProjectPar, ProjectRoleOrSkip, ProjectRole, TParContainsRoleImpl,
 };
 pub use self::utils::{
     CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,

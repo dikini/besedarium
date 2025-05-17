@@ -95,6 +95,13 @@ impl Not for False {
     type Output = True;
 }
 
+/// Type-level equality comparison for boolean types
+/// Used to check if a type is equal to another specific type
+pub trait IsEq<T> {}
+
+impl IsEq<True> for True {}
+impl IsEq<False> for False {}
+
 /// Marker trait for user-definable protocol labels.
 ///
 /// Implement this trait for any type you want to use as a protocol label.
