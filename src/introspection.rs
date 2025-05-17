@@ -21,7 +21,12 @@ impl<IO, Lbl> RolesOf for protocol::TEnd<IO, Lbl> {
     type Roles = protocol::Nil;
 }
 impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + RolesOf> RolesOf
-    for protocol::TInteract<IO, Lbl, R, H, T>
+    for protocol::TSend<IO, Lbl, R, H, T>
+{
+    type Roles = protocol::Cons<R, <T as RolesOf>::Roles>;
+}
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + RolesOf> RolesOf
+    for protocol::TRecv<IO, Lbl, R, H, T>
 {
     type Roles = protocol::Cons<R, <T as RolesOf>::Roles>;
 }
@@ -62,7 +67,12 @@ impl<IO, Lbl> LabelsOf for protocol::TEnd<IO, Lbl> {
     type Labels = protocol::Cons<Lbl, protocol::Nil>;
 }
 impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + LabelsOf> LabelsOf
-    for protocol::TInteract<IO, Lbl, R, H, T>
+    for protocol::TSend<IO, Lbl, R, H, T>
+{
+    type Labels = protocol::Cons<Lbl, <T as LabelsOf>::Labels>;
+}
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: protocol::TSession<IO> + LabelsOf> LabelsOf
+    for protocol::TRecv<IO, Lbl, R, H, T>
 {
     type Labels = protocol::Cons<Lbl, <T as LabelsOf>::Labels>;
 }

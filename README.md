@@ -62,7 +62,7 @@ system. With this library, you can:
 ```rust
 use besedarium::*;
 struct L; impl ProtocolLabel for L {}
-type Handshake = TInteract<Http, L, TClient, Message, TInteract<Http, L, TServer, Response, TEnd<Http, L>>>;
+type Handshake = TSend<Http, L, TClient, Message, TSend<Http, L, TServer, Response, TEnd<Http, L>>>;
 ```
 
 ```mermaid
@@ -80,8 +80,8 @@ use besedarium::*;
 struct L1; impl ProtocolLabel for L1 {}
 struct L2; impl ProtocolLabel for L2 {}
 type Choice = tchoice!(Http;
-    TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
-    TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
+    TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
+    TSend<Http, L2, TServer, Response, TEnd<Http, L2>>,
 );
 ```
 
@@ -103,8 +103,8 @@ use besedarium::*;
 struct L1; impl ProtocolLabel for L1 {}
 struct L2; impl ProtocolLabel for L2 {}
 type Par = tpar!(Http;
-    TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
-    TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
+    TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
+    TSend<Http, L2, TServer, Response, TEnd<Http, L2>>,
 );
 ```
 
@@ -126,7 +126,7 @@ for a given role from a global protocol specification.
 
 - The `ProjectRole` trait recursively traverses a global protocol (a type implementing `TSession`)
   and produces the local protocol for a specific role.
-- Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type
+- Each global combinator (`TSend`, `TRecv`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type
   (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
 - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid
   overlapping trait impls and to dispatch on type-level booleans.
@@ -143,12 +143,12 @@ impl RoleEq<Alice> for Bob   { type Output = False; }
 impl RoleEq<Bob> for Bob     { type Output = True; }
 struct L; impl ProtocolLabel for L {}
 
-type Global = TInteract<
+type Global = TSend<
     Http,
     EmptyLabel,
     Alice,
     Message,
-    TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>
+    TSend<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>
 >;
 
 // Project onto Alice and Bob

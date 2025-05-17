@@ -29,7 +29,7 @@
 //!
 //! ## How it works
 //! - The [`ProjectRole`] trait recursively traverses a global protocol (a type implementing [`TSession`]) and produces the local protocol for a specific role.
-//! - Each global combinator (`TInteract`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
+//! - Each global combinator (`TSend`, `TRecv`, `TChoice`, `TPar`, etc.) has a corresponding endpoint type (`EpSend`, `EpRecv`, `EpChoice`, `EpPar`, etc.).
 //! - Helper traits (e.g., `ProjectInteract`, `ProjectChoice`, `ProjectPar`) are used to avoid overlapping trait impls and to dispatch on type-level booleans.
 //!
 //! ## Example
@@ -42,7 +42,7 @@
 //! impl RoleEq<Alice> for Bob { type Output = False; }
 //! impl RoleEq<Bob> for Bob { type Output = True; }
 //! struct L; impl ProtocolLabel for L {}
-//! type Global = TInteract<Http, L, Alice, Message, TInteract<Http, L, Bob, Response, TEnd<Http, L>>>;
+//! type Global = TSend<Http, L, Alice, Message, TRecv<Http, L, Bob, Response, TEnd<Http, L>>>;
 //! type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 //! type BobLocal = <() as ProjectRole<Bob, Http, Global>>::Out;
 //! ```
@@ -64,8 +64,8 @@ macro_rules! tlist {
 /// struct L1; impl ProtocolLabel for L1 {}
 /// struct L2; impl ProtocolLabel for L2 {}
 /// type Choice = tchoice!(Http;
-///     TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
-///     TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
+///     TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
+///     TRecv<Http, L2, TServer, Response, TEnd<Http, L2>>,
 /// );
 /// ```
 #[macro_export]
@@ -83,8 +83,8 @@ macro_rules! tchoice {
 /// struct L1; impl ProtocolLabel for L1 {}
 /// struct L2; impl ProtocolLabel for L2 {}
 /// type Par = tpar!(Http;
-///     TInteract<Http, L1, TClient, Message, TEnd<Http, L1>>,
-///     TInteract<Http, L2, TServer, Response, TEnd<Http, L2>>,
+///     TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
+///     TRecv<Http, L2, TServer, Response, TEnd<Http, L2>>,
 /// );
 /// ```
 #[macro_export]
@@ -132,7 +132,7 @@ macro_rules! assert_disjoint {
 /// ```rust
 /// use besedarium::*;
 /// struct L; impl ProtocolLabel for L {}
-/// type Roles = extract_roles!(TInteract<Http, L, TClient, Message, TEnd<Http, L>>);
+/// type Roles = extract_roles!(TSend<Http, L, TClient, Message, TEnd<Http, L>>);
 /// ```
 #[macro_export]
 macro_rules! extract_roles {
@@ -165,8 +165,8 @@ macro_rules! assert_unique_labels {
 /// type MyProtocol = TChoice<
 ///     Http,
 ///     MyLabel1,
-///     TInteract<Http, MyLabel1, TClient, Message, TEnd<Http, MyLabel1>>,
-///     TInteract<Http, MyLabel2, TServer, Response, TEnd<Http, MyLabel2>>
+///     TSend<Http, MyLabel1, TClient, Message, TEnd<Http, MyLabel1>>,
+///     TRecv<Http, MyLabel2, TServer, Response, TEnd<Http, MyLabel2>>
 /// >;
 /// assert_unique_labels!(MyProtocol); // Compile-time error if labels are not unique
 /// ```

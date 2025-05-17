@@ -1,10 +1,14 @@
 <!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
 
-# Work Plan: TInteract → TSend/TRecv Refactor (Issues #15 & #16)
+# Work Plan: Protocol Label Invariant and TInteract → TSend/TRecv Refactor (Issues #15 & #16)
 
 ## Overview
 
 This plan outlines the steps to refactor the Besedarium session types library by replacing the global protocol combinator `TInteract` with distinct `TSend` and `TRecv` types. The goal is to improve protocol clarity, type-level expressiveness, and future extensibility. The plan also covers stabilization of the test base, updating documentation, and review/merge criteria.
+
+- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
+- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
+- This invariant must be maintained in all future refactors and protocol design changes.
 
 ---
 
@@ -51,14 +55,14 @@ This plan outlines the steps to refactor the Besedarium session types library by
 
 ## 4. Documentation, Changelog, and Learnings Update
 
-**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure.
+**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure and the protocol label invariant.
 
-- Update README, code docs, and protocol examples.
-- Update CHANGELOG.md with a summary of the refactor.
+- Update README, code docs, and protocol examples to show that all combinators are labeled and implement `GetProtocolLabel`.
+- Update CHANGELOG.md with a summary of the refactor and the invariant.
 - Update work/learnings.md and related files with new patterns and lessons.
 - Update work/Status.md
 
-**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date.
+**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date; protocol label invariant is documented and enforced.
 
 ---
 
@@ -78,5 +82,11 @@ This plan outlines the steps to refactor the Besedarium session types library by
 ## Summary
 
 - **Preconditions:** Stable test base, all tests passing.
-- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; documentation and changelog are updated; PR is reviewed and merged.
-- **Success criteria:** No regressions, improved clarity and maintainability, all project standards met.
+- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; all combinators are labeled and implement `GetProtocolLabel`; documentation and changelog are updated; PR is reviewed and merged.
+- **Success criteria:** No regressions, improved clarity and maintainability, all project standards and invariants met.
+
+---
+
+> **Protocol Label Invariant:**
+> All protocol combinators must have a label parameter and implement `GetProtocolLabel`.
+> This is a core design rule for Besedarium. Update this file and documentation if the invariant changes.

@@ -47,7 +47,7 @@ impl ProtocolLabel for EmptyLabel {}
 
 fn main() {
     // Interaction where Bob sends to Alice
-    type BobToAlice = TInteract<Http, EmptyLabel, Bob, Message, TEnd<Http, EmptyLabel>>;
+    type BobToAlice = TSend<Http, EmptyLabel, Bob, Message, TEnd<Http, EmptyLabel>>;
 
     // Check if Alice is detected in BobToAlice
     type IsAliceInBobToAlice = <BobToAlice as ContainsRole<Alice>>::Output;
