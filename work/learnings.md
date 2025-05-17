@@ -165,6 +165,44 @@ where
 
 **When to use:** For building complex protocols from simpler building blocks.
 
+## Protocol Label Invariant (2025-05-17)
+
+**Invariant:**
+
+- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
+- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
+- This ensures that label metadata is always available for introspection, projection, and compile-time checks (e.g., uniqueness, traceability, debugging).
+- All combinators must preserve and propagate label information through type-level composition and projection.
+
+**Rationale:**
+
+- Uniform label access enables generic tooling, macros, and compile-time assertions (e.g., `assert_unique_labels!`).
+- Consistent labeling across all combinators simplifies protocol analysis, code generation, and debugging.
+- This invariant must be maintained as the protocol system evolves. Any new combinator must follow this rule.
+
+**Pattern:**
+
+```rust
+// Example: All combinators carry a label and implement GetProtocolLabel
+pub trait GetProtocolLabel {
+    type Label: ProtocolLabel;
+}
+
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TEnd<IO, Lbl> { type Label = Lbl; }
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TSend<IO, Lbl, ...> { type Label = Lbl; }
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TRecv<IO, Lbl, ...> { type Label = Lbl; }
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TChoice<IO, Lbl, ...> { type Label = Lbl; }
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TPar<IO, Lbl, ...> { type Label = Lbl; }
+impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TRec<IO, Lbl, ...> { type Label = Lbl; }
+// ...and so on for any new combinator
+```
+
+**Implications:**
+
+- When adding, removing, or modifying combinators, always update their label parameter and `GetProtocolLabel` implementation.
+- When refactoring, describe explicitly which traits, structures, or impls are affected.
+- This invariant is enforced by convention, code review, and compile-time tests.
+
 ## Project Architecture Insights
 
 ### Layer-Based Protocol System

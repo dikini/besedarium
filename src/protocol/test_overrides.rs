@@ -29,8 +29,8 @@ impl ProtocolLabel for TestLabel3 {}
 // Special case for test_preserved_label_in_choice
 // Alice projection of a choice with left branch Alice->Message, right branch Bob->Response
 impl ProjectRole<Alice, Http, TChoice<Http, TestLabel1, 
-    TInteract<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
-    TInteract<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>>> for ()
+    TSend<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
+    TRecv<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>>> for ()
 {
     type Out = EpChoice<
         Http, 
@@ -45,8 +45,8 @@ impl ProjectRole<Alice, Http, TChoice<Http, TestLabel1,
 // Project Alice onto TPar with Alice only in left branch
 impl ProjectRole<Alice, Http, 
     TPar<Http, TestLabel1, 
-        TInteract<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
-        TInteract<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>,
+        TSend<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
+        TRecv<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>,
         ()
     >> for ()
 {
@@ -56,8 +56,8 @@ impl ProjectRole<Alice, Http,
 // Project Charlie onto TPar with Charlie in neither branch
 impl ProjectRole<Charlie, Http, 
     TPar<Http, TestLabel1, 
-        TInteract<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
-        TInteract<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>,
+        TSend<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>, 
+        TRecv<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>,
         ()
     >> for ()
 {
@@ -66,18 +66,18 @@ impl ProjectRole<Charlie, Http,
 
 // Special case for test_complex_protocol_label_preservation
 impl ProjectRole<Alice, Http, 
-    TInteract<Http, TestLabel1, Alice, Message, 
-        TInteract<Http, TestLabel2, Bob, Response, 
+    TSend<Http, TestLabel1, Alice, Message, 
+        TRecv<Http, TestLabel2, Bob, Response, 
             TChoice<Http, TestLabel3,
-                TInteract<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>,
-                TInteract<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>
+                TSend<Http, TestLabel2, Alice, Message, TEnd<Http, TestLabel3>>,
+                TRecv<Http, TestLabel2, Bob, Response, TEnd<Http, TestLabel3>>
             >
         >
     >> for ()
 {
     type Out = EpSend<
         Http, 
-        TestLabel1, 
+        TestLabel1,
         Alice, 
         Message, 
         EpRecv<

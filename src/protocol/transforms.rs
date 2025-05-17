@@ -454,23 +454,39 @@ pub trait GetProtocolLabel {
     type Label: types::ProtocolLabel;
 }
 
-// Add implementation for TInteract
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel for TInteract<IO, Lbl, R, H, T> {
+// Add implementation for TSend
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel for TSend<IO, Lbl, R, H, T> {
     type Label = Lbl;
 }
-
-// Add implementation for TChoice
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> GetProtocolLabel for TChoice<IO, Lbl, L, R> {
+// Add implementation for TRecv
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel for TRecv<IO, Lbl, R, H, T> {
     type Label = Lbl;
 }
-
-// Add implementation for TPar
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> GetProtocolLabel for TPar<IO, Lbl, L, R, IsDisjoint> {
-    type Label = Lbl;
-}
-
 // Add implementation for TEnd
 impl<IO, Lbl: types::ProtocolLabel> GetProtocolLabel for TEnd<IO, Lbl> {
+    type Label = Lbl;
+}
+// Add implementation for TChoice
+impl<IO, Lbl: types::ProtocolLabel, L, R> GetProtocolLabel for TChoice<IO, Lbl, L, R>
+where
+    L: TSession<IO>,
+    R: TSession<IO>,
+{
+    type Label = Lbl;
+}
+// Add implementation for TPar
+impl<IO, Lbl: types::ProtocolLabel, L, R, IsDisjoint> GetProtocolLabel for TPar<IO, Lbl, L, R, IsDisjoint>
+where
+    L: TSession<IO>,
+    R: TSession<IO>,
+{
+    type Label = Lbl;
+}
+// Add implementation for TRec
+impl<IO, Lbl: types::ProtocolLabel, S> GetProtocolLabel for TRec<IO, Lbl, S>
+where
+    S: TSession<IO>,
+{
     type Label = Lbl;
 }
 
@@ -790,4 +806,58 @@ where
 {
     // Create EpPar with both projected branches
     type Out = EpPar<IO, Lbl, Me, <() as ProjectRole<Me, IO, L>>::Out, <() as ProjectRole<Me, IO, R>>::Out>;
+}
+
+// TSend contains the role if the sender matches, or the continuation contains the role
+impl<IO, Lbl, R, H, T, RoleT> ContainsRole<RoleT> for TSend<IO, Lbl, R, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R: RoleEq<RoleT>,
+    <R as RoleEq<RoleT>>::Output: types::Bool,
+    T: TSession<IO> + ContainsRole<RoleT>,
+    <T as ContainsRole<RoleT>>::Output: types::Bool,
+    types::True: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
+{
+    type Output = <R as RoleEq<RoleT>>::Output;
+}
+
+// TRecv contains the role if the receiver matches, or the continuation contains the role
+impl<IO, Lbl, R, H, T, RoleT> ContainsRole<RoleT> for TRecv<IO, Lbl, R, H, T>
+where
+    Lbl: types::ProtocolLabel,
+    R: RoleEq<RoleT>,
+    <R as RoleEq<RoleT>>::Output: types::Bool,
+    T: TSession<IO> + ContainsRole<RoleT>,
+    <T as ContainsRole<RoleT>>::Output: types::Bool,
+    types::True: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
+{
+    type Output = <R as RoleEq<RoleT>>::Output;
+}
+
+// ProjectRole for TSend: if Me is sender, EpSend, else EpRecv
+impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TSend<IO, Lbl, R, H, T>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    R: Role,
+    T: TSession<IO>,
+    Me: RoleEq<R>,
+    <Me as RoleEq<R>>::Output: types::Bool,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = <Me as RoleEq<R>>::Output;
+}
+
+// ProjectRole for TRecv: if Me is receiver, EpRecv, else EpSend
+impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TRecv<IO, Lbl, R, H, T>> for ()
+where
+    Me: Role,
+    Lbl: types::ProtocolLabel,
+    R: Role,
+    T: TSession<IO>,
+    Me: RoleEq<R>,
+    <Me as RoleEq<R>>::Output: types::Bool,
+    (): ProjectRole<Me, IO, T>,
+{
+    type Out = <Me as RoleEq<R>>::Output;
 }

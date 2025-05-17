@@ -130,6 +130,13 @@ enforced in CI.
 ## Work progress planning, tracking and learning
 
 - maintain CHANGELOG.md in 'keep a changelog' style
+- maintain project status in work/Status.md. This should be a high level overview of the
+  project status, including:
+  - current work in progress
+  - current issues - link to github
+  - current PRs - link to github
+  - current tasks - link to work/TASKS.md
+  - current learnings - link to work/learnings.md
 
 ### TASKS
 

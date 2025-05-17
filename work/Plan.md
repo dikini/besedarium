@@ -1,123 +1,92 @@
-# Implementation Plan: Label Preservation
+<!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
 
-## Motivation
+# Work Plan: Protocol Label Invariant and TInteract → TSend/TRecv Refactor (Issues #15 & #16)
 
-Currently, when global protocol types are projected to local endpoint types, labels are not preserved. This leads to two significant issues:
+## Overview
 
-1. Loss of traceability between global and local protocol points
-2. Difficulty in debugging and reasoning about the relationship between global and local types
+This plan outlines the steps to refactor the Besedarium session types library by replacing the global protocol combinator `TInteract` with distinct `TSend` and `TRecv` types. The goal is to improve protocol clarity, type-level expressiveness, and future extensibility. The plan also covers stabilization of the test base, updating documentation, and review/merge criteria.
 
-## Goals
+- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
+- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
+- This invariant must be maintained in all future refactors and protocol design changes.
 
-1. Preserve labels during projection from global to local types
-2. Maintain connection between corresponding global and local protocol points
-3. Improve debugging capabilities
-4. Enhance type safety by preserving more type information
+---
 
-## Implementation Strategy
+## 1. Test Base Stabilization (Precondition for Refactor)
 
-### 1. Update Local Endpoint Type Definitions
+**Goal:** Ensure a stable, passing test base before making protocol-level changes.
 
-First, we need to modify the local endpoint types to include label parameters:
+- Disable or clear all failing and affected tests (unit, integration, trybuild, protocol examples).
+- Fix all failing doctests, especially those affected by protocol combinator changes.
+- Confirm that `cargo test` and all doctests pass with no failures.
 
-```rust
-// Current (without labels)
-struct EpSend<IO, R, H, T> { ... }
-struct EpRecv<IO, R, H, T> { ... }
-struct EpChoice<IO, R, L, R> { ... }
-struct EpPar<IO, R, L, R> { ... }
-struct EpEnd<IO> { ... }
-struct EpSkip<IO> { ... }
+**Review criteria:** No failing or flaky tests; all doctests pass; CI is green.
 
-// Proposed (with labels)
-struct EpSend<IO, Lbl, R, H, T> { ... }
-struct EpRecv<IO, Lbl, R, H, T> { ... }
-struct EpChoice<IO, Lbl, R, L, R> { ... } 
-struct EpPar<IO, Lbl, R, L, R> { ... }
-struct EpEnd<IO, Lbl> { ... }
-struct EpSkip<IO, Lbl> { ... }
-```
+---
 
-### 2. Update ProjectRole Trait Implementation
+## 2. Protocol Refactor: TInteract → TSend/TRecv
 
-Modify the `ProjectRole` trait and its implementations to propagate labels from global to local types:
+**Goal:** Replace all uses of `TInteract` with `TSend` and `TRecv` in global protocol definitions and supporting code.
 
-```rust
-// Current
-trait ProjectRole<Me, IO, G> {
-    type Endpoint;
-}
+- Refactor protocol combinators in the main library code.
+- Update all projection and helper traits to support `TSend`/`TRecv` instead of `TInteract`.
+- Update macros, documentation, and code examples to use `TSend`/`TRecv`.
 
-// Proposed
-trait ProjectRole<Me, IO, G> {
-    type Endpoint;
-}
+**Precondition:** Test base is stable and all tests are passing.
+**Postcondition:** All protocol logic uses the new combinators; code compiles and passes all checks.
 
-// Implementation example for TInteract
-impl<Me, IO, Lbl, R1, R2, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R1, R2, H, T>> 
-where
-    // existing bounds...
-{
-    // Now preserves Lbl in the output endpoint type
-    type Endpoint = /* ... */;
-}
-```
+**Review criteria:** No remaining uses of `TInteract`; all new combinators are documented and tested; code is idiomatic and clear.
 
-### 3. Update Edge Cases and Helper Traits
+---
 
-Modify all helper traits used in projection to properly handle labels:
+## 3. Test Restoration and Update
 
-- `ProjectInteract`
-- `ProjectChoice`
-- `ProjectPar`
-- etc.
+**Goal:** Restore and update all previously disabled/cleared tests to use the new protocol combinators.
 
-### 4. Update Protocol Combinators
+- Update all test files (unit, integration, trybuild, protocol examples) to use `TSend`/`TRecv`.
+- Re-enable and verify all tests.
 
-For any protocol combinators that generate local types, ensure they propagate label information.
+**Precondition:** Protocol refactor is complete and compiles.
+**Postcondition:** All tests and doctests pass with the new combinators.
 
-### 5. Add Utility Traits for Label Access
+**Review criteria:** Test coverage is restored; all tests are meaningful and up to date.
 
-Implement traits to access and compare labels in endpoint types:
+---
 
-```rust
-trait GetLabel<IO> {
-    type Label;
-}
+## 4. Documentation, Changelog, and Learnings Update
 
-impl<IO, Lbl, R, H, T> GetLabel<IO> for EpSend<IO, Lbl, R, H, T> {
-    type Label = Lbl;
-}
+**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure and the protocol label invariant.
 
-// Implementations for other endpoint types...
-```
+- Update README, code docs, and protocol examples to show that all combinators are labeled and implement `GetProtocolLabel`.
+- Update CHANGELOG.md with a summary of the refactor and the invariant.
+- Update work/learnings.md and related files with new patterns and lessons.
+- Update work/Status.md
 
-### 6. Update Macros and Helper Functions
+**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date; protocol label invariant is documented and enforced.
 
-Update any macros or helper functions that construct endpoint types to include label parameters.
+---
 
-## Testing Plan
+## 5. PR Review and Merge (Issue #16)
 
-1. Create test cases verifying that labels are preserved during projection
-2. Test complex nested protocol structures
-3. Test label preservation in recursive protocols
-4. Add compile-time assertions to verify label preservation
+**Goal:** Complete the review and merge process for the refactor.
 
-## Advantages of Clean Implementation
+- Review draft PR for completeness, correctness, and adherence to project guidelines.
+- Confirm all CI checks pass.
+- Approve and merge PR after review.
+- Close issues #15 and #16.
 
-Since there are no released versions yet, we can implement label preservation without backward compatibility concerns. This allows us to:
+**Review criteria:** All acceptance criteria met; no regressions; project is ready for further development.
 
-1. Design the cleanest possible API
-2. Make breaking changes as needed
-3. Focus on correctness and completeness rather than migration strategies
-4. Implement the feature more efficiently without compatibility layers
+---
 
-## Timeline
+## Summary
 
-1. Update endpoint type definitions (1-2 days)
-2. Update projection implementation (2-3 days)
-3. Update helper traits and utilities (1-2 days)
-4. Add tests (1 day)
-5. Update documentation (1 day)
+- **Preconditions:** Stable test base, all tests passing.
+- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; all combinators are labeled and implement `GetProtocolLabel`; documentation and changelog are updated; PR is reviewed and merged.
+- **Success criteria:** No regressions, improved clarity and maintainability, all project standards and invariants met.
 
-Total estimated time: 6-9 days
+---
+
+> **Protocol Label Invariant:**
+> All protocol combinators must have a label parameter and implement `GetProtocolLabel`.
+> This is a core design rule for Besedarium. Update this file and documentation if the invariant changes.
