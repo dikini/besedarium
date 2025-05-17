@@ -160,9 +160,16 @@ assert_type_eq!(
     AliceLocal,
     EpSend<
         Http,
+        EmptyLabel,
         Alice,
         Message,
-        EpRecv<Http, Alice, Response, EpEnd<Http, Alice>>
+        EpRecv<
+            Http,
+            EmptyLabel,
+            Alice,
+            Response,
+            EpEnd<Http, EmptyLabel, Alice>
+        >
     >
 );
 ```
