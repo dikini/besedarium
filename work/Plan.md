@@ -1,123 +1,82 @@
-# Implementation Plan: Label Preservation
+<!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
 
-## Motivation
+# Work Plan: TInteract → TSend/TRecv Refactor (Issues #15 & #16)
 
-Currently, when global protocol types are projected to local endpoint types, labels are not preserved. This leads to two significant issues:
+## Overview
 
-1. Loss of traceability between global and local protocol points
-2. Difficulty in debugging and reasoning about the relationship between global and local types
+This plan outlines the steps to refactor the Besedarium session types library by replacing the global protocol combinator `TInteract` with distinct `TSend` and `TRecv` types. The goal is to improve protocol clarity, type-level expressiveness, and future extensibility. The plan also covers stabilization of the test base, updating documentation, and review/merge criteria.
 
-## Goals
+---
 
-1. Preserve labels during projection from global to local types
-2. Maintain connection between corresponding global and local protocol points
-3. Improve debugging capabilities
-4. Enhance type safety by preserving more type information
+## 1. Test Base Stabilization (Precondition for Refactor)
 
-## Implementation Strategy
+**Goal:** Ensure a stable, passing test base before making protocol-level changes.
 
-### 1. Update Local Endpoint Type Definitions
+- Disable or clear all failing and affected tests (unit, integration, trybuild, protocol examples).
+- Fix all failing doctests, especially those affected by protocol combinator changes.
+- Confirm that `cargo test` and all doctests pass with no failures.
 
-First, we need to modify the local endpoint types to include label parameters:
+**Review criteria:** No failing or flaky tests; all doctests pass; CI is green.
 
-```rust
-// Current (without labels)
-struct EpSend<IO, R, H, T> { ... }
-struct EpRecv<IO, R, H, T> { ... }
-struct EpChoice<IO, R, L, R> { ... }
-struct EpPar<IO, R, L, R> { ... }
-struct EpEnd<IO> { ... }
-struct EpSkip<IO> { ... }
+---
 
-// Proposed (with labels)
-struct EpSend<IO, Lbl, R, H, T> { ... }
-struct EpRecv<IO, Lbl, R, H, T> { ... }
-struct EpChoice<IO, Lbl, R, L, R> { ... } 
-struct EpPar<IO, Lbl, R, L, R> { ... }
-struct EpEnd<IO, Lbl> { ... }
-struct EpSkip<IO, Lbl> { ... }
-```
+## 2. Protocol Refactor: TInteract → TSend/TRecv
 
-### 2. Update ProjectRole Trait Implementation
+**Goal:** Replace all uses of `TInteract` with `TSend` and `TRecv` in global protocol definitions and supporting code.
 
-Modify the `ProjectRole` trait and its implementations to propagate labels from global to local types:
+- Refactor protocol combinators in the main library code.
+- Update all projection and helper traits to support `TSend`/`TRecv` instead of `TInteract`.
+- Update macros, documentation, and code examples to use `TSend`/`TRecv`.
 
-```rust
-// Current
-trait ProjectRole<Me, IO, G> {
-    type Endpoint;
-}
+**Precondition:** Test base is stable and all tests are passing.
+**Postcondition:** All protocol logic uses the new combinators; code compiles and passes all checks.
 
-// Proposed
-trait ProjectRole<Me, IO, G> {
-    type Endpoint;
-}
+**Review criteria:** No remaining uses of `TInteract`; all new combinators are documented and tested; code is idiomatic and clear.
 
-// Implementation example for TInteract
-impl<Me, IO, Lbl, R1, R2, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R1, R2, H, T>> 
-where
-    // existing bounds...
-{
-    // Now preserves Lbl in the output endpoint type
-    type Endpoint = /* ... */;
-}
-```
+---
 
-### 3. Update Edge Cases and Helper Traits
+## 3. Test Restoration and Update
 
-Modify all helper traits used in projection to properly handle labels:
+**Goal:** Restore and update all previously disabled/cleared tests to use the new protocol combinators.
 
-- `ProjectInteract`
-- `ProjectChoice`
-- `ProjectPar`
-- etc.
+- Update all test files (unit, integration, trybuild, protocol examples) to use `TSend`/`TRecv`.
+- Re-enable and verify all tests.
 
-### 4. Update Protocol Combinators
+**Precondition:** Protocol refactor is complete and compiles.
+**Postcondition:** All tests and doctests pass with the new combinators.
 
-For any protocol combinators that generate local types, ensure they propagate label information.
+**Review criteria:** Test coverage is restored; all tests are meaningful and up to date.
 
-### 5. Add Utility Traits for Label Access
+---
 
-Implement traits to access and compare labels in endpoint types:
+## 4. Documentation, Changelog, and Learnings Update
 
-```rust
-trait GetLabel<IO> {
-    type Label;
-}
+**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure.
 
-impl<IO, Lbl, R, H, T> GetLabel<IO> for EpSend<IO, Lbl, R, H, T> {
-    type Label = Lbl;
-}
+- Update README, code docs, and protocol examples.
+- Update CHANGELOG.md with a summary of the refactor.
+- Update work/learnings.md and related files with new patterns and lessons.
+- Update work/Status.md
 
-// Implementations for other endpoint types...
-```
+**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date.
 
-### 6. Update Macros and Helper Functions
+---
 
-Update any macros or helper functions that construct endpoint types to include label parameters.
+## 5. PR Review and Merge (Issue #16)
 
-## Testing Plan
+**Goal:** Complete the review and merge process for the refactor.
 
-1. Create test cases verifying that labels are preserved during projection
-2. Test complex nested protocol structures
-3. Test label preservation in recursive protocols
-4. Add compile-time assertions to verify label preservation
+- Review draft PR for completeness, correctness, and adherence to project guidelines.
+- Confirm all CI checks pass.
+- Approve and merge PR after review.
+- Close issues #15 and #16.
 
-## Advantages of Clean Implementation
+**Review criteria:** All acceptance criteria met; no regressions; project is ready for further development.
 
-Since there are no released versions yet, we can implement label preservation without backward compatibility concerns. This allows us to:
+---
 
-1. Design the cleanest possible API
-2. Make breaking changes as needed
-3. Focus on correctness and completeness rather than migration strategies
-4. Implement the feature more efficiently without compatibility layers
+## Summary
 
-## Timeline
-
-1. Update endpoint type definitions (1-2 days)
-2. Update projection implementation (2-3 days)
-3. Update helper traits and utilities (1-2 days)
-4. Add tests (1 day)
-5. Update documentation (1 day)
-
-Total estimated time: 6-9 days
+- **Preconditions:** Stable test base, all tests passing.
+- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; documentation and changelog are updated; PR is reviewed and merged.
+- **Success criteria:** No regressions, improved clarity and maintainability, all project standards met.
