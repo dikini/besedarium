@@ -2,14 +2,14 @@
 
 ## Active Tasks
 
-- [ ] (wip) **Label preservation** during projection for better traceability and debugging
-  - [ ] Update local endpoint type definitions to include label parameters
-  - [ ] Modify ProjectRole trait implementation to propagate labels
-  - [ ] Update helper traits to handle labels during projection
-  - [ ] Add utility traits for label access and comparison
-  - [ ] Update macros and helper functions
-  - [ ] Create test cases for label preservation
-  - [ ] Update documentation
+- [x] **Label preservation** during projection for better traceability and debugging
+  - [x] Update local endpoint type definitions to include label parameters
+  - [x] Modify ProjectRole trait implementation to propagate labels
+  - [x] Update helper traits to handle labels during projection
+  - [x] Add utility traits for label access and comparison
+  - [x] Update macros and helper functions
+  - [x] Create test cases for label preservation
+  - [x] Update documentation
 
 ## Planned Tasks
 

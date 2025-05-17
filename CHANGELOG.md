@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Label preservation during projection from global to local types for enhanced traceability and debugging
+- New utility traits `GetLocalLabel` and `GetProtocolLabel` for accessing label information
+- Test cases to ensure labels are correctly preserved during the projection process
 - All protocol examples in README.md and documentation now use the correct 5-argument form for
 `TInteract` and `TEnd`, with explicit label types for every example.
 - All macro and combinator documentation examples are up to date and pass doctests.

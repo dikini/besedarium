@@ -42,24 +42,21 @@ This document provides a status overview of the Besedarium session types library
 ### 2.1 Implemented Features
 
 - **Core Endpoint Types**:
-  - `EpSend<IO, R, H, T>`: Send action for role R
-  - `EpRecv<IO, R, H, T>`: Receive action for role R
-  - `EpChoice<IO, R, L, R>`: Local choice/branch
-  - `EpPar<IO, R, L, R>`: Local parallel composition
-  - `EpEnd<IO, R>`: Local protocol termination
-  - `EpSkip<IO, R>`: No-op for uninvolved roles
+  - `EpSend<IO, Lbl, R, H, T>`: Send action for role R with label preservation
+  - `EpRecv<IO, Lbl, R, H, T>`: Receive action for role R with label preservation
+  - `EpChoice<IO, Lbl, R, L, R>`: Local choice/branch with label preservation
+  - `EpPar<IO, Lbl, R, L, R>`: Local parallel composition with label preservation
+  - `EpEnd<IO, Lbl, R>`: Local protocol termination with label preservation
+  - `EpSkip<IO, Lbl, R>`: No-op for uninvolved roles with label preservation
 
 - **Type-Level Properties**:
   - Role-based typing
   - Sequential composition
   - Basic branching and parallelism
+  - Label preservation from global types
 
 ### 2.2 Missing Features
 
-- **Label Preservation**: 
-  - Local types don't preserve labels from global types
-  - No connection to corresponding global protocol points
-  
 - **Enhanced Role Types**:
   - No distinction between internal choice (decides) and external choice (offers)
   - Limited role metadata
@@ -77,6 +74,18 @@ This document provides a status overview of the Besedarium session types library
   - `ProjectRole<Me, IO, G>` trait for projecting global type G to role Me
   - Helper traits for specific combinators (`ProjectInteract`, `ProjectChoice`, `ProjectPar`)
   - Type-level role equality (`RoleEq`) for determining send/receive actions
+  - Projection cases for combinators:
+    - **TPar**: 
+      - Role in left branch only → Project left branch directly (preserving labels)
+      - Role in right branch only → Project right branch directly (preserving labels)
+      - Role in neither branch → `EpSkip` with parent label
+      - Note: Due to the disjointness constraint, a role cannot appear in both branches
+    - **TChoice**: 
+      - Role in both branches → `EpChoice` with both branches projected
+      - Role in only one branch → Project that branch with appropriate context
+      - Role in neither branch → `EpSkip` with parent label
+    - **TRec**: 
+      - Project the body of recursion and wrap result in `EpRec` (preserving labels)
   
 - **Handling of Edge Cases**:
   - Proper handling of empty protocols
@@ -86,6 +95,7 @@ This document provides a status overview of the Besedarium session types library
 - **Composition Support**:
   - Projection of nested global types
   - Handling of binary choices and parallel composition
+  - Label preservation from global to local types
 
 ### 3.2 Missing Features
 
@@ -95,8 +105,8 @@ This document provides a status overview of the Besedarium session types library
   - Limited static guarantees for projection correctness
   
 - **Label and Metadata Handling**:
-  - Labels from global protocols are not preserved during projection
-  - Loss of traceability between global and local protocol points
+  - ~~Labels from global protocols are not preserved during projection~~ (Implemented)
+  - ~~Loss of traceability between global and local protocol points~~ (Fixed with label preservation)
   
 - **Performance and Optimization**:
   - Potential for optimization in nested choice projection
@@ -126,7 +136,7 @@ This document provides a status overview of the Besedarium session types library
 
 ### 4.3 Priority Areas for Future Work
 
-- **Label preservation** during projection for better traceability and debugging
+- ~~**Label preservation** during projection for better traceability and debugging~~ (Completed)
 - **Enhanced recursion support** with explicit variables and potential for mutual recursion
 - **Branch merging** for optimized choice projection
 - **Internal/external choice distinction** for clearer protocol semantics

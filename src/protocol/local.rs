@@ -58,55 +58,64 @@ pub trait EpSession<IO, R>: sealed::Sealed {}
 /// Endpoint type for sending a message in a local protocol.
 ///
 /// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this interaction (for traceability and debugging).
 /// - `R`: Role performing the send.
 /// - `H`: Message type being sent.
 /// - `T`: Continuation after sending.
-pub struct EpSend<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
-impl<IO, R, H, T> EpSession<IO, R> for EpSend<IO, R, H, T> {}
-impl<IO, R, H, T> sealed::Sealed for EpSend<IO, R, H, T> {}
+pub struct EpSend<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> EpSession<IO, R> for EpSend<IO, Lbl, R, H, T> {}
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> sealed::Sealed for EpSend<IO, Lbl, R, H, T> {}
 
 /// Endpoint type for receiving a message in a local protocol.
 ///
 /// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this interaction (for traceability and debugging).
 /// - `R`: Role performing the receive.
 /// - `H`: Message type being received.
 /// - `T`: Continuation after receiving.
-pub struct EpRecv<IO, R, H, T>(PhantomData<(IO, R, H, T)>);
-impl<IO, R, H, T> EpSession<IO, R> for EpRecv<IO, R, H, T> {}
-impl<IO, R, H, T> sealed::Sealed for EpRecv<IO, R, H, T> {}
+pub struct EpRecv<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> EpSession<IO, R> for EpRecv<IO, Lbl, R, H, T> {}
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> sealed::Sealed for EpRecv<IO, Lbl, R, H, T> {}
 
 /// Endpoint type for protocol termination in a local protocol.
 ///
 /// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this endpoint (for traceability and debugging).
 /// - `R`: Role for which the protocol ends.
-pub struct EpEnd<IO, R>(PhantomData<(IO, R)>);
-impl<IO, R> EpSession<IO, R> for EpEnd<IO, R> {}
-impl<IO, R> sealed::Sealed for EpEnd<IO, R> {}
+pub struct EpEnd<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpEnd<IO, Lbl, R> {}
+impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpEnd<IO, Lbl, R> {}
 
 /// Endpoint type for local protocol branching (choice/offer).
 ///
 /// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this choice (for traceability and debugging).
 /// - `Me`: The role being projected.
 /// - `L`, `R`: The two local protocol branches.
-pub struct EpChoice<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
-impl<IO, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Me, L, R> {}
-impl<IO, Me, L, R> sealed::Sealed for EpChoice<IO, Me, L, R> {}
+pub struct EpChoice<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Lbl, Me, L, R> {}
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> sealed::Sealed for EpChoice<IO, Lbl, Me, L, R> {}
 
 /// Endpoint type for local protocol parallel composition.
 ///
 /// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this parallel composition (for traceability and debugging).
 /// - `Me`: The role being projected.
 /// - `L`, `R`: The two local protocol branches.
-pub struct EpPar<IO, Me, L, R>(PhantomData<(IO, Me, L, R)>);
-impl<IO, Me, L, R> EpSession<IO, Me> for EpPar<IO, Me, L, R> {}
-impl<IO, Me, L, R> sealed::Sealed for EpPar<IO, Me, L, R> {}
+pub struct EpPar<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> EpSession<IO, Me> for EpPar<IO, Lbl, Me, L, R> {}
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> sealed::Sealed for EpPar<IO, Lbl, Me, L, R> {}
 
 /// No-op endpoint type for roles uninvolved in a protocol branch.
 ///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this skip operation (for traceability and debugging).
+/// - `R`: Role that is skipping this branch.
+///
 /// Used to improve type-level precision for projections.
-pub struct EpSkip<IO, R>(PhantomData<(IO, R)>);
-impl<IO, R> EpSession<IO, R> for EpSkip<IO, R> {}
-impl<IO, R> sealed::Sealed for EpSkip<IO, R> {}
+pub struct EpSkip<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpSkip<IO, Lbl, R> {}
+impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpSkip<IO, Lbl, R> {}
 
 /// Type-level marker types for dispatch
 pub struct IsEpSkipType;
@@ -118,24 +127,24 @@ pub trait IsEpSkipTypeImpl<IO, Me: Role> {
 }
 
 // EpSkip maps to IsEpSkipType
-impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Lbl, Me> {
     type TypeMarker = IsEpSkipType;
 }
 
 // All other EpSession<IO, Me> types map to IsNotEpSkipType
-impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Me, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpSend<IO, Lbl, Me, H, T> {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpRecv<IO, Me, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me> for EpRecv<IO, Lbl, Me, H, T> {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Me: Role, L, R> IsEpSkipTypeImpl<IO, Me> for EpChoice<IO, Me, L, R> {
+impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R> IsEpSkipTypeImpl<IO, MeChoice> for EpChoice<IO, Lbl, MeChoice, L, R> {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Me: Role, L, R> IsEpSkipTypeImpl<IO, Me> for EpPar<IO, Me, L, R> {
+impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R> IsEpSkipTypeImpl<IO, MePar> for EpPar<IO, Lbl, MePar, L, R> {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpEnd<IO, Me> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpEnd<IO, Lbl, Me> {
     type TypeMarker = IsNotEpSkipType;
 }
 
@@ -152,50 +161,50 @@ pub trait IsEpEndVariant<IO, Me: Role> {
 }
 
 // Implementations for IsEpSkipVariant
-impl<IO, Me: Role> IsEpSkipVariant<IO, Me> for EpSkip<IO, Me> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipVariant<IO, Me> for EpSkip<IO, Lbl, Me> {
     type Output = types::True;
 }
-impl<IO, R, H, T, Me: Role> IsEpSkipVariant<IO, Me> for EpSend<IO, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpSkipVariant<IO, Me> for EpSend<IO, Lbl, R, H, T> {
     type Output = types::False;
 }
-impl<IO, R, H, T, Me: Role> IsEpSkipVariant<IO, Me> for EpRecv<IO, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpSkipVariant<IO, Me> for EpRecv<IO, Lbl, R, H, T> {
     type Output = types::False;
 }
-impl<IO, MeChoice: Role, L, R, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
-    for EpChoice<IO, MeChoice, L, R>
+impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
+    for EpChoice<IO, Lbl, MeChoice, L, R>
 {
     type Output = types::False;
 }
-impl<IO, MePar: Role, L, R, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
-    for EpPar<IO, MePar, L, R>
+impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
+    for EpPar<IO, Lbl, MePar, L, R>
 {
     type Output = types::False;
 }
-impl<IO, MeEnd: Role, MeFilter: Role> IsEpSkipVariant<IO, MeFilter> for EpEnd<IO, MeEnd> {
+impl<IO, Lbl: types::ProtocolLabel, MeEnd: Role, MeFilter: Role> IsEpSkipVariant<IO, MeFilter> for EpEnd<IO, Lbl, MeEnd> {
     type Output = types::False;
 }
 
 // Implementations for IsEpEndVariant
-impl<IO, Me: Role> IsEpEndVariant<IO, Me> for EpEnd<IO, Me> {
+impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpEndVariant<IO, Me> for EpEnd<IO, Lbl, Me> {
     type Output = types::True;
 }
-impl<IO, R, H, T, Me: Role> IsEpEndVariant<IO, Me> for EpSend<IO, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpEndVariant<IO, Me> for EpSend<IO, Lbl, R, H, T> {
     type Output = types::False;
 }
-impl<IO, R, H, T, Me: Role> IsEpEndVariant<IO, Me> for EpRecv<IO, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpEndVariant<IO, Me> for EpRecv<IO, Lbl, R, H, T> {
     type Output = types::False;
 }
-impl<IO, MeChoice: Role, L, R, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
-    for EpChoice<IO, MeChoice, L, R>
+impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
+    for EpChoice<IO, Lbl, MeChoice, L, R>
 {
     type Output = types::False;
 }
-impl<IO, MePar: Role, L, R, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
-    for EpPar<IO, MePar, L, R>
+impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
+    for EpPar<IO, Lbl, MePar, L, R>
 {
     type Output = types::False;
 }
-impl<IO, MeSkip: Role, MeFilter: Role> IsEpEndVariant<IO, MeFilter> for EpSkip<IO, MeSkip> {
+impl<IO, Lbl: types::ProtocolLabel, MeSkip: Role, MeFilter: Role> IsEpEndVariant<IO, MeFilter> for EpSkip<IO, Lbl, MeSkip> {
     type Output = types::False;
 }
 
