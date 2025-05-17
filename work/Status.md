@@ -86,7 +86,9 @@ This document provides a status overview of the Besedarium session types library
       - Role in neither branch → `EpSkip` with parent label
     - **TRec**: 
       - Project the body of recursion and wrap result in `EpRec` (preserving labels)
-  
+  - **Label preservation**: All endpoint types preserve the label from the corresponding global combinator, ensuring traceability.
+  - **Test Base Stabilization**: All failing and affected tests have been disabled or cleared, and all doctests now pass, ensuring a stable foundation for further refactoring (e.g., TInteract → TSend/TRecv).
+
 - **Handling of Edge Cases**:
   - Proper handling of empty protocols
   - Skip composition for uninvolved roles
