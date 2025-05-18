@@ -1,5 +1,6 @@
 # Copilot guidance
 
+````instructions
 ## General Guidelines
 
 - **Mandatory planning.**
@@ -163,7 +164,6 @@ work/learnings.md. Revise and summarise the content of the learnings file in suc
 that it is suitable for context injection into an LLM context window. Make sure that we don't
 lose any important information, like code insights, code patterns, type level programming, etc...
 
-
 ### MAKING EDITS
 
 - Focus on one conceptual change at a time
@@ -207,3 +207,4 @@ When refactoring large files:
 ---
 
 Last updated: 2025-05-13
+`````
