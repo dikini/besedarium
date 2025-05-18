@@ -28,8 +28,8 @@ impl<IO, Lbl> ExtractLabel<IO> for TEnd<IO, Lbl> {
     type Label = Lbl;
 }
 
-// Implement ExtractLabel for TInteract
-impl<IO, Lbl, R, H, T> ExtractLabel<IO> for TInteract<IO, Lbl, R, H, T>
+// Implement ExtractLabel for TSend
+impl<IO, Lbl, R, H, T> ExtractLabel<IO> for TSend<IO, Lbl, R, H, T>
 where
     Lbl: ProtocolLabel,
     T: TSession<IO>,
@@ -108,12 +108,12 @@ mod label_edge_cases {
     #[test]
     fn test_nested_composition_label_preservation() {
         // Create a deeply nested protocol with different labels at each level
-        type InnerProtocol = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type InnerProtocol = TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
         type MiddleProtocol = TRec<Http, L2, InnerProtocol>;
         type OuterProtocol = TChoice<Http, L3, MiddleProtocol, TEnd<Http, EmptyLabel>>;
 
         // Create a simple continuation
-        type Continuation = TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Continuation = TSend<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
 
         // Compose protocols
         type Composed = <OuterProtocol as TSession<Http>>::Compose<Continuation>;
@@ -134,11 +134,11 @@ mod label_edge_cases {
     #[test]
     fn test_mixed_combinator_interactions() {
         // Create a protocol mixing TPar and TChoice
-        type LeftBranch = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type LeftBranch = TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
         type RightBranch = TChoice<
             Http,
             L2,
-            TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
+            TSend<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>,
             TEnd<Http, EmptyLabel>,
         >;
 
@@ -164,9 +164,9 @@ mod label_edge_cases {
     #[test]
     fn test_complex_protocol_structure() {
         // Create a complex protocol with multiple branches and nested structures
-        type Branch1 = TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
+        type Branch1 = TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
         type Branch2 =
-            TRec<Http, L2, TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>>;
+            TRec<Http, L2, TSend<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>>;
 
         type ComplexProtocol = TPar<
             Http,
@@ -176,13 +176,13 @@ mod label_edge_cases {
                 Http,
                 L2,
                 Branch2,
-                TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
+                TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
             >,
             False,
         >;
 
         // When composed with a continuation, the outer label should be preserved
-        type Continuation = TInteract<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
+        type Continuation = TSend<Http, EmptyLabel, TServer, Response, TEnd<Http, EmptyLabel>>;
         type Composed = <ComplexProtocol as TSession<Http>>::Compose<Continuation>;
 
         // Verify that the outermost label (L3) is preserved
@@ -207,10 +207,10 @@ pub mod test_coverage {
 
     // Mark combinators as tested as we create tests for them
     impl TestedWithCustomLabel for TEnd<Http, L1> {}
-    // Mark TInteract as tested with all three custom label types
-    impl TestedWithCustomLabel for TInteract<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>> {}
-    impl TestedWithCustomLabel for TInteract<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>> {}
-    impl TestedWithCustomLabel for TInteract<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    // Mark TSend as tested with all three custom label types
+    impl TestedWithCustomLabel for TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TSend<Http, L2, TClient, Message, TEnd<Http, EmptyLabel>> {}
+    impl TestedWithCustomLabel for TSend<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>> {}
     // Mark TRec as tested with all three custom label types
     impl TestedWithCustomLabel for TRec<Http, L1, TEnd<Http, EmptyLabel>> {}
     impl TestedWithCustomLabel for TRec<Http, L2, TEnd<Http, EmptyLabel>> {}
@@ -236,11 +236,11 @@ pub mod test_coverage {
 
     // Current coverage metrics
     pub const CURRENT_COVERAGE: LabelTestCoverage = LabelTestCoverage {
-        combinators_with_custom_labels: 5, // TEnd, TInteract, TRec, TChoice, TPar
-        total_combinators: 5,              // TEnd, TInteract, TRec, TChoice, TPar
-        composition_operations_tested: 4,  // TInteract, TRec, TChoice, TPar
-        total_composition_operations: 5,   // TEnd, TInteract, TRec, TChoice, TPar
-        custom_label_types_tested: 5, // TEnd with L1, TInteract with all 3, TRec with all 3, TChoice with L1, TPar with L1
+        combinators_with_custom_labels: 5, // TEnd, TSend, TRec, TChoice, TPar
+        total_combinators: 5,              // TEnd, TSend, TRec, TChoice, TPar
+        composition_operations_tested: 4,  // TSend, TRec, TChoice, TPar
+        total_composition_operations: 5,   // TEnd, TSend, TRec, TChoice, TPar
+        custom_label_types_tested: 5, // TEnd with L1, TSend with all 3, TRec with all 3, TChoice with L1, TPar with L1
         target_custom_label_types: 5, // Each combinator should be tested with at least 1 custom label type
         edge_cases_tested: 3,         // Nested compositions, mixed combinators, complex structures
         target_edge_cases: 3,         // Nested compositions, mixed combinators, complex structures
@@ -265,7 +265,7 @@ fn test_tend_label_in_composition() {
     // the label from the other session type is preserved
 
     type End1 = TEnd<Http, TestLabel1>;
-    type Interact1 = TInteract<Http, TestLabel2, TClient, String, TEnd<Http, EmptyLabel>>;
+    type Interact1 = TSend<Http, TestLabel2, TClient, String, TEnd<Http, EmptyLabel>>;
 
     // When composing TEnd with another session, TEnd is replaced by that session (by definition)
     type Composed = <End1 as TSession<Http>>::Compose<Interact1>;
@@ -273,3 +273,7 @@ fn test_tend_label_in_composition() {
     // The result should be the right-hand side, Interact1
     assert_type_eq!(Composed, Interact1);
 }
+
+// All combinator and coverage tracking now uses TSend/TRecv and related combinators.
+// All legacy TInteract references have been removed as part of the protocol projection refactor.
+// If you add new combinators, update the coverage metrics and tests accordingly.

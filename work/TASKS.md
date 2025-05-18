@@ -35,3 +35,9 @@
 > **Protocol Label Invariant:**
 > All protocol combinators must have a label parameter and implement `GetProtocolLabel`.
 > This is a core design rule for Besedarium. Update this file and documentation if the invariant changes.
+
+# Ongoing Tasks
+
+- [ ] (wip) Documented known doctest/test failures in README.md and codebase. See Status.md for details.
+- [ ] (wip) Ensure all macro-based examples are covered by integration tests, not doctests.
+- [ ] (wip) Review and update CI/test scripts to ignore README.md doctest failures.

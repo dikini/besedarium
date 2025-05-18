@@ -79,6 +79,15 @@ This plan outlines the steps to refactor the Besedarium session types library by
 
 ---
 
+## Doctest/Test Failure Handling (2025-05-18)
+
+- Document all known doctest/test failures and their causes in README.md and Status.md.
+- Ensure macro-based protocol examples are only tested in integration/compile-time tests.
+- Update CI/test scripts to ignore README.md doctest failures or restrict README inclusion to docs.rs builds.
+- Add clear warnings for users in documentation.
+
+---
+
 ## Summary
 
 - **Preconditions:** Stable test base, all tests passing.

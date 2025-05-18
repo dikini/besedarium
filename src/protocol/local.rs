@@ -17,6 +17,12 @@
 //! Local protocols are derived from global protocols through projection
 //! onto specific roles. They describe the sequence of operations that
 //! an individual participant must perform.
+//!
+//! # Protocol Label Invariant
+//! All local endpoint combinators (EpSend, EpRecv, EpEnd, EpChoice, EpPar, EpSkip)
+//! must have a label parameter and implement the GetProtocolLabel trait.
+//! This enables type-level extraction and reasoning about protocol structure and
+//! label preservation throughout all protocol transformations.
 
 use crate::sealed;
 use crate::types;
@@ -116,6 +122,37 @@ impl<IO, Lbl: types::ProtocolLabel, Me, L, R> sealed::Sealed for EpPar<IO, Lbl, 
 pub struct EpSkip<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
 impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpSkip<IO, Lbl, R> {}
 impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpSkip<IO, Lbl, R> {}
+
+/// Implements the protocol label invariant for EpSkip.
+/// See: Protocol Label Invariant in project documentation.
+impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel for EpSkip<IO, Lbl, R> {
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpSend.
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> crate::protocol::transforms::GetProtocolLabel for EpSend<IO, Lbl, R, H, T> {
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpRecv.
+impl<IO, Lbl: types::ProtocolLabel, R, H, T> crate::protocol::transforms::GetProtocolLabel for EpRecv<IO, Lbl, R, H, T> {
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpEnd.
+impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel for EpEnd<IO, Lbl, R> {
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpChoice.
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetProtocolLabel for EpChoice<IO, Lbl, Me, L, R> {
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpPar.
+impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetProtocolLabel for EpPar<IO, Lbl, Me, L, R> {
+    type Label = Lbl;
+}
 
 /// Type-level marker types for dispatch
 pub struct IsEpSkipType;

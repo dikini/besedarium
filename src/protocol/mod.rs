@@ -44,7 +44,7 @@ pub use self::local::{
 pub use self::transforms::{
     ComposeProjectedParBranches, ComposeProjectedParBranchesCase, ContainsRole, FilterSkips,
     FilterSkipsCase, GetLocalLabel, GetProtocolLabel, NotContainsRole, ProjectChoice, ProjectChoiceCase, 
-    ProjectInteract, ProjectPar, ProjectRoleOrSkip, ProjectRole, TParContainsRoleImpl,
+    ProjectPar, ProjectRoleOrSkip, ProjectRole, TParContainsRoleImpl,
 };
 pub use self::utils::{
     CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,

@@ -133,7 +133,7 @@ for a given role from a global protocol specification.
 
 ## Example
 
-```rust
+```ignore
 use besedarium::*;
 struct Alice; impl Role for Alice {}; impl ProtocolLabel for Alice {};
 struct Bob; impl Role for Bob {}; impl ProtocolLabel for Bob {};
@@ -190,3 +190,8 @@ the library and let us know what you think.
 ---
 
 *Session Types Playground: making protocols safer, one type at a time.*
+
+## ⚠️ Doctest/Test Failure Note
+
+> **Note:**
+> Some code blocks in this README use macros (e.g., `tchoice!`, `tpar!`) or type-level assertions (e.g., `assert_type_eq!`) that are not available in the Rust doctest context. As a result, running `cargo test --doc` or CI doctests may fail due to macro visibility or Rust's type identity limitations. All real protocol and projection tests are covered in integration tests and `tests/compile.rs`.

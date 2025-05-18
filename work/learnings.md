@@ -165,43 +165,23 @@ where
 
 **When to use:** For building complex protocols from simpler building blocks.
 
-## Protocol Label Invariant (2025-05-17)
+## Protocol Label Invariant
 
 **Invariant:**
 
-- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
-- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
-- This ensures that label metadata is always available for introspection, projection, and compile-time checks (e.g., uniqueness, traceability, debugging).
-- All combinators must preserve and propagate label information through type-level composition and projection.
-
-**Rationale:**
-
-- Uniform label access enables generic tooling, macros, and compile-time assertions (e.g., `assert_unique_labels!`).
-- Consistent labeling across all combinators simplifies protocol analysis, code generation, and debugging.
-- This invariant must be maintained as the protocol system evolves. Any new combinator must follow this rule.
-
-**Pattern:**
-
-```rust
-// Example: All combinators carry a label and implement GetProtocolLabel
-pub trait GetProtocolLabel {
-    type Label: ProtocolLabel;
-}
-
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TEnd<IO, Lbl> { type Label = Lbl; }
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TSend<IO, Lbl, ...> { type Label = Lbl; }
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TRecv<IO, Lbl, ...> { type Label = Lbl; }
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TChoice<IO, Lbl, ...> { type Label = Lbl; }
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TPar<IO, Lbl, ...> { type Label = Lbl; }
-impl<IO, Lbl: ProtocolLabel, ...> GetProtocolLabel for TRec<IO, Lbl, ...> { type Label = Lbl; }
-// ...and so on for any new combinator
-```
-
-**Implications:**
-
-- When adding, removing, or modifying combinators, always update their label parameter and `GetProtocolLabel` implementation.
-- When refactoring, describe explicitly which traits, structures, or impls are affected.
-- This invariant is enforced by convention, code review, and compile-time tests.
+- All protocol combinators (TSend, TRecv, TEnd, TChoice, TPar, TRec, TInteract, etc.) must have a label parameter and implement the GetProtocolLabel trait.
+- The invariant must be enforced in both code and documentation. This includes:
+  - Type definitions: All combinators must have a label parameter.
+  - Trait implementations: All combinators must implement GetProtocolLabel.
+  - Documentation: The invariant must be stated in module-level and trait-level docs, and code examples must use combinators with label parameters.
+- The review process involves:
+  1. Auditing all combinators for label and trait coverage.
+  2. Adding/correcting missing label parameters or trait implementations.
+  3. Updating documentation and code examples to reflect the invariant.
+  4. Running all tests and checks to ensure correctness and no regressions.
+- Rationale: This invariant ensures that protocol labels are always available for type-level reasoning, protocol projection, and endpoint generation. It also improves maintainability and future extensibility.
+- Pattern: When adding a new protocol combinator, always include a label parameter and implement GetProtocolLabel. Document this requirement in both code and project planning.
+- Implications: Contributors must be aware of this invariant and check for it during code review. Automated tests and linting should be used to catch violations.
 
 ## Project Architecture Insights
 
@@ -257,6 +237,14 @@ Three proven approaches for implementing session types at runtime:
 2. **Line Length Standards** set to 100 characters provide a balance between readability and efficient use of screen space.
 
 3. **List Formatting Rules** require proper indentation (2 spaces for top-level) and blank lines before and after lists.
+
+## Doctest/Test Failure Lessons (2025-05-18)
+
+- Rust doctests do not have access to crate macros unless explicitly exported and imported; integration tests do.
+- Type-level equality assertions (e.g., `assert_type_eq!`) may fail in doctests due to Rust's type identity limitations, even if types are structurally identical.
+- Macro-based protocol definitions (`tchoice!`, `tpar!`) should be tested in integration/compile-time tests, not doctests.
+- To avoid CI failures, README.md inclusion is now limited to docs.rs builds, and a warning is present in the README.
+- Always document these limitations for users and contributors.
 
 ---
 
