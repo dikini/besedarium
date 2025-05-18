@@ -1,5 +1,6 @@
 # Copilot guidance
 
+````instructions
 ## General Guidelines
 
 - **Mandatory planning.**
@@ -130,6 +131,13 @@ enforced in CI.
 ## Work progress planning, tracking and learning
 
 - maintain CHANGELOG.md in 'keep a changelog' style
+- maintain project status in work/Status.md. This should be a high level overview of the
+  project status, including:
+  - current work in progress
+  - current issues - link to github
+  - current PRs - link to github
+  - current tasks - link to work/TASKS.md
+  - current learnings - link to work/learnings.md
 
 ### TASKS
 
@@ -155,7 +163,6 @@ during a session.
 work/learnings.md. Revise and summarise the content of the learnings file in such a way
 that it is suitable for context injection into an LLM context window. Make sure that we don't
 lose any important information, like code insights, code patterns, type level programming, etc...
-
 
 ### MAKING EDITS
 
@@ -200,3 +207,4 @@ When refactoring large files:
 ---
 
 Last updated: 2025-05-13
+`````

@@ -345,24 +345,15 @@ Type-level programming in Rust offers a robust avenue to encode constraints, enf
 
 [^1]: Reddit - Functional Programming in Rust  
 [^2]: DEV Community - Rust Generics  
-[^3]: DEV Community - Type-level Bubble Sort  
 [^4]: Rust Users Forum - Blanket Trait Impl  
 [^5]: Geo's Notepad - Mutually Exclusive Traits  
 [^6]: Rust Book - Advanced Types  
 [^7]: Hacker News - Type-Level Programming  
-[^8]: Will Crichton - Type-level Programming  
-[^9]: benashby.com - Phantom Types  
 [^10]: GitHub - tyrade  
 [^11]: Rust Users Forum - typenum  
-[^12]: Docs.rs - condtype  
-[^13]: condval in condtype - Docs.rs  
-[^14]: Reddit - condval create conditionally-typed values  
 [^15]: Reddit - CondType: choose types via boolean conditions  
 [^16]: GitHub - jerry73204/typ: Experimental type level programming in Rust  
 [^17]: GitHub - frunk: Funktional generic type-level programming in Rust  
-[^18]: unfold - Rust - Docs.rs  
-[^19]: unfold - Crates.io  
 [^20]: frunk - Rust - Docs.rs  
 [^21]: Exploring Column-Oriented Data in Rust with frunk HLists  
-[^22]: Problem with "frunk map()" and generic type - help - Rust Users  
 [^23]: Docs.rs - generic-array

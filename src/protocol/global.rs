@@ -8,7 +8,8 @@
 //!
 //! - `TSession`: Core trait for all global session type combinators
 //! - `TEnd`: Protocol termination
-//! - `TInteract`: Individual interaction between roles
+//! - `TSend`: Individual send action between roles
+//! - `TRecv`: Individual receive action between roles
 //! - `TChoice`: Binary protocol choice
 //! - `TPar`: Parallel protocol composition
 //! - `TRec`: Recursive protocol definition
@@ -25,7 +26,7 @@ use core::marker::PhantomData;
 /// Core trait for all global session type combinators.
 ///
 /// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - Implemented by all protocol combinators (TEnd, TInteract, TChoice, TPar, TRec).
+/// - Implemented by all protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec).
 /// - Used for type-level composition and compile-time protocol checks.
 pub trait TSession<IO>: sealed::Sealed {
     /// Compose this session with another session of the same IO type.
@@ -49,28 +50,53 @@ impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
     const IS_EMPTY: bool = true;
 }
 
-/// Represents a single interaction in a protocol session.
+/// Represents a single send action in a protocol session.
 ///
 /// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `Lbl`: Label for this interaction (for projection and debugging).
-/// - `R`: Role performing the action (sender or receiver).
-/// - `H`: Message type being sent or received.
-/// - `T`: Continuation protocol after this interaction.
+/// - `Lbl`: Label for this send (for projection and debugging).
+/// - `R`: Role performing the send.
+/// - `H`: Message type being sent.
+/// - `T`: Continuation protocol after this send.
 ///
-/// Used to model a single send/receive step in a protocol.
+/// Used to model a single send step in a protocol.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TInteract<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
+pub struct TSend<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
     PhantomData<(IO, Lbl, R, H, T)>,
 );
 
 impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
-    for TInteract<IO, Lbl, R, H, T>
+    for TSend<IO, Lbl, R, H, T>
 {
 }
 impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
-    for TInteract<IO, Lbl, R, H, T>
+    for TSend<IO, Lbl, R, H, T>
 {
-    type Compose<Rhs: TSession<IO>> = TInteract<IO, Lbl, R, H, T::Compose<Rhs>>;
+    type Compose<Rhs: TSession<IO>> = TSend<IO, Lbl, R, H, T::Compose<Rhs>>;
+    const IS_EMPTY: bool = false;
+}
+
+/// Represents a single receive action in a protocol session.
+///
+/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
+/// - `Lbl`: Label for this receive (for projection and debugging).
+/// - `R`: Role performing the receive.
+/// - `H`: Message type being received.
+/// - `T`: Continuation protocol after this receive.
+///
+/// Used to model a single receive step in a protocol.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct TRecv<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
+    PhantomData<(IO, Lbl, R, H, T)>,
+);
+
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
+    for TRecv<IO, Lbl, R, H, T>
+{
+}
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
+    for TRecv<IO, Lbl, R, H, T>
+{
+    type Compose<Rhs: TSession<IO>> = TRecv<IO, Lbl, R, H, T::Compose<Rhs>>;
     const IS_EMPTY: bool = false;
 }
 
