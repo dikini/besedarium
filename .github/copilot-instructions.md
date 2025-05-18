@@ -35,7 +35,7 @@ implemented in rust stable.
 
 ## Markdown & Documentation
 
-- All documentation must pass markdownlint checks.
+- All documentation must pass markdownlint-cli2 checks.
 - Use line wrapping at 80-100 characters for readability.
 - Ensure code examples in docs are up to date and compile (doctest where possible).
 - Use clear section headings and bullet points for structure.
@@ -128,6 +128,8 @@ locally:
 All code must pass these checks before a pull request is submitted or merged. These steps are also
 enforced in CI.
 
+All documentation must pass `markdownlint-cli2 **/*.md` checks.
+
 ## Work progress planning, tracking and learning
 
 - maintain CHANGELOG.md in 'keep a changelog' style
@@ -150,6 +152,8 @@ checkboxes to indicate completion.
   - similar or related tasks
 - for large tasks, which may contain subtasks maintain an own task specific tasklist in
 work/tasks/[taskname]
+- at task completion update the task in work/TASKS.md to indicate completion.
+- at task completion update the task in work/Status.md to indicate the current status of structure, tests, documentation,etc...
 
 ### Learnings
 
