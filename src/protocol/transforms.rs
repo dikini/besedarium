@@ -24,6 +24,7 @@ use crate::types;
 /// # Examples
 /// ```rust
 /// use besedarium::*;
+/// use besedarium::transforms::ProjectSend;
 /// struct Alice; struct Bob;
 /// impl Role for Alice {} impl Role for Bob {}
 /// impl ProtocolLabel for Alice {} impl ProtocolLabel for Bob {}
@@ -101,7 +102,16 @@ where
 }
 
 // Helper trait for handling different cases of ProjectChoice based on role presence
-pub trait ProjectChoiceCase<Me, IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, LContainsMe, RContainsMe> {
+pub trait ProjectChoiceCase<
+    Me,
+    IO,
+    Lbl: types::ProtocolLabel,
+    L: TSession<IO>,
+    R: TSession<IO>,
+    LContainsMe,
+    RContainsMe,
+>
+{
     type Out: EpSession<IO, Me>;
 }
 
@@ -120,7 +130,7 @@ where
         Lbl,
         Me,
         <() as ProjectRole<Me, IO, L>>::Out,
-        <() as ProjectRole<Me, IO, R>>::Out
+        <() as ProjectRole<Me, IO, R>>::Out,
     >;
 }
 
@@ -134,13 +144,7 @@ where
     (): ProjectRole<Me, IO, L>,
 {
     // Wrap the projection in EpChoice with the parent Choice's label
-    type Out = EpChoice<
-        IO,
-        Lbl,
-        Me,
-        <() as ProjectRole<Me, IO, L>>::Out,
-        EpSkip<IO, Lbl, Me>
-    >;
+    type Out = EpChoice<IO, Lbl, Me, <() as ProjectRole<Me, IO, L>>::Out, EpSkip<IO, Lbl, Me>>;
 }
 
 // Case 3: Only right branch contains the role - wrap the projection in EpChoice with the Choice's label
@@ -153,13 +157,7 @@ where
     (): ProjectRole<Me, IO, R>,
 {
     // Wrap the projection in EpChoice with the parent Choice's label
-    type Out = EpChoice<
-        IO,
-        Lbl,
-        Me,
-        EpSkip<IO, Lbl, Me>,
-        <() as ProjectRole<Me, IO, R>>::Out
-    >;
+    type Out = EpChoice<IO, Lbl, Me, EpSkip<IO, Lbl, Me>, <() as ProjectRole<Me, IO, R>>::Out>;
 }
 
 // Case 4: Neither branch contains the role
@@ -283,7 +281,7 @@ pub trait ProjectRoleOrSkip<Me: Role, IO, G: TSession<IO>, Flag, ParentLbl: type
 }
 
 // If role is in branch, project it
-impl<Me: Role, IO, G: TSession<IO>, Lbl: types::ProtocolLabel> 
+impl<Me: Role, IO, G: TSession<IO>, Lbl: types::ProtocolLabel>
     ProjectRoleOrSkip<Me, IO, G, types::True, Lbl> for ()
 where
     (): ProjectRole<Me, IO, G>,
@@ -293,7 +291,7 @@ where
 }
 
 // If role is not in branch, create skip with parent label
-impl<Me: Role, IO, G: TSession<IO>, Lbl: types::ProtocolLabel> 
+impl<Me: Role, IO, G: TSession<IO>, Lbl: types::ProtocolLabel>
     ProjectRoleOrSkip<Me, IO, G, types::False, Lbl> for ()
 {
     // Create EpSkip with the parent label (this ensures label preservation)
@@ -371,11 +369,15 @@ pub trait GetProtocolLabel {
 }
 
 // Add implementation for TSend
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel for TSend<IO, Lbl, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel
+    for TSend<IO, Lbl, R, H, T>
+{
     type Label = Lbl;
 }
 // Add implementation for TRecv
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel for TRecv<IO, Lbl, R, H, T> {
+impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> GetProtocolLabel
+    for TRecv<IO, Lbl, R, H, T>
+{
     type Label = Lbl;
 }
 // Add implementation for TEnd
@@ -391,7 +393,8 @@ where
     type Label = Lbl;
 }
 // Add implementation for TPar
-impl<IO, Lbl: types::ProtocolLabel, L, R, IsDisjoint> GetProtocolLabel for TPar<IO, Lbl, L, R, IsDisjoint>
+impl<IO, Lbl: types::ProtocolLabel, L, R, IsDisjoint> GetProtocolLabel
+    for TPar<IO, Lbl, L, R, IsDisjoint>
 where
     L: TSession<IO>,
     R: TSession<IO>,
@@ -609,7 +612,8 @@ pub trait FilterSkipsCase<IO, Me: Role, H, T, TypeMarker> {
 }
 
 // Case: Head is EpSkip – skip it
-impl<IO, Me: Role, Lbl: types::ProtocolLabel, T> FilterSkipsCase<IO, Me, EpSkip<IO, Lbl, Me>, T, IsEpSkipType> for ()
+impl<IO, Me: Role, Lbl: types::ProtocolLabel, T>
+    FilterSkipsCase<IO, Me, EpSkip<IO, Lbl, Me>, T, IsEpSkipType> for ()
 where
     (): FilterSkips<IO, Me, T>,
 {
@@ -639,28 +643,28 @@ where
     <R as ContainsRole<Me>>::Output: types::Bool,
     // Use a helper trait to handle case-specific projection
     (): ProjectParCase<
-        Me, 
-        IO, 
-        Lbl, 
-        L, 
-        R, 
+        Me,
+        IO,
+        Lbl,
+        L,
+        R,
         <L as ContainsRole<Me>>::Output,
-        <R as ContainsRole<Me>>::Output
+        <R as ContainsRole<Me>>::Output,
     >,
 {
     type Out = <() as ProjectParCase<
-        Me, 
-        IO, 
-        Lbl, 
-        L, 
+        Me,
+        IO,
+        Lbl,
+        L,
         R,
         <L as ContainsRole<Me>>::Output,
-        <R as ContainsRole<Me>>::Output
+        <R as ContainsRole<Me>>::Output,
     >>::Out;
 }
 
 // Helper trait for case-specific projection of TPar
-pub trait ProjectParCase<Me, IO, Lbl, L, R, LContainsMe, RContainsMe> 
+pub trait ProjectParCase<Me, IO, Lbl, L, R, LContainsMe, RContainsMe>
 where
     Me: Role,
     Lbl: types::ProtocolLabel,
@@ -721,7 +725,13 @@ where
     (): ProjectRole<Me, IO, R>,
 {
     // Create EpPar with both projected branches
-    type Out = EpPar<IO, Lbl, Me, <() as ProjectRole<Me, IO, L>>::Out, <() as ProjectRole<Me, IO, R>>::Out>;
+    type Out = EpPar<
+        IO,
+        Lbl,
+        Me,
+        <() as ProjectRole<Me, IO, L>>::Out,
+        <() as ProjectRole<Me, IO, R>>::Out,
+    >;
 }
 
 // TSend contains the role if the sender matches, or the continuation contains the role
@@ -734,10 +744,7 @@ where
     <T as ContainsRole<RoleT>>::Output: types::Bool,
     <R as RoleEq<RoleT>>::Output: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
 {
-    type Output = types::Or<
-        <R as RoleEq<RoleT>>::Output,
-        <T as ContainsRole<RoleT>>::Output
-    >;
+    type Output = types::Or<<R as RoleEq<RoleT>>::Output, <T as ContainsRole<RoleT>>::Output>;
 }
 
 // TRecv contains the role if the receiver matches, or the continuation contains the role
@@ -750,17 +757,48 @@ where
     <T as ContainsRole<RoleT>>::Output: types::Bool,
     <R as RoleEq<RoleT>>::Output: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
 {
-    type Output = types::Or<
-        <R as RoleEq<RoleT>>::Output,
-        <T as ContainsRole<RoleT>>::Output
-    >;
+    type Output = types::Or<<R as RoleEq<RoleT>>::Output, <T as ContainsRole<RoleT>>::Output>;
 }
 
-// --- Remove legacy ProjectInteract trait and its impls ---
-// (All code for ProjectInteract and its impls is removed)
-
 // --- Add new helper traits for send/recv projection ---
-/// Helper trait for projecting TSend combinators onto a role.
+/// Helper trait for projecting `TSend` combinators onto a role.
+///
+/// This trait is used to project a `TSend` combinator from a global protocol
+/// onto a specific role, producing the corresponding local protocol for that role.
+///
+/// # Type Parameters
+/// - `Me`: The role onto which the combinator is being projected.
+/// - `IO`: The I/O type associated with the protocol.
+/// - `Label`: The protocol label for the `TSend` combinator.
+/// - `To`: The role to which the message is being sent.
+/// - `Msg`: The type of the message being sent.
+/// - `Cont`: The continuation of the protocol after the `TSend` combinator.
+///
+/// # Associated Type
+/// - `Out`: The resulting local protocol for the role `Me`.
+///
+/// # Examples
+/// ```rust
+/// use besedarium::*;
+/// use besedarium::transforms::ProjectSend;
+/// struct Alice; struct Bob;
+/// impl Role for Alice {} impl Role for Bob {}
+/// impl ProtocolLabel for Alice {} impl ProtocolLabel for Bob {}
+/// impl RoleEq<Alice> for Alice { type Output = True; }
+/// impl RoleEq<Bob> for Alice   { type Output = False; }
+/// impl RoleEq<Alice> for Bob   { type Output = False; }
+/// impl RoleEq<Bob> for Bob     { type Output = True; }
+///
+/// type Global = TSend<
+///     Http,
+///     EmptyLabel,
+///     Alice,
+///     Message,
+///     TEnd<Http, EmptyLabel>
+/// >;
+/// type AliceLocal = <() as ProjectSend<Alice, Http, EmptyLabel, Bob, Message, TEnd<Http, EmptyLabel>>>::Out;
+/// ```
+///
 pub trait ProjectSend<Me, IO, Label, To, Msg, Cont>
 where
     Label: types::ProtocolLabel,
@@ -794,7 +832,8 @@ where
     type Out = EpSend<IO, Label, Me, Msg, <() as ProjectRole<Me, IO, Cont>>::Out>;
 }
 
-impl<Me, IO, Label, To, Msg, Cont> ProjectSendCase<types::False, Me, IO, Label, To, Msg, Cont> for ()
+impl<Me, IO, Label, To, Msg, Cont> ProjectSendCase<types::False, Me, IO, Label, To, Msg, Cont>
+    for ()
 where
     Label: types::ProtocolLabel,
     Cont: TSession<IO>,
@@ -809,7 +848,8 @@ pub trait ProjectRecvCase<Flag, Me, IO, Label, From, Msg, Cont> {
 }
 
 // --- ProjectRecvCase: If Me is the receiver, produce EpRecv with Me as the role parameter ---
-impl<Me, IO, Label, From, Msg, Cont> ProjectRecvCase<types::True, Me, IO, Label, From, Msg, Cont> for ()
+impl<Me, IO, Label, From, Msg, Cont> ProjectRecvCase<types::True, Me, IO, Label, From, Msg, Cont>
+    for ()
 where
     Label: types::ProtocolLabel,
     Cont: TSession<IO>,
@@ -819,7 +859,8 @@ where
     type Out = EpRecv<IO, Label, Me, Msg, <() as ProjectRole<Me, IO, Cont>>::Out>;
 }
 
-impl<Me, IO, Label, From, Msg, Cont> ProjectRecvCase<types::False, Me, IO, Label, From, Msg, Cont> for ()
+impl<Me, IO, Label, From, Msg, Cont> ProjectRecvCase<types::False, Me, IO, Label, From, Msg, Cont>
+    for ()
 where
     Label: types::ProtocolLabel,
     Cont: TSession<IO>,
@@ -837,25 +878,10 @@ where
     <To as RoleEq<Me>>::Output: types::Bool,
     Cont: TSession<IO>,
     (): ProjectRole<Me, IO, Cont>,
-    (): ProjectSendCase<
-        <To as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Label,
-        To,
-        Msg,
-        Cont,
-    >,
+    (): ProjectSendCase<<To as RoleEq<Me>>::Output, Me, IO, Label, To, Msg, Cont>,
 {
-    type Out = <() as ProjectSendCase<
-        <To as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Label,
-        To,
-        Msg,
-        Cont,
-    >>::Out;
+    type Out =
+        <() as ProjectSendCase<<To as RoleEq<Me>>::Output, Me, IO, Label, To, Msg, Cont>>::Out;
 }
 
 impl<Me, IO, Label, From, Msg, Cont> ProjectRecv<Me, IO, Label, From, Msg, Cont> for ()
@@ -865,25 +891,10 @@ where
     <From as RoleEq<Me>>::Output: types::Bool,
     Cont: TSession<IO>,
     (): ProjectRole<Me, IO, Cont>,
-    (): ProjectRecvCase<
-        <From as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Label,
-        From,
-        Msg,
-        Cont,
-    >,
+    (): ProjectRecvCase<<From as RoleEq<Me>>::Output, Me, IO, Label, From, Msg, Cont>,
 {
-    type Out = <() as ProjectRecvCase<
-        <From as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Label,
-        From,
-        Msg,
-        Cont,
-    >>::Out;
+    type Out =
+        <() as ProjectRecvCase<<From as RoleEq<Me>>::Output, Me, IO, Label, From, Msg, Cont>>::Out;
 }
 
 // --- ProjectRole implementation for TSend ---
@@ -895,25 +906,9 @@ where
     <To as RoleEq<Me>>::Output: types::Bool,
     Cont: TSession<IO>,
     (): ProjectRole<Me, IO, Cont>,
-    (): ProjectSendCase<
-        <To as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Lbl,
-        To,
-        Msg,
-        Cont,
-    >,
+    (): ProjectSendCase<<To as RoleEq<Me>>::Output, Me, IO, Lbl, To, Msg, Cont>,
 {
-    type Out = <() as ProjectSendCase<
-        <To as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Lbl,
-        To,
-        Msg,
-        Cont,
-    >>::Out;
+    type Out = <() as ProjectSendCase<<To as RoleEq<Me>>::Output, Me, IO, Lbl, To, Msg, Cont>>::Out;
 }
 
 // --- ProjectRole implementation for TRecv ---
@@ -925,23 +920,8 @@ where
     <From as RoleEq<Me>>::Output: types::Bool,
     Cont: TSession<IO>,
     (): ProjectRole<Me, IO, Cont>,
-    (): ProjectRecvCase<
-        <From as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Lbl,
-        From,
-        Msg,
-        Cont,
-    >,
+    (): ProjectRecvCase<<From as RoleEq<Me>>::Output, Me, IO, Lbl, From, Msg, Cont>,
 {
-    type Out = <() as ProjectRecvCase<
-        <From as RoleEq<Me>>::Output,
-        Me,
-        IO,
-        Lbl,
-        From,
-        Msg,
-        Cont,
-    >>::Out;
+    type Out =
+        <() as ProjectRecvCase<<From as RoleEq<Me>>::Output, Me, IO, Lbl, From, Msg, Cont>>::Out;
 }
