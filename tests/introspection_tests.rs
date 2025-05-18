@@ -122,18 +122,12 @@ mod labels_of_tests {
     fn test_complex_protocol_labels() {
         // Create a complex protocol with multiple branches and nested structures
         type Branch1 = TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>;
-        type Branch2 =
-            TRec<Http, L2, TSend<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>>;
+        type Branch2 = TRec<Http, L2, TSend<Http, L3, TServer, Response, TEnd<Http, EmptyLabel>>>;
         type ComplexProtocol = TPar<
             Http,
             L1,
             Branch1,
-            TChoice<
-                Http,
-                L2,
-                Branch2,
-                TSend<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>>,
-            >,
+            TChoice<Http, L2, Branch2, TSend<Http, L3, TClient, Message, TEnd<Http, EmptyLabel>>>,
             FalseB,
         >;
 
@@ -202,13 +196,8 @@ mod roles_of_tests {
     fn test_complex_protocol_roles() {
         // Define a complex protocol with multiple roles
         // Use TEnd<Http> instead of TEnd<Http, L3> to match current implementation
-        type Protocol = TSend<
-            Http,
-            L1,
-            TClient,
-            Message,
-            TSend<Http, L2, TServer, Response, TEnd<Http>>,
-        >;
+        type Protocol =
+            TSend<Http, L1, TClient, Message, TSend<Http, L2, TServer, Response, TEnd<Http>>>;
 
         // Expected role list is Cons<TClient, Cons<TServer, Nil>>
         type Expected = Cons<TClient, Cons<TServer, Nil>>;

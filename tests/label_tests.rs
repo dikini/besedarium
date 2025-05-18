@@ -37,6 +37,15 @@ where
     type Label = Lbl;
 }
 
+// Implement ExtractLabel for TRecv
+impl<IO, Lbl, R, H, T> ExtractLabel<IO> for TRecv<IO, Lbl, R, H, T>
+where
+    Lbl: ProtocolLabel,
+    T: TSession<IO>,
+{
+    type Label = Lbl;
+}
+
 // Implement ExtractLabel for TRec
 impl<IO, Lbl, S> ExtractLabel<IO> for TRec<IO, Lbl, S>
 where
@@ -172,12 +181,7 @@ mod label_edge_cases {
             Http,
             L3,
             Branch1,
-            TChoice<
-                Http,
-                L2,
-                Branch2,
-                TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>,
-            >,
+            TChoice<Http, L2, Branch2, TSend<Http, L1, TClient, Message, TEnd<Http, EmptyLabel>>>,
             False,
         >;
 

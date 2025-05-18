@@ -3,12 +3,12 @@
 //! This file contains tests to verify that labels are correctly preserved
 //! when projecting from global to local types.
 
-use besedarium::*;
 use besedarium::GetLocalLabel;
+use besedarium::*;
 
 // --- Custom Label Types for Testing ---
 struct TestLabel1;
-struct TestLabel2; 
+struct TestLabel2;
 struct TestLabel3;
 impl ProtocolLabel for TestLabel1 {}
 impl ProtocolLabel for TestLabel2 {}

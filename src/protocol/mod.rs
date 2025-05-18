@@ -34,7 +34,7 @@ pub mod test_overrides;
 // Re-export commonly used items at the protocol module level
 pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList};
 pub use self::global::{
-    AssertDisjoint, TChoice, TEnd, TSend, TRecv, TPar, TRec, TSession, ToTChoice, ToTPar,
+    AssertDisjoint, TChoice, TEnd, TPar, TRec, TRecv, TSend, TSession, ToTChoice, ToTPar,
 };
 pub use self::local::{
     EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, GetEpSkipTypeMarker, IsEnd,
@@ -43,8 +43,8 @@ pub use self::local::{
 };
 pub use self::transforms::{
     ComposeProjectedParBranches, ComposeProjectedParBranchesCase, ContainsRole, FilterSkips,
-    FilterSkipsCase, GetLocalLabel, GetProtocolLabel, NotContainsRole, ProjectChoice, ProjectChoiceCase, 
-    ProjectPar, ProjectRoleOrSkip, ProjectRole, TParContainsRoleImpl,
+    FilterSkipsCase, GetLocalLabel, GetProtocolLabel, NotContainsRole, ProjectChoice,
+    ProjectChoiceCase, ProjectPar, ProjectRole, ProjectRoleOrSkip, TParContainsRoleImpl,
 };
 pub use self::utils::{
     CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,
