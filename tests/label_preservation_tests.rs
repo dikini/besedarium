@@ -3,7 +3,6 @@
 //! This file contains tests to verify that labels are correctly preserved
 //! when projecting from global to local types.
 
-use besedarium::GetLocalLabel;
 use besedarium::*;
 
 // --- Custom Label Types for Testing ---
@@ -62,6 +61,4 @@ struct Http;
 
 // --- Tests for Label Preservation ---
 #[cfg(test)]
-mod label_preservation_tests {
-    use super::*;
-}
+mod label_preservation_tests {}

@@ -7,18 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Project Status (as of May 16, 2025)
+### Project Status (as of May 19, 2025)
 
 - **Documentation**: Comprehensive, with README.md, module-level docs, and detailed explanation files in docs/
-- **Codebase Structure**: Modular architecture with protocol/, types.rs, and introspection.rs
+- **Codebase Structure**: Fully modularized architecture with separate files for each protocol transformation
 - **Test Coverage**: Extensive tests for type-level functionality, including compile-fail tests
 - **Tooling**: Markdown linting configured with markdownlint-cli2
-- **Next Steps**: Implementing runtime support for protocols, addressing known issues with TPar/EpPar
+- **Next Steps**: 
+  1. Update test cases for the new modular structure
+  2. Implementing runtime support for protocols
+  3. Addressing known issues with TPar/EpPar
 
 ### Added
 
 - Label preservation during projection from global to local types for enhanced traceability and debugging
 - New utility traits `GetLocalLabel` and `GetProtocolLabel` for accessing label information
+- Modularized protocol transformations with dedicated modules:
+  - `send.rs`: Specialized `ProjectSendCase` helper trait for send operations
+  - `recv.rs`: Specialized `ProjectRecvCase` helper trait for receive operations
+  - `projection.rs`: Core projection trait with improved trait bounds
 - Test cases to ensure labels are correctly preserved during the projection process
 - All protocol examples in README.md and documentation now use the correct 5-argument form for
 `TInteract` and `TEnd`, with explicit label types for every example.
@@ -31,6 +38,8 @@ with choice, concurrent sub-sessions, and Mixed marker usage. These are now repo
 tests in cargo test output.
 - README.md with approachable, non-academic documentation and mermaid diagrams for all main
 protocol examples.
+- Modularized protocol transformation machinery: split `transforms.rs` into `projection.rs`, `choice.rs`, `parallel.rs`, `recursion.rs`, and `util.rs` under `src/protocol/transforms/`.
+- Added module-level documentation and improved doc comments for all protocol transform traits.
 
 ### Fixed
 
@@ -40,6 +49,7 @@ protocol examples.
 - README.md is now included as module-level documentation via `#![doc =
 include_str!("../README.md")]` for docs.rs and cargo doc.
 - `extract_roles!` macro for compile-time role extraction from protocol types.
+- Updated test overrides in `test_overrides.rs` to work with the new modularized structure and implemented `SessionType` for test types to satisfy trait bounds.
 - Improved documentation for all macros, with clear usage examples.
 - Projection machinery: derive local (endpoint) session types for a given role from a global
 protocol specification using the `ProjectRole` trait and helpers (`ProjectInteract`,
@@ -182,6 +192,8 @@ refactoring, focusing on test-first refactoring approach and parameter name cons
 ### Removed
 
 - Removed main.rs and moved all logic to lib.rs for a library-only crate structure.
+- Deleted obsolete `transforms.rs` and removed the deprecated `ProjectInteract` pattern.
+- Cleaned up unused imports and fixed all warnings and formatting issues.
 
 ### Known Issues
 

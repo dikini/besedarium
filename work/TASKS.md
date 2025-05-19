@@ -1,10 +1,23 @@
-# Project Task Checklist
+# Task 1: Modularize `transforms.rs` by Protocol Operation
 
-- [ ] Modularize `transforms.rs` by protocol operation
-- [ ] Add `TStart` combinator as protocol entry point
-- [ ] Add explicit recursion variables (e.g., `TMu`, `TVar`)
-- [ ] Implement internal/external choice distinction
-- [ ] Introduce channel delegation patterns
-- [ ] Merge equivalent branches in choice projection
-- [ ] Improve static guarantees for projection correctness
-- [ ] Explore partial role overlap in `TPar`
+- [x] Create new module files + doc comments
+- [x] Migrate relevant traits/impls to each file
+- [x] Fix all imports and references in the codebase
+- [x] Verify all tests pass and code is formatted/linted
+- [x] Update documentation and code comments for the new structure
+- [x] Modularize protocol transformation machinery (split transforms.rs)
+- [x] Migrate all traits, impls, and helpers to new modules
+- [x] Remove obsolete patterns and update all references
+- [x] Update documentation and code comments for new structure
+- [x] Ensure all code, tests, and doctests pass
+- [x] Clean up unused imports and formatting
+- [x] Implement `ProjectSendCase` trait in `src/protocol/transforms/send.rs`
+- [x] Implement `ProjectRecvCase` trait in `src/protocol/transforms/recv.rs`
+- [x] Update trait bounds in `ProjectRole` implementations for `TSend` and `TRecv`
+- [x] Update tests in `test_overrides.rs` to work with the new structure:
+  - [x] Update imports to reference specific module paths
+  - [x] Update special case implementation for Alice projection in test_preserved_label_in_choice
+  - [x] Ensure all test cases compile with the updated module structure
+- [x] Run all tests and verify passing status
+- [x] Review documentation and PR before merge
+- [x] Update CHANGELOG.md with completed modularization work
