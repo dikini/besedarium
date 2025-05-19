@@ -19,7 +19,7 @@ use crate::{
     protocol::{
         global::{
             TChoice as GlobalTChoice, TEnd as GlobalTEnd, TPar as GlobalTPar, TRecv as GlobalTRecv,
-            TSend as GlobalTSend, TStart as GlobalTStart, TSession as GlobalTSession,
+            TSend as GlobalTSend, TSession as GlobalTSession, TStart as GlobalTStart,
         },
         local::RoleEq,
         local::{EpChoice, EpEnd, EpSession},

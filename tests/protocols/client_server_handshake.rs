@@ -3,7 +3,7 @@ use besedarium::*;
 // Protocol-specific labels
 pub struct HandshakeStartLabel;
 pub struct ClientRequestLabel;
-pub struct ServerResponseLabel; 
+pub struct ServerResponseLabel;
 pub struct HandshakeEndLabel;
 
 impl ProtocolLabel for HandshakeStartLabel {}
