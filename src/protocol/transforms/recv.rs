@@ -48,8 +48,8 @@ where
 
 // --- Implementation for when Me is the receiver (Flag = True) ---
 
-impl<Me, IO, Lbl, RReceiver, P, G>
-    ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, crate::types::True> for ()
+impl<Me, IO, Lbl, RReceiver, P, G> ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, crate::types::True>
+    for ()
 where
     Me: Role,
     IO: SessionType,
@@ -61,13 +61,7 @@ where
     <() as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
 {
     // If Me is the receiver, produce EpRecv with Me as the role parameter
-    type Output = EpRecv<
-        IO,
-        Lbl,
-        Me,
-        P,
-        <() as ProjectRole<Me, IO, G>>::Out,
-    >;
+    type Output = EpRecv<IO, Lbl, Me, P, <() as ProjectRole<Me, IO, G>>::Out>;
 }
 
 // --- Implementation for when Me is not the receiver (Flag = False) ---

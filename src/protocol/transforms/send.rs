@@ -48,8 +48,8 @@ where
 
 // --- Implementation for when Me is the sender (Flag = True) ---
 
-impl<Me, IO, Lbl, RSender, P, G>
-    ProjectSendCase<Me, IO, Lbl, RSender, P, G, crate::types::True> for ()
+impl<Me, IO, Lbl, RSender, P, G> ProjectSendCase<Me, IO, Lbl, RSender, P, G, crate::types::True>
+    for ()
 where
     Me: Role,
     IO: SessionType,
@@ -61,19 +61,13 @@ where
     <() as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
 {
     // If Me is the sender, produce EpSend with Me as the role parameter
-    type Output = EpSend<
-        IO,
-        Lbl,
-        Me,
-        P,
-        <() as ProjectRole<Me, IO, G>>::Out,
-    >;
+    type Output = EpSend<IO, Lbl, Me, P, <() as ProjectRole<Me, IO, G>>::Out>;
 }
 
 // --- Implementation for when Me is not the sender (Flag = False) ---
 
-impl<Me, IO, Lbl, RSender, P, G>
-    ProjectSendCase<Me, IO, Lbl, RSender, P, G, crate::types::False> for ()
+impl<Me, IO, Lbl, RSender, P, G> ProjectSendCase<Me, IO, Lbl, RSender, P, G, crate::types::False>
+    for ()
 where
     Me: Role,
     IO: SessionType,

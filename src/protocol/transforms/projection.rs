@@ -9,27 +9,30 @@
 //! to local (endpoint) protocols for specific roles. The core trait is `ProjectRole`,
 //! which recursively projects a global protocol into a local endpoint protocol from
 //! the perspective of a specific role.
-//! 
+//!
 //! The implementation uses helper traits that are defined in other modules:
 //! - `ProjectSendCase` (in send.rs): For projecting send operations
 //! - `ProjectRecvCase` (in recv.rs): For projecting receive operations
-//! 
+//!
 //! The code is organized across multiple modules for better modularity and maintainability.
 
 use crate::{
     protocol::{
-        global::{TSession as GlobalTSession, TEnd as GlobalTEnd, TSend as GlobalTSend, TRecv as GlobalTRecv, TPar as GlobalTPar, TChoice as GlobalTChoice},
-        local::{EpSession, EpEnd, EpChoice}, 
+        global::{
+            TChoice as GlobalTChoice, TEnd as GlobalTEnd, TPar as GlobalTPar, TRecv as GlobalTRecv,
+            TSend as GlobalTSend, TSession as GlobalTSession,
+        },
         local::RoleEq,
+        local::{EpChoice, EpEnd, EpSession},
     },
-    types::{ProtocolLabel, SessionType, Bool},
-    Role, Disjoint, 
+    types::{Bool, ProtocolLabel, SessionType},
+    Disjoint, Role,
 };
 
 // Import helper projection traits from other modules
-use super::parallel::ProjectPar;  // For TPar projection
-use super::send::ProjectSendCase; // For TSend projection
-use super::recv::ProjectRecvCase; // For TRecv projection
+use super::parallel::ProjectPar; // For TPar projection
+use super::recv::ProjectRecvCase;
+use super::send::ProjectSendCase; // For TSend projection // For TRecv projection
 
 /// General projection trait for a role 'Me' in a global protocol 'Global'.
 ///
@@ -49,7 +52,7 @@ pub trait ProjectRole<Me, IO, Global>
 where
     Me: Role,
     IO: SessionType, // IO is a marker like Http, Mqtt, etc.
-    Global: GlobalTSession<IO>, // Global protocol must be a TSession over IO
+    Global: GlobalTSession<IO>,
 {
     /// The resulting local endpoint protocol for role `Me`
     type Out: EpSession<IO, Me>; // The result is a local endpoint session for Me over IO
@@ -68,8 +71,7 @@ where
 }
 
 // ProjectRole for TSend<IO, Lbl, RSender, P, G>
-impl<Me, IO, Lbl, RSender, P, G>
-    ProjectRole<Me, IO, GlobalTSend<IO, Lbl, RSender, P, G>> for ()
+impl<Me, IO, Lbl, RSender, P, G> ProjectRole<Me, IO, GlobalTSend<IO, Lbl, RSender, P, G>> for ()
 where
     Me: Role,
     IO: SessionType,
@@ -83,12 +85,19 @@ where
     (): ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>,
 {
     // Delegate to ProjectSendCase trait for role-based case analysis
-    type Out = <() as ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>>::Output;
+    type Out = <() as ProjectSendCase<
+        Me,
+        IO,
+        Lbl,
+        RSender,
+        P,
+        G,
+        <Me as RoleEq<RSender>>::Output,
+    >>::Output;
 }
 
 // ProjectRole for TRecv<IO, Lbl, RReceiver, P, G>
-impl<Me, IO, Lbl, RReceiver, P, G>
-    ProjectRole<Me, IO, GlobalTRecv<IO, Lbl, RReceiver, P, G>> for ()
+impl<Me, IO, Lbl, RReceiver, P, G> ProjectRole<Me, IO, GlobalTRecv<IO, Lbl, RReceiver, P, G>> for ()
 where
     Me: Role,
     IO: SessionType,
@@ -102,7 +111,15 @@ where
     (): ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, <Me as RoleEq<RReceiver>>::Output>,
 {
     // Delegate to ProjectRecvCase trait for role-based case analysis
-    type Out = <() as ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, <Me as RoleEq<RReceiver>>::Output>>::Output;
+    type Out = <() as ProjectRecvCase<
+        Me,
+        IO,
+        Lbl,
+        RReceiver,
+        P,
+        G,
+        <Me as RoleEq<RReceiver>>::Output,
+    >>::Output;
 }
 
 // ProjectRole for TPar<IO, Lbl, G1, G2, IsDisjointFlag>
@@ -118,9 +135,21 @@ where
     <G1 as ProjectRole<Me, IO, G1>>::Out: EpSession<IO, Me>,
     <G2 as ProjectRole<Me, IO, G2>>::Out: EpSession<IO, Me>,
     // Use ProjectPar to project the parallel branches together
-    (): ProjectPar<Me, IO, Lbl, <G1 as ProjectRole<Me, IO, G1>>::Out, <G2 as ProjectRole<Me, IO, G2>>::Out>,
+    (): ProjectPar<
+        Me,
+        IO,
+        Lbl,
+        <G1 as ProjectRole<Me, IO, G1>>::Out,
+        <G2 as ProjectRole<Me, IO, G2>>::Out,
+    >,
 {
-    type Out = <() as ProjectPar<Me, IO, Lbl, <G1 as ProjectRole<Me, IO, G1>>::Out, <G2 as ProjectRole<Me, IO, G2>>::Out>>::Out;
+    type Out = <() as ProjectPar<
+        Me,
+        IO,
+        Lbl,
+        <G1 as ProjectRole<Me, IO, G1>>::Out,
+        <G2 as ProjectRole<Me, IO, G2>>::Out,
+    >>::Out;
 }
 
 // ProjectRole for TChoice<IO, Lbl, LeftBranch, RightBranch> (Binary Choice)

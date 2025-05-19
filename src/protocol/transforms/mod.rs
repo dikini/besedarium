@@ -5,8 +5,8 @@
 pub mod choice;
 pub mod parallel;
 pub mod projection;
-pub mod recv;
 pub mod recursion;
+pub mod recv;
 pub mod send;
 pub mod util;
 

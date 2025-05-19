@@ -13,7 +13,14 @@ use crate::types;
 // - `IO`: Protocol marker type.
 // - `Lbl`: Label from the TPar construct.
 // - `L`, `R`: The two protocol branches.
-pub trait ProjectPar<Me: Role, IO, Lbl: types::ProtocolLabel, L: EpSession<IO, Me>, R: EpSession<IO, Me>> {
+pub trait ProjectPar<
+    Me: Role,
+    IO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, Me>,
+    R: EpSession<IO, Me>,
+>
+{
     type Out: EpSession<IO, Me>;
 }
 
