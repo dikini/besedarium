@@ -4,7 +4,7 @@
 
 use crate::protocol::global::*;
 use crate::protocol::local::*;
-use crate::protocol::transforms::*;
+use crate::protocol::transforms::projection::ProjectRole;
 use crate::*;
 
 // These are needed to avoid import errors
@@ -25,6 +25,9 @@ impl Role for Charlie {}
 impl ProtocolLabel for TestLabel1 {}
 impl ProtocolLabel for TestLabel2 {}
 impl ProtocolLabel for TestLabel3 {}
+
+// Implement SessionType for Http to satisfy the trait bound in ProjectRole
+impl SessionType for Http {}
 
 // Special case for test_preserved_label_in_choice
 // Alice projection of a choice with left branch Alice->Message, right branch Bob->Response

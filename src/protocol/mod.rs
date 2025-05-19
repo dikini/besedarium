@@ -41,11 +41,7 @@ pub use self::local::{
     IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, RoleEq, TBroker, TClient,
     TServer, TWorker, Void,
 };
-pub use self::transforms::{
-    ComposeProjectedParBranches, ComposeProjectedParBranchesCase, ContainsRole, FilterSkips,
-    FilterSkipsCase, GetLocalLabel, GetProtocolLabel, NotContainsRole, ProjectChoice,
-    ProjectChoiceCase, ProjectPar, ProjectRole, ProjectRoleOrSkip, TParContainsRoleImpl,
-};
+pub use self::transforms::*;
 pub use self::utils::{
     CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,
 };
