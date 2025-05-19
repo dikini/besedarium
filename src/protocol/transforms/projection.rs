@@ -1,4 +1,3 @@
-// filepath: /home/dikini/Projects/besedarium/src/protocol/transforms/projection.rs
 //! Projection traits and implementations
 //!
 //! Contains the core projection trait `ProjectRole` that maps global protocols
@@ -20,19 +19,21 @@ use crate::{
     protocol::{
         global::{
             TChoice as GlobalTChoice, TEnd as GlobalTEnd, TPar as GlobalTPar, TRecv as GlobalTRecv,
-            TSend as GlobalTSend, TSession as GlobalTSession,
+            TSend as GlobalTSend, TSession as GlobalTSession, TStart as GlobalTStart,
         },
         local::RoleEq,
-        local::{EpChoice, EpEnd, EpSession},
+        local::{EpChoice, EpSession},
     },
     types::{Bool, ProtocolLabel, SessionType},
     Disjoint, Role,
 };
 
 // Import helper projection traits from other modules
+use super::end::ProjectEndCase; // For TEnd projection
 use super::parallel::ProjectPar; // For TPar projection
-use super::recv::ProjectRecvCase;
-use super::send::ProjectSendCase; // For TSend projection // For TRecv projection
+use super::recv::ProjectRecvCase; // For TRecv projection
+use super::send::ProjectSendCase; // For TSend projection
+use super::start::ProjectStartCase; // For TStart projection
 
 /// General projection trait for a role 'Me' in a global protocol 'Global'.
 ///
@@ -60,14 +61,30 @@ where
 
 // --- ProjectRole Implementations ---
 
+// ProjectRole for TStart<IO, Lbl, S>
+impl<Me, IO, Lbl, S> ProjectRole<Me, IO, GlobalTStart<IO, Lbl, S>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    S: GlobalTSession<IO> + ProjectRole<Me, IO, S>,
+    <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>,
+    (): ProjectStartCase<Me, IO, Lbl, S>,
+{
+    // Delegate to ProjectStartCase trait for start projection
+    type Out = <() as ProjectStartCase<Me, IO, Lbl, S>>::Out;
+}
+
 // ProjectRole for TEnd<IO, Lbl>
 impl<Me, IO, Lbl> ProjectRole<Me, IO, GlobalTEnd<IO, Lbl>> for ()
 where
     Me: Role,
     IO: SessionType,
     Lbl: ProtocolLabel,
+    (): ProjectEndCase<Me, IO, Lbl>,
 {
-    type Out = EpEnd<IO, Lbl, Me>; // EpEnd<IO, Label, Role>
+    // Delegate to ProjectEndCase trait for end projection
+    type Out = <() as ProjectEndCase<Me, IO, Lbl>>::Out;
 }
 
 // ProjectRole for TSend<IO, Lbl, RSender, P, G>

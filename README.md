@@ -3,7 +3,8 @@
 Welcome to the Session Types Playground! This project is a Rust library for building, composing,
 and verifying communication protocols at the type level. If you've ever wanted to make sure your
 distributed systems or networked applications follow the right message flow—at compile time—this
-is for you.
+is for you. With clear protocol entry points (`TStart`) and comprehensive safety checks, Besedarium
+helps you design robust communication protocols.
 
 ## Background: Session Types
 
@@ -61,28 +62,46 @@ system. With this library, you can:
 
 ```rust
 use besedarium::*;
-struct L; impl ProtocolLabel for L {}
-type Handshake = TSend<Http, L, TClient, Message, TSend<Http, L, TServer, Response, TEnd<Http, L>>>;
+struct StartL; impl ProtocolLabel for StartL {}
+struct RequestL; impl ProtocolLabel for RequestL {}
+struct ResponseL; impl ProtocolLabel for ResponseL {}
+struct EndL; impl ProtocolLabel for EndL {}
+
+// The protocol starts with TStart, providing a clear entry point
+type Handshake = TStart<Http, StartL, 
+    TSend<Http, RequestL, TClient, Message, 
+        TSend<Http, ResponseL, TServer, Response, 
+            TEnd<Http, EndL>
+        >
+    >
+>;
 ```
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant Server
+    
+    note over Client,Server: Protocol Start
     Client->>Server: Message
     Server-->>Client: Response
+    note over Client,Server: Protocol End
 ```
 
 ## Example: N-ary Choice
 
 ```rust
 use besedarium::*;
+struct StartL; impl ProtocolLabel for StartL {}
 struct L1; impl ProtocolLabel for L1 {}
 struct L2; impl ProtocolLabel for L2 {}
-type Choice = tchoice!(Http;
-    TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
-    TSend<Http, L2, TServer, Response, TEnd<Http, L2>>,
-);
+// Protocol begins with TStart and branches using tchoice! macro
+type Choice = TStart<Http, StartL, 
+    tchoice!(Http;
+        TSend<Http, L1, TClient, Message, TEnd<Http, L1>>,
+        TSend<Http, L2, TServer, Response, TEnd<Http, L2>>,
+    )
+>;
 ```
 
 ```mermaid

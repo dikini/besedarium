@@ -37,7 +37,49 @@ and trybuild tests ensure that safety properties are enforced and violations are
 
 ## Global Session Type Combinators
 
-### 1. `TInteract`
+### 1. `TStart`
+
+- **Purpose:** Marks the explicit entry point of a protocol session.
+- **Implementation:**
+
+  ```rust
+  pub struct TStart<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(
+      PhantomData<(IO, Lbl, S)>,
+  );
+  ```
+
+  - `IO`: Protocol marker (e.g., Http, Mqtt)
+  - `Lbl`: Label for this start point (for projection and debugging)
+  - `S`: The continuation protocol after this start point
+- **Pros:**
+  - Provides a clear and explicit starting point for protocols
+  - Improves protocol readability and self-documentation
+  - Serves as a consistent entry point for protocol composition
+- **Cons:**
+  - Adds an extra layer to protocol definitions
+- **Properties Ensured:**
+  - Clear protocol entry point
+  - Label preservation through projection
+- **Example:**
+
+  ```rust
+  type HandshakeProtocol = TStart<Http, StartLabel,
+      TSend<Http, RequestLabel, Client, Message,
+          TRecv<Http, ResponseLabel, Server, Response, TEnd<Http, EndLabel>>>
+  >;
+  // Projects to EpStart<...> for each role
+  ```
+
+  - **Diagram:**
+
+  ```mermaid
+  flowchart TB
+      Start[Start] --> Request[Client: Message]
+      Request --> Response[Server: Response]
+      Response --> End((End))
+  ```
+
+### 2. `TInteract`
 
 - **Purpose:** Models a single interaction (send/receive) by a role in a protocol.
 - **Implementation:**

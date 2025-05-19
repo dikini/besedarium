@@ -7,6 +7,7 @@
 //! Key components:
 //!
 //! - `TSession`: Core trait for all global session type combinators
+//! - `TStart`: Protocol entry point
 //! - `TEnd`: Protocol termination
 //! - `TSend`: Individual send action between roles
 //! - `TRecv`: Individual receive action between roles
@@ -48,6 +49,30 @@ impl<IO, Lbl> sealed::Sealed for TEnd<IO, Lbl> {}
 impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
     type Compose<Rhs: TSession<IO>> = Rhs;
     const IS_EMPTY: bool = true;
+}
+
+/// Protocol entry point that marks the beginning of a session.
+///
+/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
+/// - `Lbl`: Label for this start point (for projection and debugging).
+/// - `S`: The continuation protocol after this start point.
+///
+/// Used to provide a clear starting point for protocols, improving clarity and consistency.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct TStart<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
+
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TStart<IO, Lbl, S> {}
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TStart<IO, Lbl, S> {
+    type Compose<Rhs: TSession<IO>> = TStart<IO, Lbl, S::Compose<Rhs>>;
+    const IS_EMPTY: bool = false;
+}
+
+/// Implement GetProtocolLabel for TStart to adhere to the protocol label invariant.
+/// This allows for label extraction and preservation during projection.
+impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> crate::protocol::transforms::GetProtocolLabel
+    for TStart<IO, Lbl, S>
+{
+    type Label = Lbl;
 }
 
 /// Represents a single send action in a protocol session.
