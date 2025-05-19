@@ -44,42 +44,47 @@ the accept/reject decision).
 **Global Protocol (Besedarium API):**
 
 ```rust
-type SimpleGlobal =
-    TInteract<
+// Using TStart as the explicit protocol entry point
+type SimpleGlobal = 
+    TStart<
         Http,
-        EmptyLabel,
-        Customer,
-        Order<Hawaii>,
+        ProtocolStartLabel,
         TInteract<
             Http,
             EmptyLabel,
-            Agency,
-            Quote<Nat>,
-            TChoice<
+            Customer,
+            Order<Hawaii>,
+            TInteract<
                 Http,
                 EmptyLabel,
-                // accept branch
-                TInteract<
+                Agency,
+                Quote<Nat>,
+                TChoice<
                     Http,
                     EmptyLabel,
-                    Customer,
-                    Accept<Bool>,
+                    // accept branch
                     TInteract<
                         Http,
                         EmptyLabel,
                         Customer,
-                        Address<Nat>,
+                        Accept<Bool>,
                         TInteract<
                             Http,
                             EmptyLabel,
-                            Agency,
-                            Date<Nat>,
-                            TEnd<Http>
+                            Customer,
+                            Address<Nat>,
+                            TInteract<
+                                Http,
+                                EmptyLabel,
+                                Agency,
+                                Date<Nat>,
+                                TEnd<Http>
+                            >
                         >
-                    >
-                >,
-                // reject branch
-                TEnd<Http>
+                    >,
+                    // reject branch
+                    TEnd<Http>
+                >
             >
         >
     >;
@@ -127,31 +132,36 @@ to "break out" of recursion in a type-safe way.
 **Global Protocol (Besedarium API):**
 
 ```rust
+// Using TStart as the explicit protocol entry point with recursion
 type RetryGlobal =
-    TRec<
+    TStart<
         Http,
-        RecursionLabel<"retry_loop">,
-        TInteract<
+        ProtocolStartLabel,
+        TRec<
             Http,
-            EmptyLabel,
-            Customer,
-            Order<Place>,
+            RecursionLabel<"retry_loop">,
             TInteract<
                 Http,
                 EmptyLabel,
-                Agency,
-                Quote<Nat>,
-                TChoice<
+                Customer,
+                Order<Place>,
+                TInteract<
                     Http,
                     EmptyLabel,
-                    // accept
-                    TInteract<Http, EmptyLabel, Customer, Accept<Bool>, /*...*/> ,
+                    Agency,
+                    Quote<Nat>,
                     TChoice<
                         Http,
                         EmptyLabel,
-                        // retry branch loops to recursion point
-                        TInteract<Http, EmptyLabel, Customer, Retry, /* loops via TRec */>,
-                        TEnd<Http>
+                        // accept
+                        TInteract<Http, EmptyLabel, Customer, Accept<Bool>, /*...*/> ,
+                        TChoice<
+                            Http,
+                            EmptyLabel,
+                            // retry branch loops to recursion point
+                            TInteract<Http, EmptyLabel, Customer, Retry, /* loops via TRec */>,
+                            TEnd<Http>
+                        >
                     >
                 >
             >

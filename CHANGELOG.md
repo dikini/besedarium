@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Implemented `TStart` combinator as a clear protocol entry point, enhancing protocol structure clarity and consistency
+- Added projection logic for `TStart` to `EpStart` in endpoint protocols
+- Created comprehensive tests for `TStart` functionality
+- Updated example protocols to use `TStart` as their entry point
+
 - New `TStart` combinator for explicit protocol entry points with corresponding `EpStart` local type
 - Label preservation during projection from global to local types for enhanced traceability and debugging
 - New utility traits `GetLocalLabel` and `GetProtocolLabel` for accessing label information

@@ -5,11 +5,13 @@
 //!
 //! Welcome to the Session Types Playground! This crate lets you build, compose, and verify communication protocols at the type level in Rust.
 //!
+//! - **Clear protocol structure:** Use `TStart` as entry points for your protocol definitions.
 //! - **Catch protocol mistakes early:** Get compile-time errors for protocol mismatches.
 //! - **Readable and reusable:** Protocols are just Rust types—easy to read, share, and reuse.
 //! - **Great for learning:** See real-world protocol examples in `tests/protocols/`.
 //!
 //! ## Main Concepts
+//! - **Protocol Entry Points:** `TStart` combinators provide clear protocol starting points.
 //! - **Session combinators:** Compose protocols from simple building blocks.
 //! - **Macros:** Ergonomic construction of n-ary choices and parallel branches.
 //! - **Disjointness checks:** Ensure parallel branches do not overlap roles.

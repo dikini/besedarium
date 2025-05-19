@@ -322,6 +322,12 @@ Three proven approaches for implementing session types at runtime:
 - Updated docs and examples to showcase `TStart` usage in practical protocol definitions
 - Protocol entry points improve protocol clarity and provide a consistent structure
 - The architecture follows the protocol label invariant, ensuring all type information is preserved during transformations
+- Benefits of explicit protocol entry points:
+  1. Clear delineation of protocol boundaries
+  2. Improved protocol readability and maintainability
+  3. Consistent structure for protocol definitions
+  4. Simplified debugging and error messages
+  5. Better support for protocol composition and reuse
 
 ---
 

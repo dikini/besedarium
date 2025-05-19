@@ -2,7 +2,11 @@
 
 ## Current Tasks
 
-- [x] (wip) Implement `TStart` Combinator as Protocol Entry Point (#18)
+_No tasks in progress._
+
+## Completed Tasks
+
+- [x] Implement `TStart` Combinator as Protocol Entry Point (#18)
   - [x] Add `TStart` struct definition and trait implementations to `src/protocol/global.rs`
   - [x] Implement `GetProtocolLabel` for `TStart`
   - [x] Implement projection logic in `transforms/projection.rs`
@@ -10,11 +14,3 @@
   - [x] Add or update integration tests in `tests/protocols/` directory
   - [x] Update documentation in key files
   - [x] Update examples to use `TStart` where appropriate
-
-## Completed Tasks
-
-- [x] Implement `TStart` Combinator as Protocol Entry Point (#18)
-
-## Completed Tasks
-
-_No tasks completed yet._
