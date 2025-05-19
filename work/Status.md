@@ -155,10 +155,45 @@ This document provides a status overview of the Besedarium session types library
 - **Init** Global session combinator that projects to all local roles. Signifies protocol initialisation. Possibly tied to runtime channels.
 - **Metadata** type parameter. A reader-like, configuration type parameter, there to supply common configuration to all. Should be projected to local roles, either as a whole, or could be projected to piece-wise to specific roles.
 
-## 5. Doctest/Test Failure Status (2025-05-18)
+# Project Status
 
-- All integration and unit tests pass.
-- Doctest failures persist for code blocks in README.md and lib.rs that use macros (e.g., `tchoice!`, `tpar!`) or strict type equality assertions (e.g., `assert_type_eq!`).
-- These failures are due to macro visibility and Rust's type identity limitations in doctest context, not real code errors.
-- README.md and lib.rs now include warning notes; README inclusion is limited to docs.rs builds to avoid CI/test failures.
-- CI is green, but users should be aware of these limitations when running `cargo test --doc` locally.
+## Current Work in Progress
+
+- Protocol transform modularization: **completed** implementing `ProjectSendCase` and `ProjectRecvCase` in their own modules
+- Next step: Update tests in `test_overrides.rs` to work with the new modular structure
+
+## Current Issues
+
+- Tests in `test_overrides.rs` need updates to work with the new modular structure
+- Need to review documentation consistency across the modularized files
+- See GitHub issues for any remaining edge cases or documentation improvements
+
+## Current PRs
+
+- [Modularize protocol transforms and update references](https://github.com/YOUR_REPO/besedarium/pull/XX) (pending review)
+
+## Current Tasks
+
+- See [work/TASKS.md](TASKS.md)
+
+## Current Learnings
+
+- See [work/learnings.md](learnings.md)
+
+## Structure, Tests, Documentation
+
+- Core protocol transform code is now completely modularized:
+  - `ProjectSendCase` trait fully implemented in `src/protocol/transforms/send.rs`
+    - True case: When Me == RSender → Project as `EpSend`
+    - False case: When Me != RSender → Project continuation only
+  - `ProjectRecvCase` trait fully implemented in `src/protocol/transforms/recv.rs`
+    - True case: When Me == RReceiver → Project as `EpRecv`
+    - False case: When Me != RReceiver → Project continuation only
+  - `ProjectRole` implementations updated in `projection.rs` with:
+    - Proper trait bounds for helper traits
+    - Role equality checks for dispatch
+    - Type-level boolean flags to select appropriate implementation
+  - Other helper traits already modularized in their respective files
+- Library code compiles successfully with `cargo check --lib`
+- Some tests need updates due to module changes, especially in `test_overrides.rs`
+- Documentation and code comments are comprehensive with proper module-level documentation

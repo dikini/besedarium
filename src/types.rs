@@ -119,3 +119,55 @@ impl ProtocolLabel for EmptyLabel {}
 pub struct EpSilent<IO, R>(PhantomData<(IO, R)>);
 impl<IO, R> EpSession<IO, R> for EpSilent<IO, R> {}
 impl<IO, R> sealed::Sealed for EpSilent<IO, R> {}
+
+/// A marker trait for all session types (e.g., In, Out, InOut).
+/// This helps in constraining generic parameters to valid session type markers.
+pub trait SessionType {}
+
+/// A trait indicating that a session type has a dual.
+/// For example, the dual of an `Out` session is an `In` session.
+pub trait HasDual {
+    /// The dual session type.
+    type Dual: SessionType;
+}
+
+// Implementations for IO marker types
+impl SessionType for Http {}
+impl HasDual for Http {
+    type Dual = Http;
+}
+
+impl SessionType for Db {}
+impl HasDual for Db {
+    type Dual = Db;
+}
+
+impl SessionType for Mqtt {}
+impl HasDual for Mqtt {
+    type Dual = Mqtt;
+}
+
+impl SessionType for Cache {}
+impl HasDual for Cache {
+    type Dual = Cache;
+}
+
+impl SessionType for Mixed {}
+impl HasDual for Mixed {
+    type Dual = Mixed;
+}
+
+// Implementations for basic session type markers if they exist (e.g., In, Out)
+// Assuming In, Out, InOut might be defined elsewhere or will be defined.
+// If not, these are conceptual placeholders.
+
+// Example (if In and Out types exist and implement SessionType):
+// impl HasDual for In {
+//     type Dual = Out;
+// }
+// impl HasDual for Out {
+//     type Dual = In;
+// }
+// impl HasDual for InOut { // Or however InOut is defined
+//     type Dual = InOut; // Or its specific dual
+// }

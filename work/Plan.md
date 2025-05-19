@@ -1,101 +1,43 @@
-<!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
+# Work Plan
 
-# Work Plan: Protocol Label Invariant and TInteract → TSend/TRecv Refactor (Issues #15 & #16)
+## Task 1: Modularize `transforms.rs` by Protocol Operation (Detailed)
 
-## Overview
+- **Goal**: Break `transforms.rs` into smaller, more manageable modules, organized by protocol operation.
+- **New Module Structure**:
+  - `transforms/mod.rs`: Module root, re-exports all public traits and helpers.
+  - `transforms/projection.rs`: Contains all projection traits and impls (e.g., `ProjectRole`, `ProjectSendDispatch`, `ProjectRecvDispatch`).
+  - `transforms/choice.rs`: Contains all choice-specific traits and impls (e.g., `ProjectChoice`, `ProjectChoiceCase`).
+  - `transforms/parallel.rs`: Contains all parallel composition traits and impls (e.g., `ProjectPar`, `ComposeProjectedParBranches`).
+  - `transforms/recursion.rs`: (Optional, for future-proofing) Recursion-related traits (e.g., for `TMu`, `TVar`).
+  - `transforms/util.rs`: Shared helpers and traits (e.g., `ContainsRole`, `NotContainsRole`, `GetProtocolLabel`).
 
-This plan outlines the steps to refactor the Besedarium session types library by replacing the global protocol combinator `TInteract` with distinct `TSend` and `TRecv` types. The goal is to improve protocol clarity, type-level expressiveness, and future extensibility. The plan also covers stabilization of the test base, updating documentation, and review/merge criteria.
+- **Implementation Steps**:
+  1. Create the new module files with module-level doc comments describing their purpose and contents. **(done)**
+  2. Migrate relevant traits, impls, and helpers from `transforms.rs` into the appropriate new files. **(done)**
+  3. Fix all `use`/`mod` statements and imports throughout the codebase to reference the new structure. **(in progress)**
+  4. In `mod.rs`, publicly re-export all traits and helpers needed by other modules or users. **(in progress)**
+  5. Ensure all doc comments are preserved or improved for clarity and navigation. **(in progress)**
+  6. Run `cargo check`, `cargo build`, `cargo test`, `cargo fmt --all -- --check`, and `cargo clippy` to confirm no breakage. **(pending)**
+  7. Update documentation (e.g., `docs/ImplementationOverview.md`) to reflect the new file layout and rationale. **(pending)**
 
-- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
-- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
-- This invariant must be maintained in all future refactors and protocol design changes.
+- **Items to Watch Out For**:
+  - **Import Loops**: Avoid circular dependencies by keeping utility traits in `util.rs` and only importing them where needed.
+  - **Trait Visibility**: Ensure all traits and helpers that need to be used outside their module are `pub` and re-exported in `mod.rs`.
+  - **Test Coverage**: After migration, verify that all tests (including doctests) still pass and that no logic is lost in the move.
+  - **Documentation Consistency**: Update all references to the old `transforms.rs` location in code comments and documentation.
+  - **Recursion Module**: If recursion traits are not yet implemented, create a stub file with a `TODO` comment for future work.
+  - **File Size Balance**: If any file becomes too large, consider further splitting (e.g., separate `choice/case.rs` for case helpers).
 
----
+- **Sub-tasks**:
+  1. Create new module files + doc comments. **(done)**
+  2. Migrate relevant traits/impls to each file. **(done)**
+  3. Fix all imports and references in the codebase. **(in progress)**
+  4. Verify all tests pass and code is formatted/linted. **(pending)**
+  5. Update documentation and code comments for the new structure. **(pending)**
 
-## 1. Test Base Stabilization (Precondition for Refactor)
-
-**Goal:** Ensure a stable, passing test base before making protocol-level changes.
-
-- Disable or clear all failing and affected tests (unit, integration, trybuild, protocol examples).
-- Fix all failing doctests, especially those affected by protocol combinator changes.
-- Confirm that `cargo test` and all doctests pass with no failures.
-
-**Review criteria:** No failing or flaky tests; all doctests pass; CI is green.
-
----
-
-## 2. Protocol Refactor: TInteract → TSend/TRecv
-
-**Goal:** Replace all uses of `TInteract` with `TSend` and `TRecv` in global protocol definitions and supporting code.
-
-- Refactor protocol combinators in the main library code.
-- Update all projection and helper traits to support `TSend`/`TRecv` instead of `TInteract`.
-- Update macros, documentation, and code examples to use `TSend`/`TRecv`.
-
-**Precondition:** Test base is stable and all tests are passing.
-**Postcondition:** All protocol logic uses the new combinators; code compiles and passes all checks.
-
-**Review criteria:** No remaining uses of `TInteract`; all new combinators are documented and tested; code is idiomatic and clear.
-
----
-
-## 3. Test Restoration and Update
-
-**Goal:** Restore and update all previously disabled/cleared tests to use the new protocol combinators.
-
-- Update all test files (unit, integration, trybuild, protocol examples) to use `TSend`/`TRecv`.
-- Re-enable and verify all tests.
-
-**Precondition:** Protocol refactor is complete and compiles.
-**Postcondition:** All tests and doctests pass with the new combinators.
-
-**Review criteria:** Test coverage is restored; all tests are meaningful and up to date.
+**Dependencies**:
+- Minor import changes across multiple modules.
+- Ensure consistent naming (no collisions, clear structure).
+- Coordinate with any ongoing work that touches `transforms.rs` to avoid merge conflicts.
 
 ---
-
-## 4. Documentation, Changelog, and Learnings Update
-
-**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure and the protocol label invariant.
-
-- Update README, code docs, and protocol examples to show that all combinators are labeled and implement `GetProtocolLabel`.
-- Update CHANGELOG.md with a summary of the refactor and the invariant.
-- Update work/learnings.md and related files with new patterns and lessons.
-- Update work/Status.md
-
-**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date; protocol label invariant is documented and enforced.
-
----
-
-## 5. PR Review and Merge (Issue #16)
-
-**Goal:** Complete the review and merge process for the refactor.
-
-- Review draft PR for completeness, correctness, and adherence to project guidelines.
-- Confirm all CI checks pass.
-- Approve and merge PR after review.
-- Close issues #15 and #16.
-
-**Review criteria:** All acceptance criteria met; no regressions; project is ready for further development.
-
----
-
-## Doctest/Test Failure Handling (2025-05-18)
-
-- Document all known doctest/test failures and their causes in README.md and Status.md.
-- Ensure macro-based protocol examples are only tested in integration/compile-time tests.
-- Update CI/test scripts to ignore README.md doctest failures or restrict README inclusion to docs.rs builds.
-- Add clear warnings for users in documentation.
-
----
-
-## Summary
-
-- **Preconditions:** Stable test base, all tests passing.
-- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; all combinators are labeled and implement `GetProtocolLabel`; documentation and changelog are updated; PR is reviewed and merged.
-- **Success criteria:** No regressions, improved clarity and maintainability, all project standards and invariants met.
-
----
-
-> **Protocol Label Invariant:**
-> All protocol combinators must have a label parameter and implement `GetProtocolLabel`.
-> This is a core design rule for Besedarium. Update this file and documentation if the invariant changes.
