@@ -22,13 +22,14 @@ use crate::{
             TSend as GlobalTSend, TSession as GlobalTSession, TStart as GlobalTStart,
         },
         local::RoleEq,
-        local::{EpChoice, EpEnd, EpSession},
+        local::{EpChoice, EpSession},
     },
     types::{Bool, ProtocolLabel, SessionType},
     Disjoint, Role,
 };
 
 // Import helper projection traits from other modules
+use super::end::ProjectEndCase; // For TEnd projection
 use super::parallel::ProjectPar; // For TPar projection
 use super::recv::ProjectRecvCase; // For TRecv projection
 use super::send::ProjectSendCase; // For TSend projection
@@ -80,8 +81,10 @@ where
     Me: Role,
     IO: SessionType,
     Lbl: ProtocolLabel,
+    (): ProjectEndCase<Me, IO, Lbl>,
 {
-    type Out = EpEnd<IO, Lbl, Me>; // EpEnd<IO, Label, Role>
+    // Delegate to ProjectEndCase trait for end projection
+    type Out = <() as ProjectEndCase<Me, IO, Lbl>>::Out;
 }
 
 // ProjectRole for TSend<IO, Lbl, RSender, P, G>
