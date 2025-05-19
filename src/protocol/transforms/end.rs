@@ -7,9 +7,7 @@
 //! `TEnd` combinators, mapping them to local `EpEnd` types for each role.
 
 use crate::{
-    protocol::{
-        local::{EpEnd, EpSession, Role},
-    },
+    protocol::local::{EpEnd, EpSession, Role},
     types::{ProtocolLabel, SessionType},
 };
 
