@@ -1,101 +1,157 @@
-<!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
+# Implementation Plan: Adding TStart Combinator as Protocol Entry Point
 
-# Work Plan: Protocol Label Invariant and TInteract → TSend/TRecv Refactor (Issues #15 & #16)
-
-## Overview
-
-This plan outlines the steps to refactor the Besedarium session types library by replacing the global protocol combinator `TInteract` with distinct `TSend` and `TRecv` types. The goal is to improve protocol clarity, type-level expressiveness, and future extensibility. The plan also covers stabilization of the test base, updating documentation, and review/merge criteria.
-
-- All protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec, etc.) must have a label parameter of type `ProtocolLabel`.
-- The trait `GetProtocolLabel` must be implemented for all protocol combinators.
-- This invariant must be maintained in all future refactors and protocol design changes.
-
+## PROPOSED EDIT PLAN
+Working with: Multiple files in the besedarium codebase
+Total planned edits: 7
 ---
 
-## 1. Test Base Stabilization (Precondition for Refactor)
+## 1. Background & Context
 
-**Goal:** Ensure a stable, passing test base before making protocol-level changes.
+The goal of this task is to implement a `TStart` combinator to serve as the initial entry point for global protocols. Based on our analysis of the codebase, this would fit into the existing architecture alongside other global protocol combinators like `TEnd`, `TSend`, `TRecv`, `TChoice`, and `TPar`.
 
-- Disable or clear all failing and affected tests (unit, integration, trybuild, protocol examples).
-- Fix all failing doctests, especially those affected by protocol combinator changes.
-- Confirm that `cargo test` and all doctests pass with no failures.
+The `TStart` will provide a clear and explicit starting point for protocols, making the protocol structure more consistent and improving readability. It will also help with protocol composition since it will serve as a well-defined entry point.
 
-**Review criteria:** No failing or flaky tests; all doctests pass; CI is green.
+## 2. Technical Requirements
 
----
+1. The `TStart` combinator must adhere to the protocol label invariant: it must have a label parameter and implement the `GetProtocolLabel` trait.
+2. It must be compatible with the existing projection machinery to ensure proper conversion from global to local protocols.
+3. It must work with stable Rust features (no specialization, negative bounds, etc.).
+4. It should maintain type safety and preserve the integrity of the session type system.
 
-## 2. Protocol Refactor: TInteract → TSend/TRecv
+## 3. Detailed Design
 
-**Goal:** Replace all uses of `TInteract` with `TSend` and `TRecv` in global protocol definitions and supporting code.
+### 3.1. Structure of `TStart`
 
-- Refactor protocol combinators in the main library code.
-- Update all projection and helper traits to support `TSend`/`TRecv` instead of `TInteract`.
-- Update macros, documentation, and code examples to use `TSend`/`TRecv`.
+The `TStart` combinator will have the following structure:
+```rust
+pub struct TStart<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
+```
 
-**Precondition:** Test base is stable and all tests are passing.
-**Postcondition:** All protocol logic uses the new combinators; code compiles and passes all checks.
+where:
+- `IO`: Protocol marker type (e.g., Http, Mqtt)
+- `Lbl`: Label for this start point (for projection and debugging)
+- `S`: The continuation protocol after this start point
 
-**Review criteria:** No remaining uses of `TInteract`; all new combinators are documented and tested; code is idiomatic and clear.
+### 3.2. Trait Implementations
 
----
+The `TStart` combinator will need the following trait implementations:
 
-## 3. Test Restoration and Update
+1. `sealed::Sealed` trait (to restrict trait implementations)
+2. `TSession<IO>` trait (core trait for all protocol combinators)
+3. `GetProtocolLabel` trait (to adhere to the protocol label invariant)
 
-**Goal:** Restore and update all previously disabled/cleared tests to use the new protocol combinators.
+### 3.3. Projection Implementation
 
-- Update all test files (unit, integration, trybuild, protocol examples) to use `TSend`/`TRecv`.
-- Re-enable and verify all tests.
+We'll need to implement `ProjectRole` for `TStart` to properly project it to local protocols. The projection will:
+1. Map `TStart<IO, Lbl, S>` to a new corresponding `EpStart<IO, Lbl, Me>` for each role `Me`
+2. Chain this with the projection of the inner protocol `S`
+3. Preserve the label from the global protocol through to the local protocol
 
-**Precondition:** Protocol refactor is complete and compiles.
-**Postcondition:** All tests and doctests pass with the new combinators.
+## 4. Implementation Plan
 
-**Review criteria:** Test coverage is restored; all tests are meaningful and up to date.
+### 4.1. Add `TStart` Combinator in global.rs
 
----
+First, we'll define the `TStart` struct and implement the basic traits for it in the `global.rs` file.
 
-## 4. Documentation, Changelog, and Learnings Update
+### 4.2. Update GetProtocolLabel Implementation
 
-**Goal:** Ensure all documentation, changelogs, and learnings reflect the new protocol structure and the protocol label invariant.
+Ensure the `TStart` combinator adheres to the protocol label invariant by implementing `GetProtocolLabel`.
 
-- Update README, code docs, and protocol examples to show that all combinators are labeled and implement `GetProtocolLabel`.
-- Update CHANGELOG.md with a summary of the refactor and the invariant.
-- Update work/learnings.md and related files with new patterns and lessons.
-- Update work/Status.md
+### 4.3. Implement Projection Logic
 
-**Review criteria:** Documentation is accurate, clear, and passes markdownlint; changelog is up to date; protocol label invariant is documented and enforced.
+Add an implementation of `ProjectRole` for `TStart` in the projection module to handle its projection to local protocols.
 
----
+### 4.4. Add Unit Tests
 
-## 5. PR Review and Merge (Issue #16)
+Create unit tests to verify that `TStart` works correctly, including:
+- Basic type-level functioning
+- Proper projection to local protocols
+- Label preservation
 
-**Goal:** Complete the review and merge process for the refactor.
+### 4.5. Add Integration Tests
 
-- Review draft PR for completeness, correctness, and adherence to project guidelines.
-- Confirm all CI checks pass.
-- Approve and merge PR after review.
-- Close issues #15 and #16.
+Add integration tests to verify that `TStart` works correctly in more complex protocol scenarios.
 
-**Review criteria:** All acceptance criteria met; no regressions; project is ready for further development.
+### 4.6. Update Documentation
 
----
+Update documentation in key files to explain the purpose and usage of `TStart`.
 
-## Doctest/Test Failure Handling (2025-05-18)
+### 4.7. Update Examples
 
-- Document all known doctest/test failures and their causes in README.md and Status.md.
-- Ensure macro-based protocol examples are only tested in integration/compile-time tests.
-- Update CI/test scripts to ignore README.md doctest failures or restrict README inclusion to docs.rs builds.
-- Add clear warnings for users in documentation.
+Update existing examples to use `TStart` as their entry point where appropriate.
 
----
+## 5. Step-by-Step Plan
 
-## Summary
+1. **Edit 1**: Add `TStart` struct definition and trait implementations to `src/protocol/global.rs`
+   - Define the struct with proper generic parameters
+   - Implement required traits (`sealed::Sealed`, `TSession<IO>`)
+   - Implement composition rules for `TStart`
 
-- **Preconditions:** Stable test base, all tests passing.
-- **Postconditions:** All protocol logic and tests use `TSend`/`TRecv`; all combinators are labeled and implement `GetProtocolLabel`; documentation and changelog are updated; PR is reviewed and merged.
-- **Success criteria:** No regressions, improved clarity and maintainability, all project standards and invariants met.
+2. **Edit 2**: Add label implementation in `transforms/util.rs` or appropriate module
+   - Implement `GetProtocolLabel` for `TStart` to adhere to the protocol label invariant
 
----
+3. **Edit 3**: Implement projection logic in `transforms/projection.rs`
+   - Add `ProjectRole` implementation to project `TStart` to local protocols
 
-> **Protocol Label Invariant:**
-> All protocol combinators must have a label parameter and implement `GetProtocolLabel`.
-> This is a core design rule for Besedarium. Update this file and documentation if the invariant changes.
+4. **Edit 4**: Create unit tests in `tests/` directory
+   - Create basic tests for `TStart` functionality
+   - Test projection and label preservation
+
+5. **Edit 5**: Add or update integration tests in `tests/protocols/` directory
+   - Update an existing protocol test to use `TStart`
+   - Verify that it works correctly in a real protocol scenario
+
+6. **Edit 6**: Update documentation in key files
+   - Update docstrings in `global.rs`
+   - Update module-level documentation as appropriate
+
+7. **Edit 7**: Update README.md if necessary to mention `TStart`
+
+## 6. Coding Guidelines
+
+- Follow Rust's naming conventions and coding style
+- Add comprehensive docstrings to all public items
+- Ensure all changes pass all tests (`cargo test`)
+- Ensure code passes clippy (`cargo clippy`) without warnings
+- Format all code with rustfmt (`cargo fmt`)
+
+## 7. Testing Strategy
+
+### 7.1. Unit Tests
+
+1. Test that `TStart` is properly defined and can be used in type definitions
+2. Test that `TStart` projects correctly to local protocols
+3. Test that labels are preserved through projection
+4. Test that `TStart` composes correctly with other protocol combinators
+
+### 7.2. Integration Tests
+
+1. Update an existing protocol test to use `TStart` as its entry point
+2. Create a new protocol example that uses `TStart` to verify its applicability
+
+## 8. Documentation
+
+The following documentation updates will be needed:
+
+1. Add detailed docstrings to `TStart` definition
+2. Update module-level documentation in `global.rs` to mention `TStart`
+3. Update ImplementationOverview.md to include `TStart` in the list of global session type combinators
+
+## 9. Risks and Mitigations
+
+### 9.1. Potential Risks
+
+1. **Projection Complexity**: Adding a new global combinator may require updates to the projection system.
+   - *Mitigation*: Follow the existing pattern of projection implementation.
+
+2. **Backward Compatibility**: Existing tests may need to be updated.
+   - *Mitigation*: Ensure that `TStart` is optional for existing protocols or update tests to use it.
+
+3. **Composition Rules**: Composition with other combinators needs careful consideration.
+   - *Mitigation*: Define composition rules clearly and test them exhaustively.
+
+## 10. Future Considerations
+
+1. Consider adding a specific local projection type for `TStart` if needed, like `EpStart`
+2. Consider enhancing `TStart` with additional metadata about the protocol
+3. Consider adding support for multiple starting points in complex protocols

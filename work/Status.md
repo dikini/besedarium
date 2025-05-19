@@ -7,6 +7,7 @@ This document provides a status overview of the Besedarium session types library
 ### 1.1 Implemented Features
 
 - **Core Combinators**: 
+  - `TStart<IO, Lbl, S>`: Protocol entry point with label Lbl and continuation S
   - `TSend<IO, Lbl, R, H, T>`: Send action from role R with message H and label Lbl
   - `TRecv<IO, Lbl, R, H, T>`: Receive action for role R with message H and label Lbl
   - `TChoice<IO, Lbl, L, R>`: Binary choice between two protocol branches
@@ -23,7 +24,7 @@ This document provides a status overview of the Besedarium session types library
   - Label parameters for all combinators
   - Type-level role extraction and containment checking
 
-### 1.2 Missing Features
+### 1.2 Missing Features and Work in Progress
 
 - **Advanced Recursion**:
   - No explicit recursion variables (`TMu`/`TVar` style)

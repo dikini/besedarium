@@ -34,10 +34,10 @@ pub mod test_overrides;
 // Re-export commonly used items at the protocol module level
 pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList};
 pub use self::global::{
-    AssertDisjoint, TChoice, TEnd, TPar, TRec, TRecv, TSend, TSession, ToTChoice, ToTPar,
+    AssertDisjoint, TChoice, TEnd, TPar, TRec, TRecv, TSend, TSession, ToTChoice, ToTPar, TStart,
 };
 pub use self::local::{
-    EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, GetEpSkipTypeMarker, IsEnd,
+    EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, EpStart, GetEpSkipTypeMarker, IsEnd,
     IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, RoleEq, TBroker, TClient,
     TServer, TWorker, Void,
 };

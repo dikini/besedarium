@@ -61,16 +61,29 @@ system. With this library, you can:
 
 ```rust
 use besedarium::*;
-struct L; impl ProtocolLabel for L {}
-type Handshake = TSend<Http, L, TClient, Message, TSend<Http, L, TServer, Response, TEnd<Http, L>>>;
+struct StartL; impl ProtocolLabel for StartL {}
+struct RequestL; impl ProtocolLabel for RequestL {}
+struct ResponseL; impl ProtocolLabel for ResponseL {}
+struct EndL; impl ProtocolLabel for EndL {}
+
+type Handshake = TStart<Http, StartL, 
+    TSend<Http, RequestL, TClient, Message, 
+        TSend<Http, ResponseL, TServer, Response, 
+            TEnd<Http, EndL>
+        >
+    >
+>;
 ```
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant Server
+    
+    note over Client,Server: Protocol Start
     Client->>Server: Message
     Server-->>Client: Response
+    note over Client,Server: Protocol End
 ```
 
 ## Example: N-ary Choice

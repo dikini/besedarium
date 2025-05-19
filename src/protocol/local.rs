@@ -7,6 +7,7 @@
 //! Key components:
 //!
 //! - `EpSession`: Core trait for all local session types
+//! - `EpStart`: Protocol entry point
 //! - `EpSend`: Endpoint sending operation
 //! - `EpRecv`: Endpoint receiving operation
 //! - `EpChoice`: Endpoint protocol choice
@@ -123,6 +124,16 @@ pub struct EpSkip<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
 impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpSkip<IO, Lbl, R> {}
 impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpSkip<IO, Lbl, R> {}
 
+/// Endpoint type for protocol starting point.
+///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this start point (for traceability and debugging).
+/// - `Me`: Role for which the protocol starts.
+/// - `T`: Continuation after the start point.
+pub struct EpStart<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
+impl<IO, Lbl: types::ProtocolLabel, Me, T> EpSession<IO, Me> for EpStart<IO, Lbl, Me, T> {}
+impl<IO, Lbl: types::ProtocolLabel, Me, T> sealed::Sealed for EpStart<IO, Lbl, Me, T> {}
+
 /// Implements the protocol label invariant for EpSkip.
 /// See: Protocol Label Invariant in project documentation.
 impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel
@@ -162,6 +173,13 @@ impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetPr
 /// Implements the protocol label invariant for EpPar.
 impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetProtocolLabel
     for EpPar<IO, Lbl, Me, L, R>
+{
+    type Label = Lbl;
+}
+
+/// Implements the protocol label invariant for EpStart.
+impl<IO, Lbl: types::ProtocolLabel, Me, T> crate::protocol::transforms::GetProtocolLabel
+    for EpStart<IO, Lbl, Me, T>
 {
     type Label = Lbl;
 }

@@ -246,6 +246,83 @@ Three proven approaches for implementing session types at runtime:
 - To avoid CI failures, README.md inclusion is now limited to docs.rs builds, and a warning is present in the README.
 - Always document these limitations for users and contributors.
 
+## Learnings
+
+### Protocol Transform Modularization (2025-05-18)
+
+- Modularizing protocol transformation logic improves maintainability, discoverability, and testability.
+- Rust stable type-level programming requires careful trait and module organization to avoid orphan rules and import conflicts.
+- Doctests must use public re-export paths (e.g., `besedarium::ProjectChoice`) to work for both users and CI.
+- Removing unused imports and running `cargo fmt`, `clippy`, and doctests is essential for a clean, CI-ready codebase.
+- Documentation should always reflect the public API and module structure, with clear examples and trait explanations.
+- When splitting large files, update all references and re-exports to avoid breakage in dependent modules and tests.
+- Use `pub use` in `mod.rs` to provide a stable, discoverable API surface for downstream users.
+- Maintain a running changelog and status file to track progress and ensure nothing is missed during large refactors.
+
+### Implementing Helper Traits for Projection (2025-05-19)
+
+- Implementing helper traits like `ProjectSendCase` and `ProjectRecvCase` in separate modules improves code organization and maintainability.
+- When implementing these traits, proper type bounds are critical - especially ensuring `IO: SessionType` and the role-specific requirements.
+- Using type-level booleans (`True`/`False`) for dispatch based on role equality is an effective pattern for handling different projection cases.
+- The implementation follows the "Helper Trait Case Analysis" pattern where:
+  1. The main trait (`ProjectRole`) delegates to case-specific helpers (`ProjectSendCase`, `ProjectRecvCase`)
+  2. The helpers handle different cases based on type-level boolean flags (`Me == RSender` vs `Me != RSender`)
+  3. Each implementation provides a different local protocol type based on role involvement
+- Trait bounds in the implementation must be carefully managed:
+  1. Need to explicitly declare `(): ProjectRole<Me, IO, G>` to ensure the unit type implements the recursive projection
+  2. Need to include `IO: SessionType` in all implementations to maintain consistent bounds
+  3. Properly reference external bounds from other modules using full paths when needed
+- Code reuse across modules requires careful attention to imports and visibility
+- Mirror implementations between `send.rs` and `recv.rs` help maintain consistency and symmetry
+- In `ProjectRole` implementations, we need to:
+  1. Include bounds for role equality: `Me: RoleEq<RSender>` and `<Me as RoleEq<RSender>>::Output: Bool`
+  2. Add bounds for the helper traits: `(): ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>`
+- Compiler errors provide valuable guidance for fixing trait bounds, especially the `consider extending the where clause` hints.
+- When testing modularized code, `cargo check --lib` is useful for isolating library compilation from test cases.
+
+### Test Overrides Update (2025-05-19)
+
+- When modularizing a project, it's important to update test files that contain special case implementations
+- Special case test implementations often need explicit trait bounds that weren't required before modularization
+- For test types like `Http`, `Alice`, etc., we need to implement traits like `SessionType` to satisfy bounds in the new modularized structure
+- After modularization, imports should reference specific module paths rather than wildcard imports (e.g., `use crate::protocol::transforms::projection::ProjectRole` instead of `use crate::protocol::transforms::*`)
+- The compiler provides valuable diagnostic information about missing trait implementations which can guide the update process
+- Test types defined in test files need the same trait implementations as their production counterparts to ensure type safety
+- Even when the structure of implementations doesn't change, the trait bounds and import paths need to be updated to match the new module organization
+
+### Protocol Combinator Implementation (2025-05-19)
+
+- When adding a new protocol combinator, follow these key steps:
+  1. Define the struct in `global.rs` with proper generic parameters and PhantomData
+  2. Implement `sealed::Sealed` to restrict trait implementations
+  3. Implement `TSession<IO>` with proper composition rules
+  4. Implement `GetProtocolLabel` to adhere to the protocol label invariant
+  5. Implement `ProjectRole` for projection to local protocols
+- All combinators must adhere to the protocol label invariant by having a label parameter and implementing GetProtocolLabel
+- For projection, consider how the new combinator should translate to local protocols
+- Maintain consistent pattern with existing combinators (e.g., TEnd, TSend, TRecv, TChoice)
+- Carefully define composition rules in the TSession implementation to ensure proper protocol composition
+- Add comprehensive documentation and test cases for the new combinator
+- Update integration tests to showcase the new combinator in real protocol scenarios
+- Consider the impact on existing code and maintain backward compatibility where possible
+
+### TStart Implementation (2025-05-19)
+
+- The `TStart` combinator provides an explicit entry point for protocols:
+  1. Defined `TStart<IO, Lbl, S>` in `global.rs` with label parameter and continuation
+  2. Created corresponding `EpStart<IO, Lbl, Me, T>` in `local.rs` for local protocols
+  3. Implemented `ProjectRole` to correctly project global `TStart` to local `EpStart`
+  4. Added label preservation via `GetProtocolLabel` implementation
+- Defined composition behavior: `TStart<IO, Lbl, S>::Compose<Rhs> = TStart<IO, Lbl, S::Compose<Rhs>>`
+- Added comprehensive tests:
+  1. Basic type construction tests
+  2. Projection correctness tests for multiple roles
+  3. Label preservation tests
+  4. Composition tests with other protocol combinators
+- Updated docs and examples to showcase `TStart` usage in practical protocol definitions
+- Protocol entry points improve protocol clarity and provide a consistent structure
+- The architecture follows the protocol label invariant, ensuring all type information is preserved during transformations
+
 ---
 
 *This knowledge base distills the core patterns for implementing session types in Rust. Reference when implementing protocol-related functionality.*
