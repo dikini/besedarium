@@ -164,6 +164,16 @@ impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, L
     const IS_EMPTY: bool = false;
 }
 
+/// Continue recursion at the protocol fragment labeled by `Lbl`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct TContinue<IO, Lbl: types::ProtocolLabel>(PhantomData<(IO, Lbl)>);
+
+impl<IO, Lbl: types::ProtocolLabel> sealed::Sealed for TContinue<IO, Lbl> {}
+impl<IO, Lbl: types::ProtocolLabel> TSession<IO> for TContinue<IO, Lbl> {
+    type Compose<Rhs: TSession<IO>> = TContinue<IO, Lbl>;
+    const IS_EMPTY: bool = false;
+}
+
 /// Branded parallel composition of two protocol branches.
 ///
 /// - `IO`: Protocol marker type.

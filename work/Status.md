@@ -156,32 +156,33 @@ This document provides a status overview of the Besedarium session types library
 - **Init** Global session combinator that projects to all local roles. Signifies protocol initialisation. Possibly tied to runtime channels.
 - **Metadata** type parameter. A reader-like, configuration type parameter, there to supply common configuration to all. Should be projected to local roles, either as a whole, or could be projected to piece-wise to specific roles.
 
-# Project Status
+## 5. Current Project Status
 
-## Current Work in Progress
+### 5.1 Work in Progress
 
 - Protocol transform modularization: **completed** implementing `ProjectSendCase` and `ProjectRecvCase` in their own modules
 - Next step: Update tests in `test_overrides.rs` to work with the new modular structure
 
-## Current Issues
+### 5.2 Current Issues
 
 - Tests in `test_overrides.rs` need updates to work with the new modular structure
 - Need to review documentation consistency across the modularized files
 - See GitHub issues for any remaining edge cases or documentation improvements
 
-## Current PRs
+### 5.3 Current PRs
 
 - [Modularize protocol transforms and update references](https://github.com/YOUR_REPO/besedarium/pull/XX) (pending review)
+- [New implementation of recursive combinators](https://github.com/YOUR_REPO/besedarium/pull/19) (draft, resolves issue #19)
 
-## Current Tasks
+### 5.4 Current Tasks
 
 - See [work/TASKS.md](TASKS.md)
 
-## Current Learnings
+### 5.5 Current Learnings
 
 - See [work/learnings.md](learnings.md)
 
-## Structure, Tests, Documentation
+### 5.6 Structure, Tests, Documentation
 
 - Core protocol transform code is now completely modularized:
   - `ProjectSendCase` trait fully implemented in `src/protocol/transforms/send.rs`
