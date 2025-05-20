@@ -48,7 +48,7 @@ and trybuild tests ensure that safety properties are enforced and violations are
   );
   ```
 
-  - `IO`: Protocol marker (e.g., Http, Mqtt)
+  - `IO`: Protocol marker type (e.g., Http, Mqtt)
   - `Lbl`: Label for this start point (for projection and debugging)
   - `S`: The continuation protocol after this start point
 - **Pros:**
@@ -79,56 +79,92 @@ and trybuild tests ensure that safety properties are enforced and violations are
       Response --> End((End))
   ```
 
-### 2. `TInteract`
+### 2. `TSend`
 
-- **Purpose:** Models a single interaction (send/receive) by a role in a protocol.
+- **Purpose:** Models a single send action in a protocol session.
 - **Implementation:**
 
   ```rust
-  pub struct TInteract<IO, Lbl: ProtocolLabel, R, H, T: TSession<IO>>(
+  pub struct TSend<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
       PhantomData<(IO, Lbl, R, H, T)>,
   );
   ```
 
-  - `IO`: Protocol marker (e.g., Http, Mqtt)
-  - `Lbl`: Label for this interaction (for projection and debugging)
-  - `R`: Role performing the action (sender or receiver)
-  - `H`: Message type being sent or received
-  - `T`: Continuation protocol after this interaction
+  - `IO`: Protocol marker type (e.g., Http, Mqtt)
+  - `Lbl`: Label for this send (for projection and debugging)
+  - `R`: Role performing the send
+  - `H`: Message type being sent
+  - `T`: Continuation protocol after this send
 - **Pros:**
-  - Simple, compositional building block for protocols.
-  - Encodes both the actor and the message at the type level.
-  - Labeling supports protocol projection and debugging.
+  - Fine-grained control for modeling single send actions
+  - Clear specification of the sending role and message type
+  - Composable with other protocol combinators
 - **Cons:**
-  - Requires explicit role, label, and message types for each step.
+  - More verbose than higher-level combinators for simple interactions
 - **Properties Ensured:**
-  - Linearity (each step is explicit and unique in the protocol).
-  - Type safety for message and role.
+  - Clear specification of sending role
+  - Type safety of sent messages
 - **Example:**
 
   ```rust
-  type Handshake = TInteract<Http, HandshakeLabel, TClient, Message,
-      TInteract<Http, ResponseLabel, TServer, Response, TEnd<Http>>>;
-  // Projects to local types for each role using the projection machinery (see below).
+  type RequestProtocol = TSend<Http, RequestLabel, Client, Message,
+      TRecv<Http, ResponseLabel, Server, Response, TEnd<Http, EndLabel>>
+  >;
   ```
 
   - **Diagram:**
 
   ```mermaid
-  sequenceDiagram
-      participant Client
-      participant Server
-      Client->>Server: Message
-      Server-->>Client: Response
+  flowchart TB
+      Request[Client: Message] --> Response[Server: Response]
+      Response --> End((End))
   ```
 
-### 2. `TChoice`
+### 3. `TRecv`
+
+- **Purpose:** Models a single receive action in a protocol session.
+- **Implementation:**
+
+  ```rust
+  pub struct TRecv<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
+      PhantomData<(IO, Lbl, R, H, T)>,
+  );
+  ```
+
+  - `IO`: Protocol marker type (e.g., Http, Mqtt)
+  - `Lbl`: Label for this receive (for projection and debugging)
+  - `R`: Role performing the receive
+  - `H`: Message type being received
+  - `T`: Continuation protocol after this receive
+- **Pros:**
+  - Fine-grained control for modeling single receive actions
+  - Clear specification of the receiving role and message type
+  - Composable with other protocol combinators
+- **Cons:**
+  - More verbose than higher-level combinators for simple interactions
+- **Properties Ensured:**
+  - Clear specification of receiving role
+  - Type safety of received messages
+- **Example:**
+
+  ```rust
+  type ResponseProtocol = TRecv<Http, ResponseLabel, Server, Response, TEnd<Http, EndLabel>>;
+  ```
+
+  - **Diagram:**
+
+  ```mermaid
+  flowchart TB
+      Response[Server: Response] --> End((End))
+  ```
+
+### 4. `TChoice`
 
 - **Purpose:** Models a branching point in the protocol (choice between alternatives).
 - **Implementation:**
 
   ```rust
-  pub struct TChoice<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>>(
+  pub struct TChoice<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>>(
       PhantomData<(IO, Lbl, L, R)>,
   );
   ```
@@ -148,8 +184,8 @@ and trybuild tests ensure that safety properties are enforced and violations are
 
   ```rust
   type Choice = TChoice<Http, ChoiceLabel,
-      TInteract<Http, L1, TClient, Message, TEnd<Http>>,
-      TInteract<Http, L2, TServer, Response, TEnd<Http>>
+      TSend<Http, L1, TClient, Message, TEnd<Http>>,
+      TSend<Http, L2, TServer, Response, TEnd<Http>>
   >;
   // Each branch is projected to the local type for each role.
   ```
@@ -167,13 +203,13 @@ and trybuild tests ensure that safety properties are enforced and violations are
       B --> End2((End))
   ```
 
-### 3. `TPar`
+### 5. `TPar`
 
 - **Purpose:** Models parallel (concurrent) composition of protocol branches.
 - **Implementation:**
 
   ```rust
-  pub struct TPar<IO, Lbl: ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
+  pub struct TPar<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
       PhantomData<(IO, Lbl, L, R, IsDisjoint)>,
   );
   ```
@@ -196,8 +232,8 @@ and trybuild tests ensure that safety properties are enforced and violations are
 
   ```rust
   type Workflow = TPar<Http, ParLabel,
-      TInteract<Http, L1, TClient, Message, TInteract<Http, L2, TServer, Response, TEnd<Http>>>,
-      TInteract<Http, L3, TBroker, Publish, TEnd<Http>>,
+      TSend<Http, L1, TClient, Message, TRecv<Http, L2, TServer, Response, TEnd<Http>>>,
+      TSend<Http, L3, TBroker, Publish, TEnd<Http>>,
       TrueB // or FalseB, depending on disjointness check
   >;
   // Each branch is projected independently to local types for each role.
@@ -221,7 +257,7 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Implementation:**
 
   ```rust
-  pub struct TRec<IO, Lbl: ProtocolLabel, S: TSession<IO>>(
+  pub struct TRec<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(
       PhantomData<(IO, Lbl, S)>,
   );
   ```
@@ -239,7 +275,7 @@ and trybuild tests ensure that safety properties are enforced and violations are
 - **Example:**
 
   ```rust
-  type Streaming = TRec<Http, StreamLabel, TInteract<Http, L1, TClient, Message, TEnd<Http>>>;
+  type Streaming = TRec<Http, StreamLabel, TSend<Http, L1, TClient, Message, TEnd<Http>>>;
   // Recursion is preserved in the local projection.
   ```
 
@@ -253,17 +289,17 @@ and trybuild tests ensure that safety properties are enforced and violations are
       A --> Start
   ```
 
-### 5. `TEnd`
+### 6. `TEnd`
 
 - **Purpose:** Marks the end of a protocol branch.
 - **Implementation:**
 
   ```rust
-  pub struct TEnd<IO, Lbl = EmptyLabel>(PhantomData<(IO, Lbl)>);
+  pub struct TEnd<IO, Lbl = types::EmptyLabel>(PhantomData<(IO, Lbl)>);
   ```
 
   - `IO`: Protocol marker type
-  - `Lbl`: Label for this end (default: EmptyLabel)
+  - `Lbl`: Label for this end (default: types::EmptyLabel)
 - **Pros:**
   - Simple, unambiguous protocol termination.
 - **Cons:**
@@ -286,10 +322,21 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 
 ### Endpoint Combinators
 
+- **EpStart**: Endpoint protocol starting point
+
+  ```rust
+  pub struct EpStart<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
+  ```
+  
+  - `IO`: Protocol marker type
+  - `Lbl`: Label for this start point (for traceability and debugging)
+  - `Me`: Role for which the protocol starts
+  - `T`: Continuation after the start point
+
 - **EpSend**: Endpoint sending operation
 
   ```rust
-  pub struct EpSend<IO, Lbl: ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+  pub struct EpSend<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
   ```
 
   - `IO`: Protocol marker type
@@ -301,7 +348,7 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 - **EpRecv**: Endpoint receiving operation
 
   ```rust
-  pub struct EpRecv<IO, Lbl: ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
+  pub struct EpRecv<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
   ```
 
   - `IO`: Protocol marker type
@@ -313,7 +360,7 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 - **EpChoice**: Endpoint protocol choice (branching/offer)
 
   ```rust
-  pub struct EpChoice<IO, Lbl: ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+  pub struct EpChoice<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
   ```
 
   - `IO`: Protocol marker type
@@ -324,7 +371,7 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 - **EpPar**: Endpoint parallel composition
 
   ```rust
-  pub struct EpPar<IO, Lbl: ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
+  pub struct EpPar<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
   ```
 
   - `IO`: Protocol marker type
@@ -335,7 +382,7 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 - **EpEnd**: Endpoint protocol termination
 
   ```rust
-  pub struct EpEnd<IO, Lbl: ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+  pub struct EpEnd<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
   ```
 
   - `IO`: Protocol marker type
@@ -345,7 +392,7 @@ Local (endpoint) types describe the protocol from the perspective of a single ro
 - **EpSkip**: No-op type for roles not involved in a branch
 
   ```rust
-  pub struct EpSkip<IO, Lbl: ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
+  pub struct EpSkip<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
   ```
 
   - `IO`: Protocol marker type
@@ -375,7 +422,7 @@ The core of Besedarium's type-level protocol analysis is the machinery for proje
 
 - **`ProjectRole`**: The main trait for projecting a global protocol onto a specific role, producing the local endpoint type for that role.
 
-- **`ProjectInteract`**: Helper trait for projecting a single interaction, dispatching on whether the role is the sender or receiver.
+- **`ProjectSendCase`** / **`ProjectRecvCase`**: Helper traits for projecting send and receive operations, dispatching based on whether the role is the sender or receiver.
 
 - **`ProjectChoice` / `ProjectChoiceCase`**: Helpers for projecting protocol choices, handling all cases of role presence in branches.
 
@@ -392,16 +439,21 @@ The core of Besedarium's type-level protocol analysis is the machinery for proje
 ### Main Projection Trait: `ProjectRole`
 
 ```rust
-pub trait ProjectRole<Me, IO, G: TSession<IO>> {
+pub trait ProjectRole<Me, IO, Global>
+where
+    Me: Role,
+    IO: SessionType,
+    Global: GlobalTSession<IO>,
+{
     type Out: EpSession<IO, Me>;
 }
 ```
 
 - `Me`: The role being projected
 
-- `IO`: Protocol marker type
+- `IO`: Protocol marker type (like Http, Mqtt)
 
-- `G`: The global protocol type
+- `Global`: The global protocol type
 
 - `Out`: The resulting local endpoint type for `Me`
 
@@ -409,8 +461,8 @@ pub trait ProjectRole<Me, IO, G: TSession<IO>> {
 
 ```rust
 // Global protocol: Alice sends Message, then Bob sends Response
-// type Global = TInteract<Http, EmptyLabel, Alice, Message,
-//     TInteract<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>>;
+// type Global = TSend<Http, EmptyLabel, Alice, Message,
+//     TSend<Http, EmptyLabel, Bob, Response, TEnd<Http, EmptyLabel>>>;
 // Project onto Alice:
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 // Result: EpSend<..., EpRecv<..., EpEnd<...>>>
@@ -418,73 +470,169 @@ type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
 
 ### Projection for Each Global Combinator
 
-#### 1. `TEnd`
+#### 1. `TStart`
+
+- Projects to `EpStart` for the role, preserving the label.
+
+```rust
+impl<Me, IO, Lbl, S> ProjectRole<Me, IO, GlobalTStart<IO, Lbl, S>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    S: GlobalTSession<IO> + ProjectRole<Me, IO, S>,
+    <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>,
+    (): ProjectStartCase<Me, IO, Lbl, S>,
+{
+    type Out = <() as ProjectStartCase<Me, IO, Lbl, S>>::Out;
+}
+```
+
+#### 2. `TEnd`
 
 - Projects to `EpEnd` for the role, preserving the label.
 
 ```rust
-impl<Me, IO, Lbl> ProjectRole<Me, IO, TEnd<IO, Lbl>> for () {
-    type Out = EpEnd<IO, Lbl, Me>;
+impl<Me, IO, Lbl> ProjectRole<Me, IO, GlobalTEnd<IO, Lbl>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    (): ProjectEndCase<Me, IO, Lbl>,
+{
+    type Out = <() as ProjectEndCase<Me, IO, Lbl>>::Out;
 }
 ```
 
-#### 2. `TInteract`
+#### 3. `TSend`
 
 - If the role is the sender, projects to `EpSend`.
 
-- If the role is not the sender, projects to `EpRecv`.
+- If the role is not the sender, projects to `EpRecv` (or other appropriate action).
 
-- Uses `ProjectInteract` to dispatch based on role equality.
+- Uses `ProjectSendCase` to dispatch based on role equality.
 
 ```rust
-impl<Me, IO, Lbl, R, H, T> ProjectRole<Me, IO, TInteract<IO, Lbl, R, H, T>> for ()
+impl<Me, IO, Lbl, RSender, P, G> ProjectRole<Me, IO, GlobalTSend<IO, Lbl, RSender, P, G>> for ()
 where
-    Me: RoleEq<R>,
-    (): ProjectInteract<<Me as RoleEq<R>>::Output, Me, IO, Lbl, R, H, T>,
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    RSender: Role,
+    P: Send + 'static,
+    G: GlobalTSession<IO> + ProjectRole<Me, IO, G>,
+    <G as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
+    Me: RoleEq<RSender>,
+    <Me as RoleEq<RSender>>::Output: Bool,
+    (): ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>,
 {
-    type Out = <() as ProjectInteract<<Me as RoleEq<R>>::Output, Me, IO, Lbl, R, H, T>>::Out;
+    type Out = <() as ProjectSendCase<
+        Me,
+        IO,
+        Lbl,
+        RSender,
+        P,
+        G,
+        <Me as RoleEq<RSender>>::Output,
+    >>::Output;
 }
 ```
 
-#### 3. `TChoice`
+#### 4. `TRecv`
 
-- Projects to `EpChoice` if the role is present in either branch.
+- If the role is the receiver, projects to `EpRecv`.
 
-- If the role is present in only one branch, the other branch is projected as `EpSkip`.
+- If the role is not the receiver, projects to appropriate action.
 
-- If the role is in neither branch, projects to `EpSkip`.
-
-- Uses `ContainsRole` and `ProjectChoiceCase` for case analysis.
+- Uses `ProjectRecvCase` to dispatch based on role equality.
 
 ```rust
-impl<Me, IO, Lbl, L, R> ProjectRole<Me, IO, TChoice<IO, Lbl, L, R>> for ()
+impl<Me, IO, Lbl, RReceiver, P, G> ProjectRole<Me, IO, GlobalTRecv<IO, Lbl, RReceiver, P, G>> for ()
 where
-    L: ContainsRole<Me>,
-    R: ContainsRole<Me>,
-    (): ProjectChoiceCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>,
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    RReceiver: Role,
+    P: Send + 'static,
+    G: GlobalTSession<IO> + ProjectRole<Me, IO, G>,
+    <G as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
+    Me: RoleEq<RReceiver>,
+    <Me as RoleEq<RReceiver>>::Output: Bool,
+    (): ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, <Me as RoleEq<RReceiver>>::Output>,
 {
-    type Out = <() as ProjectChoiceCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>>::Out;
+    type Out = <() as ProjectRecvCase<
+        Me,
+        IO,
+        Lbl,
+        RReceiver,
+        P,
+        G,
+        <Me as RoleEq<RReceiver>>::Output,
+    >>::Output;
 }
 ```
 
-#### 4. `TPar`
+#### 5. `TChoice`
 
-- Projects to `EpPar` if the role is present in both branches.
+- Projects to `EpChoice` with the two branches projected independently.
 
-- If the role is present in only one branch, projects that branch directly.
-
-- If the role is in neither branch, projects to `EpSkip`.
-
-- Uses `ContainsRole` and `ProjectParCase` for case analysis.
+- Each branch gets projected for the role Me.
 
 ```rust
-impl<Me, IO, Lbl, L, R, IsDisjoint> ProjectRole<Me, IO, TPar<IO, Lbl, L, R, IsDisjoint>> for ()
+impl<Me, IO, Lbl, LeftBranch, RightBranch>
+    ProjectRole<Me, IO, GlobalTChoice<IO, Lbl, LeftBranch, RightBranch>> for ()
 where
-    L: ContainsRole<Me>,
-    R: ContainsRole<Me>,
-    (): ProjectParCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>,
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    LeftBranch: GlobalTSession<IO> + ProjectRole<Me, IO, LeftBranch>,
+    RightBranch: GlobalTSession<IO> + ProjectRole<Me, IO, RightBranch>,
+    <LeftBranch as ProjectRole<Me, IO, LeftBranch>>::Out: EpSession<IO, Me>,
+    <RightBranch as ProjectRole<Me, IO, RightBranch>>::Out: EpSession<IO, Me>,
 {
-    type Out = <() as ProjectParCase<Me, IO, Lbl, L, R, <L as ContainsRole<Me>>::Output, <R as ContainsRole<Me>>::Output>>::Out;
+    type Out = EpChoice<
+        IO,
+        Lbl,
+        Me,
+        <LeftBranch as ProjectRole<Me, IO, LeftBranch>>::Out,
+        <RightBranch as ProjectRole<Me, IO, RightBranch>>::Out,
+    >;
+}
+```
+
+#### 6. `TPar`
+
+- Projects to a combination of the two branches projected independently.
+
+- Uses `ProjectPar` to combine the projected branches properly.
+
+```rust
+impl<Me, IO, Lbl, G1, G2, IsDisjointFlag>
+    ProjectRole<Me, IO, GlobalTPar<IO, Lbl, G1, G2, IsDisjointFlag>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    G1: GlobalTSession<IO> + ProjectRole<Me, IO, G1>,
+    G2: GlobalTSession<IO> + ProjectRole<Me, IO, G2>,
+    IsDisjointFlag: Disjoint<G1, G2>,
+    <G1 as ProjectRole<Me, IO, G1>>::Out: EpSession<IO, Me>,
+    <G2 as ProjectRole<Me, IO, G2>>::Out: EpSession<IO, Me>,
+    (): ProjectPar<
+        Me,
+        IO,
+        Lbl,
+        <G1 as ProjectRole<Me, IO, G1>>::Out,
+        <G2 as ProjectRole<Me, IO, G2>>::Out,
+    >,
+{
+    type Out = <() as ProjectPar<
+        Me,
+        IO,
+        Lbl,
+        <G1 as ProjectRole<Me, IO, G1>>::Out,
+        <G2 as ProjectRole<Me, IO, G2>>::Out,
+    >>::Out;
 }
 ```
 
@@ -506,8 +654,11 @@ where
 impl<IO, Lbl, R> ContainsRole<R> for TEnd<IO, Lbl> {
     type Output = types::False;
 }
-// For TInteract, all roles are considered present (sender or receiver)
-impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TInteract<IO, Lbl, R1, H, T> {
+// For TSend and TRecv, all roles are considered present (sender or receiver)
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TSend<IO, Lbl, R1, H, T> {
+    type Output = types::True;
+}
+impl<IO, Lbl, H, T, R1, R2> ContainsRole<R2> for TRecv<IO, Lbl, R1, H, T> {
     type Output = types::True;
 }
 ```
@@ -544,8 +695,8 @@ impl<IO, Me, Lbl1, Lbl2> ComposeProjectedParBranchesCase<types::True, types::Tru
 ```rust
 // Given a global protocol:
 type Global = TPar<Http, ParLabel,
-    TInteract<Http, L1, Alice, Msg, TEnd<Http>>,
-    TInteract<Http, L2, Bob, Ack, TEnd<Http>>,
+    TSend<Http, L1, Alice, Msg, TEnd<Http>>,
+    TSend<Http, L2, Bob, Ack, TEnd<Http>>,
     TrueB>;
 // Project onto Alice:
 type AliceLocal = <() as ProjectRole<Alice, Http, Global>>::Out;
@@ -668,7 +819,6 @@ and runtime integration.
                    |
 |------------|----------------|----------------------------|-----------------------------|----------
 ------------------|
-| TInteract  | Interaction    | Linearity, type safety     | Simple, compositional       | Explicit
 for each step     |
 | TChoice    | Branching      | Exhaustiveness             | Expressive, n-ary via macro | Verbose
 without macros     |

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Project Status (as of May 19, 2025)
+### Project Status (as of May 20, 2025)
 
 - **Documentation**: Comprehensive, with README.md, module-level docs, and detailed explanation files in docs/
 - **Codebase Structure**: Fully modularized architecture with separate files for each protocol transformation
@@ -46,6 +46,12 @@ tests in cargo test output.
 protocol examples.
 - Modularized protocol transformation machinery: split `transforms.rs` into `projection.rs`, `choice.rs`, `parallel.rs`, `recursion.rs`, and `util.rs` under `src/protocol/transforms/`.
 - Added module-level documentation and improved doc comments for all protocol transform traits.
+- Updated Implementation Overview documentation to reflect current codebase structure:
+  - Replaced outdated `TInteract` references with separate `TSend` and `TRecv` combinators
+  - Updated all type signatures to match current implementation
+  - Updated projection trait implementations with current trait bounds and type parameters
+  - Added missing documentation for `EpStart` endpoint combinator
+  - Updated examples to use current combinator implementations
 
 ### Fixed
 
