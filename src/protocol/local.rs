@@ -134,6 +134,27 @@ pub struct EpStart<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, M
 impl<IO, Lbl: types::ProtocolLabel, Me, T> EpSession<IO, Me> for EpStart<IO, Lbl, Me, T> {}
 impl<IO, Lbl: types::ProtocolLabel, Me, T> sealed::Sealed for EpStart<IO, Lbl, Me, T> {}
 
+/// Endpoint type for recursion in a local protocol.
+///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this recursion (for traceability and debugging).
+/// - `Me`: The role being projected.
+/// - `T`: The protocol fragment to repeat (may refer to itself).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EpRec<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
+impl<IO, Lbl: types::ProtocolLabel, Me, T> EpSession<IO, Me> for EpRec<IO, Lbl, Me, T> {}
+impl<IO, Lbl: types::ProtocolLabel, Me, T> sealed::Sealed for EpRec<IO, Lbl, Me, T> {}
+
+/// Endpoint type for continue recursion in a local protocol.
+///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this continue (for traceability and debugging).
+/// - `Me`: The role being projected.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EpContinue<IO, Lbl: types::ProtocolLabel, Me>(PhantomData<(IO, Lbl, Me)>);
+impl<IO, Lbl: types::ProtocolLabel, Me> EpSession<IO, Me> for EpContinue<IO, Lbl, Me> {}
+impl<IO, Lbl: types::ProtocolLabel, Me> sealed::Sealed for EpContinue<IO, Lbl, Me> {}
+
 /// Implements the protocol label invariant for EpSkip.
 /// See: Protocol Label Invariant in project documentation.
 impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel

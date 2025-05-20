@@ -189,3 +189,25 @@ where
         <RightBranch as ProjectRole<Me, IO, RightBranch>>::Out,
     >;
 }
+
+// ProjectRole for TRec<IO, Lbl, S>
+impl<Me, IO, Lbl, S> ProjectRole<Me, IO, crate::protocol::global::TRec<IO, Lbl, S>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+    S: crate::protocol::global::TSession<IO> + ProjectRole<Me, IO, S>,
+    <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>,
+{
+    type Out = crate::protocol::local::EpRec<IO, Lbl, Me, <S as ProjectRole<Me, IO, S>>::Out>;
+}
+
+// ProjectRole for TContinue<IO, Lbl>
+impl<Me, IO, Lbl> ProjectRole<Me, IO, crate::protocol::global::TContinue<IO, Lbl>> for ()
+where
+    Me: Role,
+    IO: SessionType,
+    Lbl: ProtocolLabel,
+{
+    type Out = crate::protocol::local::EpContinue<IO, Lbl, Me>;
+}

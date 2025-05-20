@@ -4,6 +4,8 @@
 //! that generate endpoint (local) session types from global session types.
 
 use besedarium::*;
+use besedarium::protocol::global::{TRec, TContinue};
+use besedarium::protocol::local::{EpRec, EpContinue};
 
 // --- Custom Label Types for Testing ---
 struct L1;
@@ -286,6 +288,79 @@ mod project_role_tests {
                         EpRecv<Http, L2, Alice, Response, EpEnd<Http, L3, Alice>>,
                     >,
                 >,
+            >
+        );
+    }
+
+    // Test projection of TRec and TContinue (recursion)
+    #[test]
+    fn test_projection_of_trec_and_tcontinue() {
+        // Define a recursive global protocol: Alice sends, Bob receives, then recurse
+        type GlobalProtocol = TRec<
+            Http,
+            L1,
+            TInteract<
+                Http,
+                L2,
+                Alice,
+                Message,
+                TInteract<
+                    Http,
+                    L3,
+                    Bob,
+                    Response,
+                    TContinue<Http, L1>,
+                >,
+            >,
+        >;
+
+        // Project onto Alice
+        type AliceLocal = <() as ProjectRole<Alice, Http, GlobalProtocol>>::Out;
+        // Expected: EpRec<Http, L1, Alice, EpSend<Http, L2, Alice, Message, EpRecv<Http, L3, Alice, Response, EpContinue<Http, L1, Alice>>>>
+        assert_type_eq!(
+            AliceLocal,
+            EpRec<
+                Http,
+                L1,
+                Alice,
+                EpSend<
+                    Http,
+                    L2,
+                    Alice,
+                    Message,
+                    EpRecv<
+                        Http,
+                        L3,
+                        Alice,
+                        Response,
+                        EpContinue<Http, L1, Alice>
+                    >
+                >
+            >
+        );
+
+        // Project onto Bob
+        type BobLocal = <() as ProjectRole<Bob, Http, GlobalProtocol>>::Out;
+        // Expected: EpRec<Http, L1, Bob, EpRecv<Http, L2, Bob, Message, EpSend<Http, L3, Bob, Response, EpContinue<Http, L1, Bob>>>>
+        assert_type_eq!(
+            BobLocal,
+            EpRec<
+                Http,
+                L1,
+                Bob,
+                EpRecv<
+                    Http,
+                    L2,
+                    Bob,
+                    Message,
+                    EpSend<
+                        Http,
+                        L3,
+                        Bob,
+                        Response,
+                        EpContinue<Http, L1, Bob>
+                    >
+                >
             >
         );
     }
