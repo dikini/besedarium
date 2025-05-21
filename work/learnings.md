@@ -331,4 +331,47 @@ Three proven approaches for implementing session types at runtime:
 
 ---
 
-*This knowledge base distills the core patterns for implementing session types in Rust. Reference when implementing protocol-related functionality.*
+*This knowledge base distills the core patterns for implementing session types in Rust. Reference when implementing protocol-related functionality*
+
+## Duality and Well-Formedness in MPST (May 2025)
+
+### Key Concepts and Patterns
+
+- **Duality and Well-Formedness**
+  - Duality ensures that for every communication action (send/receive, offer/choice) between two roles, the actions are complementary.
+  - Well-formedness requires that all pairs of communicating roles are duals for their shared actions, preventing mismatches and deadlocks.
+
+- **Global (T*) vs Local (Ep*) Types**
+  - Global types (T*) describe the protocol as a whole; local types (Ep*) are projections for each role.
+  - Consistent naming and structuring clarify protocol intent and implementation.
+
+- **Type-Level Programming Patterns in Rust**
+  - Use marker types and PhantomData to encode protocol structure at the type level.
+  - Traits such as `TSession`, `Project`, `Dual`, `IsDual`, and `IsWellFormed` enable compile-time protocol verification.
+  - Boolean logic and recursive trait implementations are used for type-level checks.
+  - Compile-time assertions (e.g., `assert_type_eq!`) help enforce protocol invariants.
+
+- **Pairwise Duality Checking**
+  - For each communicating pair, filter projections to shared actions and check duality in lockstep.
+  - Algorithmic matching ensures that every send has a matching receive, and every offer has a matching choice.
+
+- **Example-Driven Documentation**
+  - Concrete Rust-style examples for two- and three-role protocols clarify both well-formed and ill-formed cases.
+  - Examples illustrate projection, duality, and well-formedness checks.
+
+- **Type-Level Well-Formedness Expression**
+  - `IsWellFormed<G>` trait aggregates pairwise duality checks for all communicating pairs.
+  - Uses type-level sets, filtering, and aggregation to ensure protocol safety at compile time.
+
+### Patterns and Insights
+
+- Prefer explicit, minimal struct definitions for each protocol action.
+- Use trait-based type-level functions for protocol analysis and verification.
+- Document invariants and requirements for each protocol construct.
+- Maintain clear separation between global and local protocol representations.
+- Use lockstep filtering and pairwise checks for robust well-formedness analysis.
+- Example-driven explanations improve clarity and correctness.
+
+---
+
+_Last updated: 2025-05-20_

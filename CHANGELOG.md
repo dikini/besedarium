@@ -52,6 +52,13 @@ protocol examples.
   - Updated projection trait implementations with current trait bounds and type parameters
   - Added missing documentation for `EpStart` endpoint combinator
   - Updated examples to use current combinator implementations
+- Comprehensive documentation for duality and well-formedness in Multiparty Session Types (MPST) in `docs/duality.md`:
+  - Theoretical definitions of duality, IsDual predicate, and well-formedness invariants.
+  - Minimal Rust struct definitions for all protocol actions (Send/Receive, Offer/Choice, Par, Seq, Rec, Continue, Init, End) for both global (T*) and local (Ep*) types.
+  - Section on determining the dual action for well-formedness, with algorithmic matching.
+  - Concrete Rust-style protocol examples, including three-role protocols (well-formed and not well-formed).
+  - Type-level trait pseudocode for IsDual and IsWellFormed, and documentation on compile-time protocol verification patterns.
+- Updated `work/learnings.md` with key learnings and patterns from the new documentation, including Rust type-level programming, trait design, and protocol verification strategies.
 
 ### Fixed
 
