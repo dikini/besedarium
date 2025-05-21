@@ -43,7 +43,7 @@ By understanding duality and the role of `CommMetadata`, protocol designers can 
   - [Session Initialization Correspondence](#session-initialization-correspondence)
   - [Session Termination Correspondence](#session-termination-correspondence)
 - [IsWellFormed Predicate: Detailed Rules](#well-formedness-of-global-protocols-iswellformed)
-  - [Global Protocol Well-Formedness (`IsWellFormed(G)`)](#global-protocol-well-formedness-iswellformedg)
+  - [Global Protocol Well-Formedness (`IsWellFormed(G)`)](#global-protocol-well-formedness-iswellformedi)
   - [Local Endpoint Protocol Well-Formedness (`IsWellFormed(EpP<IO, ...>)`)](#local-endpoint-protocol-well-formedness-iswellformedeppio-)\n
 - [Projection Function: Detailed Rules](#projection-function-detailed-rules) <!-- Assuming this section exists; if not, it might need removal or a valid target -->
   - [Projecting Send](#projecting-send)
@@ -905,6 +905,7 @@ Given `G = TChanSeq<P1, P2>`:
 Given `G = TChanRec<X, P>`:
 
 - `Project(G, R_target) = EpRec<IO_Target, X, Project(P, R_target)>`
+ 
   - The recursion variable `X` is preserved.
  
   - The body `P` is projected onto `R_target`.
@@ -1051,3 +1052,4 @@ trait IsWellFormedGlobal: TChan {
 ```
 
 For Local Endpoint Types (`EpP<IO, ...>`), `IsWellFormedLocal` would primarily check internal consistency properties, like guarded recursion if not fully covered by the global check, and consistent `IO` usage.
+````
