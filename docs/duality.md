@@ -14,54 +14,6 @@ The document will cover:
 
 By understanding duality and the role of `CommMetadata`, protocol designers can create more robust, verifiable, and maintainable MPST specifications.
 
-## Table of Contents
-
-- [Motivation: Why Duality and Well-Formedness Matter](#motivation-why-duality-and-well-formedness-matter)
-- [Relationship Between Duality and Well-Formedness](#relationship-between-duality-and-well-formedness)
-- [Implementing `IsDual()` and `IsWellFormed()`](#implementing-isdual-and-iswellformed)
-- [Determining the Corresponding (Dual) Action](#determining-the-corresponding-dual-action)
-  - [Duality Table](#duality-table)
-  - [Invariants of Duality](#invariants-of-duality)
-- [Core Protocol Constructs: Definitions and Duality](#core-protocol-constructs-definitions-and-duality)
-  - [1. Send Action](#1-send-action)
-  - [2. Receive Action](#2-receive-action)
-  - [3. Offer Action (External Choice - Offering Side)](#3-offer-action-external-choice---offering-side)
-  - [4. Choice Action (External Choice - Choosing Side)](#4-choice-action-external-choice---choosing-side)
-  - [5. Par Action (Parallel Composition)](#5-par-action-parallel-composition)
-  - [6. Seq Action (Sequential Composition)](#6-seq-action-sequential-composition)
-  - [7. Rec Action (Recursion)](#7-rec-action-recursion)
-  - [8. Continue Action (Recursion Invocation)](#8-continue-action-recursion-invocation)
-  - [9. Init Action (Session Initialization)](#9-init-action-session-initialization)
-  - [10. End Action (Session Termination)](#10-end-action-session-termination)
-- [CommMetadata: Channel ID and Message Label](#commmetadata-channel-id-and-message-label)
-- [IsDual Predicate: Detailed Rules](#isdual-predicate)
-  - [Send/Receive Correspondence](#sendreceive-correspondence)
-  - [Offer/Choice Correspondence](#offerchoice-correspondence)
-  - [Parallel Composition Correspondence](#parallel-composition-correspondence)
-  - [Sequential Composition Correspondence](#sequential-composition-correspondence)
-  - [Recursive Protocol Correspondence](#recursive-protocol-correspondence)
-  - [Session Initialization Correspondence](#session-initialization-correspondence)
-  - [Session Termination Correspondence](#session-termination-correspondence)
-- [IsWellFormed Predicate: Detailed Rules](#well-formedness-of-global-protocols-iswellformed)
-  - [Global Protocol Well-Formedness (`IsWellFormed(G)`)](#global-protocol-well-formedness-iswellformedi)
-  - [Local Endpoint Protocol Well-Formedness (`IsWellFormed(EpP<IO, ...>)`)](#local-endpoint-protocol-well-formedness-iswellformedeppio-)\n
-- [Projection Function: Detailed Rules](#projection-function-detailed-rules) <!-- Assuming this section exists; if not, it might need removal or a valid target -->
-  - [Projecting Send](#projecting-send)
-  - [Projecting Receive](#projecting-receive)
-  - [Projecting Offer](#projecting-offer)
-  - [Projecting Choice](#projecting-choice)
-  - [Projecting Parallel](#projecting-parallel)
-  - [Projecting Sequence](#projecting-sequence)
-  - [Projecting Recursion](#projecting-recursion)
-  - [Projecting Continue](#projecting-continue)
-  - [Projecting Init](#projecting-init)
-  - [Projecting End](#projecting-end)
-- [Type-Level Implementation in Rust](#type-level-implementation-in-rust)
-  - [Representing Protocol Constructs](#representing-protocol-constructs)
-  - [Implementing `IsDual`](#implementing-isdual)
-  - [Implementing `IsWellFormed`](#implementing-iswellformed)
-- [Conclusion](#conclusion)
-
 ## Motivation: Why Duality and Well-Formedness Matter
 
 Duality and well-formedness are foundational concepts in the theory and practice of session types, especially in the context of MPST. They ensure that communication protocols (Global Protocols) are safe, deadlock-free, and free from mismatches or orphan messages.
@@ -133,16 +85,52 @@ Note: This table presents a simplified view. Actual communication actions like `
 This section systematically details each fundamental construct used in MPST. For each construct, we provide:
 
 - A semantic explanation of its role in a Global Protocol.
-- Its minimal Rust type definition for both Global Types (TChan\*) and Local Endpoint Types (Ep\*). The `IO` generic parameter, present in all Local Endpoint Types (`Ep*`), typically represents session-specific context, channel capabilities (e.g., `In`, `Out`, `InOut`), or an effects system; its precise nature depends on the specific MPST implementation. It is crucial for ensuring type safety at the local endpoint level.
+- Its minimal Rust type definition for both Global Types (TChan\*) and Local Endpoint Types (Ep\*). The `IO` generic parameter, present in all Local Endpoint Types (`Ep*`), typically represents session-specific context, channel capabilities (e.g., `In`, `Out`, `InOutSession`), or an effects system; its precise nature depends on the specific MPST implementation. It is crucial for ensuring type safety at the local endpoint level.
 - How ECIs via `CommMetadata` (containing `ChanId` and `MsgLbl`) are integrated.
 - The specific duality rule that defines its complementary action.
 - Key invariants that must hold.
 - The roles involved in the action.
 - Required parameters for its definition.
 
-Understanding these constructs and their dualities is crucial for designing well-formed Global Protocols and for implementing the `IsDual` and `IsWellFormed` predicates.
+Understanding these constructs, their dualities, and the role of I/O capabilities is crucial for designing well-formed Global Protocols and for implementing the `IsDual` and `IsWellFormed` predicates.
 
-### 1. Send Action
+### Role I/O Capabilities and Action I/O Types
+
+A key aspect of bridging theoretical session types with practical implementations is managing the concrete Input/Output (I/O) mechanisms used for communication (e.g., TCP, HTTP, MQTT).
+
+1. **`ActionIOType` (Action-Specific I/O Requirement)**:
+    - Each communication action in a Global Protocol (like `Send` or `Receive`) is associated with a specific *type* of I/O mechanism required to perform it. We represent these using marker types, e.g., `struct Tcp; struct Http;`, which implement a common `ActionIOTMarker` trait.
+    - This `ActionIOType` can be part of an extended `CommMetadata` (e.g., `RichCommMetadata<ChanId, MsgLbl, ActionIO>`) or a direct generic parameter on global action types like `TChanSend`. This document will primarily assume it's part of `CommMetadata` for conciseness in action signatures.
+
+2. **`IO` Parameter in Local Endpoint Types (Role's Session Capability)**:
+    - The `IO` generic parameter in Local Endpoint Types (e.g., `EpSend<IO, M, Msg, P>`) represents the *overall I/O capability or context* that a specific role brings to *that entire session*.
+    - This `IO` type could be a concrete session manager (e.g., `MyTcpSessionManager`), a client instance (`MyHttpClient`), or a more abstract capability that might handle multiple `ActionIOType`s (e.g., `VersatileRpcHandler`).
+
+3. **`SupportsActionIO` Trait (Linking Session Capability to Action Requirement)**:
+    - To ensure a role can perform an action, its session I/O capability (`IO`) must support the `ActionIOType` required by that action. This is enforced by a trait:
+
+      ```rust
+      pub trait ActionIOTMarker: Send + Sync + 'static {}
+      pub struct Tcp; impl ActionIOTMarker for Tcp {}
+      // ... other ActionIOTMarkers
+
+      /// Indicates that a session's I/O capability (`Self`)
+      /// can support a specific `ActionIOType` (`AIO`).
+      pub trait SupportsActionIO<AIO: ActionIOTMarker> {}
+
+      // Example: A TCP-only session capability
+      pub struct TcpOnlySessionIO;
+      impl SupportsActionIO<Tcp> for TcpOnlySessionIO {}
+      ```
+
+4. **Verification during Projection**:
+    - When a Global Protocol action is projected to a Local Endpoint Type for a participating role, a `SupportsActionIO` trait bound is imposed.
+    - For example, if `TChanSend<S, R, M_Rich, Msg, P>` (where `M_Rich::ActionIO` is, say, `Tcp`) is projected for role `S` (the sender), the resulting local type would be `EpSend<IO_S, M_Rich, Msg, Projected_P_S>`. This projection is only valid if `IO_S: SupportsActionIO<Tcp>`.
+    - This ensures at compile time that the role `S`, with its declared session capability `IO_S`, can actually perform a TCP send.
+
+This mechanism connects the abstract protocol specification to concrete I/O requirements, enhancing the practical applicability and safety of the MPST framework. The `IsWellFormed` predicate for a global protocol implicitly relies on these `SupportsActionIO` checks being satisfiable during projection for all participating roles.
+
+### Send Action
 
 - **Semantics**: Represents a message being sent from a sender role (S) to a
   receiver role (R) over a communication channel identified by `CommMetadata` (M).
@@ -168,7 +156,7 @@ Understanding these constructs and their dualities is crucial for designing well
 - **`CommMetadata` Integration**: The `M: CommMetadata` parameter in `TChanSend` explicitly identifies the communication at the global level. The `Msg` parameter specifies the type of data being transferred. This pair (`M`, `Msg`) is then directly used in the projected `EpSend<IO, M, Msg, P>` at the local level to ensure the sender uses the correct channel, message context, and data type. `CommMetadata` encapsulates a `ChanId` and a `MsgLbl`.
   - The `ChanId` specifies the logical communication channel being used.
   - The `MsgLbl` can further qualify the message or interaction type on that channel.
-  This pair (`ChanId`, `MsgLbl`) allows for precise disambiguation when multiple logical channels exist between the same pair of roles, when a single channel supports different kinds of messages, or when a role communicates with itself logically through different channels/message contexts.
+  This pair (`ChanId`, `MsgLbl`) allows for precise disambiguulation when multiple logical channels exist between the same pair of roles, when a single channel supports different kinds of messages, or when a role communicates with itself logically through different channels/message contexts.
 - **Duality Rule**: `Dual(Send<S, R, M, Msg, P>) = Recv<R, S, M, Msg, Dual(P)>`.
   The dual of sending a message is receiving that same message on the same channel (identified by `CommMetadata` M), with the roles reversed, followed by the dual of the continuation Global Protocol.
 - **Invariants**:
@@ -196,7 +184,7 @@ Understanding these constructs and their dualities is crucial for designing well
     - `Msg`: Message Type
     - `P: Ep` (Continuation Local Endpoint Protocol, e.g., `Ep<IO>`)
 
-### 2. Receive Action
+### Receive Action
 
 - **Semantics**: Represents a message being received by a receiver role (R) from a
   sender role (S) over a communication channel identified by `CommMetadata` (M).
@@ -250,7 +238,7 @@ Understanding these constructs and their dualities is crucial for designing well
     - `Msg`: Message Type
     - `P: Ep` (Continuation Local Endpoint Protocol, e.g., `Ep<IO>`)
 
-### 3. Offer Action (External Choice - Offering Side)
+### Offer Action (External Choice - Offering Side)
 
 - **Semantics**: Represents a role (O - Offerer) presenting a set of labeled Global Protocol branches (`{l_i: P_i}`) to another role (C - Chooser). The Chooser will select one label, and the Global Protocol will continue as `P_i` corresponding to the chosen label `l_i`. The communication of the choice itself might be implicit or explicit (e.g., via a `Send` of the chosen label). This is a form of External Choice.
 - **Rust Definitions**:
@@ -299,7 +287,7 @@ Understanding these constructs and their dualities is crucial for designing well
     - `M: CommMetadata` (for choice signalling, e.g., receiving the choice label).
     - `L`: Type-level list of `(Label, Ep<IO, ...>)` pairs.
 
-### 4. Choice Action (External Choice - Choosing Side)
+### Choice Action (External Choice - Choosing Side)
 
 - **Semantics**: Represents a role (C - Chooser) selecting one branch from a set of labeled Global Protocols (`{l_i: P_i}`) offered by another role (O - Offerer). The Global Protocol continues as `P_i` corresponding to the chosen label `l_i`. The act of choosing typically involves sending the selected label to the Offerer. This is the counterpart to the Offer action in an External Choice.
 - **Rust Definitions**:
@@ -349,7 +337,7 @@ Understanding these constructs and their dualities is crucial for designing well
     - `M: CommMetadata` (for choice signalling, e.g., sending the choice label).
     - `L`: Type-level list of `(Label, Ep<IO, ...>)` pairs.
 
-### 5. Par Action (Parallel Composition)
+### Par Action (Parallel Composition)
 
 - **Semantics**: Represents two Global Protocols, `P1` and `P2`, executing concurrently. The overall Global Protocol completes when both `P1` and `P2` complete.
 - **Rust Definitions**:
@@ -404,7 +392,7 @@ sequenceDiagram
   - For the Global Protocol `TChanPar<P1, P2>`:
     - Both `P1` and `P2` must be well-formed Global Protocols.
     - The set of `ChanId`s (from `CommMetadata`) used in `P1` must be disjoint from the set of `ChanId`s used in `P2`.
-    - Roles can participate in both `P1` and `P2` simultaneously, but their actions within `P1` are independent of their actions within `P2` due to this `ChanId` disjointness.
+    - Roles participate in both `P1` and `P2` simultaneously, but their actions within `P1` are independent of their actions within `P2` due to this `ChanId` disjointness.
   - For the Local Endpoint Type `EpPar<IO, EpP1, EpP2>`:
     - `IO` is the input/output capability marker.
     - `EpP1` represents the local protocol for the first parallel branch (e.g., `EpSend<IO, ...>`). It must be a well-formed local protocol.
@@ -421,7 +409,7 @@ sequenceDiagram
     - `EpP1: Ep` (Local Endpoint Protocol for the first parallel branch, e.g., `Ep<IO>`)
     - `EpP2: Ep` (Local Endpoint Protocol for the second parallel branch, e.g., `Ep<IO>`)
 
-### 6. Seq Action (Sequential Composition)
+### Seq Action (Sequential Composition)
 
 - **Semantics**: Represents two Global Protocols, `P1` and `P2`, executing one after the other. `P1` must complete before `P2` begins.
 - **Rust Definitions**:
@@ -464,7 +452,7 @@ sequenceDiagram
     - `EpP1: Ep<IO>` (First Local Endpoint Protocol)
     - `EpP2: Ep<IO>` (Second Local Endpoint Protocol)
 
-### 7. Rec Action (Recursion)
+### Rec Action (Recursion)
 
 - **Semantics**: Represents a recursive Global Protocol. `Rec<X, P>` defines a protocol `P` that can refer to itself via the recursion variable `X`.
 - **Rust Definitions**:
@@ -508,7 +496,7 @@ sequenceDiagram
     - `X`: Recursion variable (marker type).
     - `EpP: Ep<IO>`: The Local Endpoint Protocol body.
 
-### 8. Continue Action (Recursion Invocation)
+### Continue Action (Recursion Invocation)
 
 - **Semantics**: Represents the invocation of a previously defined recursive Global Protocol `Rec<X, P>`. `Continue<X>` jumps to the beginning of the protocol associated with the recursion variable `X`.
 - **Rust Definitions**:
@@ -548,7 +536,7 @@ sequenceDiagram
     - `IO`: The input/output capability marker.
     - `X`: Recursion variable (marker type) being invoked.
 
-### 9. Init Action (Session Initialization)
+### Init Action (Session Initialization)
 
 - **Semantics**: Represents the initialization of a communication session. It typically marks the beginning of a protocol interaction, setting up the context for subsequent actions. It can be thought of as the entry point for a specific protocol instance, particularly when multiple sessions might co-exist or when a session needs explicit instantiation.
 - **Rust Definitions**:
@@ -588,7 +576,7 @@ sequenceDiagram
     - `IO`: The input/output capability marker.
     - `EpP: Ep<IO>`: The Local Endpoint Protocol being initialized.
 
-### 10. End Action (Session Termination)
+### End Action (Session Termination)
 
 - **Semantics**: Represents the termination of a Global Protocol or a local endpoint's participation. It signifies that no further actions will occur in that branch of the protocol.
 - **Rust Definitions**:
@@ -736,6 +724,8 @@ Well-formedness is a crucial property of Global Protocols in MPST. It ensures th
 
 The `IsWellFormed` predicate is typically defined at both the Global Protocol level and, sometimes, at the Local Endpoint Type level (though local well-formedness often focuses on internal consistency like guarded recursion, rather than inter-role duality which is the primary concern of global well-formedness).
 
+Furthermore, for a global protocol to be practically well-formed and implementable, the projection process must also verify that each role's session I/O capabilities (represented by the `IO` parameter in its projected `Ep<IO, ...>` type) are sufficient to support the specific `ActionIOType` required by the actions it participates in. This is typically enforced via a `SupportsActionIO<AIO: ActionIOTMarker>` trait bound during projection, as detailed in the "Role I/O Capabilities and Action I/O Types" subsection. Thus, `IsWellFormed(G)` implies not only logical coherence but also that the I/O requirements of `G` can be met by appropriately capable roles.
+
 ### Global Protocol Well-Formedness (`IsWellFormed(G)`)
 
 A Global Protocol `G` is considered well-formed if it satisfies the following conditions, applied recursively based on the structure of `G`:
@@ -771,7 +761,7 @@ A Global Protocol `G` is considered well-formed if it satisfies the following co
 4. **Structural Compositions**:
    - `IsWellFormed(TChanPar<P1, P2>)`: Holds if:
      - `IsWellFormed(P1)` AND `IsWellFormed(P2)`.
-     - Crucially, the set of `ChanId`s (from `CommMetadata`) used in `P1` must be **disjoint** from the set of `ChanId`s used in `P2`. This ensures that parallel branches operate on independent communication pathways and do not interfere.
+     - Crucially, the set of `ChanId`s (from `CommMetadata`) used in `P1` must be disjoint from those used in `P2`. This ensures that parallel branches operate on independent communication pathways and do not interfere.
    - `IsWellFormed(TChanSeq<P1, P2>)`: Holds if:
      - `IsWellFormed(P1)` AND `IsWellFormed(P2)`.
      - `P1` must be structured such that it can terminate or lead to a state where `P2` can begin (e.g., `P1` eventually reaches `TChanEnd` or a point where all its active roles are done, allowing `P2` to start).
@@ -788,7 +778,7 @@ While global well-formedness focuses on the duality of interactions between role
 - **Consistent `IO` Usage**: The `IO` parameter is used consistently throughout the local protocol structure and its continuations.
 - **Type Safety**: All message types are correctly specified, and branches in choices/offers are well-defined.
 
-However, the primary mechanism for ensuring overall system correctness in MPST is `IsWellFormed(G)` at the global level, which relies on projection and pairwise `IsDual` checks between local endpoint types.
+However, the primary mechanism for ensuring overall system correctness in MPST is `IsWellFormed(G)` at the global level, which relies on projection and pairwise `IsDual` checks.
 
 ## Predicate: `IsWellFormed(G)` (Summary of the Check Process)
 
@@ -808,23 +798,27 @@ This comprehensive check ensures that the Global Protocol is not only internally
 
 The projection function, `Project(G, R_target)`, takes a Global Protocol `G` and a target role `R_target` and produces the Local Endpoint Type for `R_target`. This local type, `EpP<IO, ...>`, dictates `R_target`'s behavior in the protocol. The `IO` parameter for the resulting local endpoint type is determined by the projection context and `R_target`'s capabilities and involvement.
 
-Let `R_target` be the role onto which we are projecting.
+Crucially, for any communication action (e.g., Send, Receive, Offer, Choice) that specifies a required `ActionIOType` (e.g., `Tcp`, `Http`, often embedded within `CommMetadata`), the projection onto a participating role `R_target` will only be valid if `R_target`'s session I/O capability (`IO`) satisfies this requirement. This is enforced by a trait bound like `IO: SupportsActionIO<RequiredActionIOType>`.
 
-### Projecting Send
+Let `R_target` be the role onto which we are projecting. Let `M_Rich` denote a `CommMetadata` structure that includes an `ActionIOType` (e.g., `M_Rich::ActionIO`).
 
-Given `G = TChanSend<S, R, M, Msg, P>`:
+### Projecting Send Action
+
+Given `G = TChanSend<S, R, M_Rich, Msg, P>`:
 
 - If `R_target == S` (Sender):
-  `Project(G, S) = EpSend<IO_S, M, Msg, Project(P, S)>`
+  `Project(G, S) = EpSend<IO_S, M_Rich, Msg, Project(P, S)>`
+  (Requires `IO_S: SupportsActionIO<M_Rich::ActionIO>`)
   - `S` performs a send action.
-  - `M` (CommMetadata) and `Msg` (Message Type) are directly used from the global definition.
-  - `IO_S` reflects `S`'s I/O capability (e.g., output-capable).
+  - `M_Rich` (CommMetadata including `ActionIOType`) and `Msg` (Message Type) are directly used from the global definition.
+  - `IO_S` reflects `S`'s I/O capability (e.g., output-capable for `M_Rich::ActionIO`).
   - The continuation `Project(P, S)` is the projection of the rest of the global protocol `P` onto `S`.
 - If `R_target == R` (Receiver):
-  `Project(G, R) = EpRecv<IO_R, M, Msg, Project(P, R)>`
+  `Project(G, R) = EpRecv<IO_R, M_Rich, Msg, Project(P, R)>`
+  (Requires `IO_R: SupportsActionIO<M_Rich::ActionIO>`)
   - `R` performs a receive action.
-  - `M` (CommMetadata) and `Msg` (Message Type) are directly used from the global definition, matching the sender.
-  - `IO_R` reflects `R`'s I/O capability (e.g., input-capable).
+  - `M_Rich` and `Msg` are directly used from the global definition, matching the sender.
+  - `IO_R` reflects `R`'s I/O capability (e.g., input-capable for `M_Rich::ActionIO`).
   - The continuation `Project(P, R)` is the projection of `P` onto `R`.
 - If `R_target != S` AND `R_target != R` (Other role):
   `Project(G, R_target) = Project(P, R_target)` (or `EpInternal<IO_Other, Project(P, R_target)>` if an explicit internal action marker is used)
@@ -832,86 +826,71 @@ Given `G = TChanSend<S, R, M, Msg, P>`:
   - Its local protocol is determined by the projection of the continuation `P` onto `R_target`.
   - `IO_Other` reflects `R_target`'s I/O capability in this context.
 
-### Projecting Receive
+### Projecting Receive Action
 
-Given `G = TChanRecv<R, S, M, Msg, P>`: (This is symmetric to Projecting Send)
+Given `G = TChanRecv<R, S, M_Rich, Msg, P>`: (This is symmetric to Projecting Send)
 
 - If `R_target == R` (Receiver):
-  `Project(G, R) = EpRecv<IO_R, M, Msg, Project(P, R)>`
-  - `R` performs a receive action.
-  - `M` and `Msg` are used from the global definition.
-  - `IO_R` reflects `R`'s I/O capability.
+  `Project(G, R) = EpRecv<IO_R, M_Rich, Msg, Project(P, R)>`
+  (Requires `IO_R: SupportsActionIO<M_Rich::ActionIO>`)
 - If `R_target == S` (Sender):
-  `Project(G, S) = EpSend<IO_S, M, Msg, Project(P, S)>`
-  - `S` performs a send action.
-  - `M` and `Msg` are used from the global definition, matching the receiver.
-  - `IO_S` reflects `S`'s I/O capability.
+  `Project(G, S) = EpSend<IO_S, M_Rich, Msg, Project(P, S)>`
+  (Requires `IO_S: SupportsActionIO<M_Rich::ActionIO>`)
 - If `R_target != R` AND `R_target != S` (Other role):
   `Project(G, R_target) = Project(P, R_target)` (or `EpInternal<IO_Other, Project(P, R_target)>`)
 
-### Projecting Offer
+### Projecting Offer Action
 
-Given `G = TChanOffer<O, C, M_choice, Branches>` where `Branches = {l_i: P_i}`:
+Given `G = TChanOffer<O, C, M_choice_Rich, Branches>` where `Branches = {l_i: P_i}` and `M_choice_Rich` specifies the `ActionIOType` for communicating the choice:
 
 - If `R_target == O` (Offerer):
-  `Project(G, O) = EpOffer<IO_O, M_choice, ProjectedBranches_O>`
+  `Project(G, O) = EpOffer<IO_O, M_choice_Rich, ProjectedBranches_O>`
+  (Requires `IO_O: SupportsActionIO<M_choice_Rich::ActionIO>`)
   where `ProjectedBranches_O = {l_i: Project(P_i, O)}`.
-  - `O` offers a set of choices.
-  - `M_choice` is the `CommMetadata` for the choice signalling mechanism (e.g., for `O` to receive the chosen label from `C`).
-  - `IO_O` reflects `O`'s I/O capability.
-  - Each branch `P_i` is projected onto `O`.
 - If `R_target == C` (Chooser):
-  `Project(G, C) = EpChoice<IO_C, M_choice, ProjectedBranches_C>`
+  `Project(G, C) = EpChoice<IO_C, M_choice_Rich, ProjectedBranches_C>`
+  (Requires `IO_C: SupportsActionIO<M_choice_Rich::ActionIO>`)
   where `ProjectedBranches_C = {l_i: Project(P_i, C)}`.
-  - `C` makes a choice.
-  - `M_choice` is the `CommMetadata` for choice signalling (e.g., for `C` to send the chosen label to `O`).
-  - `IO_C` reflects `C`'s I/O capability.
-  - Each branch `P_i` is projected onto `C`.
 - If `R_target != O` AND `R_target != C` (Other role):
   `Project(G, R_target) = EpInternalChoice<IO_Other, {l_i: Project(P_i, R_target)}>` (conceptual type)
-  This means `R_target` proceeds with `Project(P_i, R_target)` based on the choice `l_i` made by `C`.
+  This means `R_target` proceeds with `Project(P_i, R_target)` based on the choice `l_i` made by `C`. The `IO_Other` must be compatible with any `ActionIOType`s used in the branches `R_target` might participate in.
 
-### Projecting Choice
+### Projecting Choice Action
 
-Given `G = TChanChoice<C, O, M_choice, Branches>` where `Branches = {l_i: P_i}`: (Symmetric to Projecting Offer)
+Given `G = TChanChoice<C, O, M_choice_Rich, Branches>` where `Branches = {l_i: P_i}`: (Symmetric to Projecting Offer)
 
 - If `R_target == C` (Chooser):
-  `Project(G, C) = EpChoice<IO_C, M_choice, {l_i: Project(P_i, C)}>`
+  `Project(G, C) = EpChoice<IO_C, M_choice_Rich, {l_i: Project(P_i, C)}>`
+  (Requires `IO_C: SupportsActionIO<M_choice_Rich::ActionIO>`)
 - If `R_target == O` (Offerer):
-  `Project(G, O) = EpOffer<IO_O, M_choice, {l_i: Project(P_i, O)}>`
+  `Project(G, O) = EpOffer<IO_O, M_choice_Rich, {l_i: Project(P_i, O)}>`
+  (Requires `IO_O: SupportsActionIO<M_choice_Rich::ActionIO>`)
 - If `R_target != C` AND `R_target != O` (Other role):
   `Project(G, R_target) = EpInternalChoice<IO_Other, {l_i: Project(P_i, R_target)}>` (conceptual type)
   `R_target` proceeds with `Project(P_i, R_target)` based on the choice `l_i` made by `C`.
 
-### Projecting Parallel
+### Par Action
 
 Given `G = TChanPar<P1, P2>`:
 
 - `Project(G, R_target) = EpPar<IO_Target, Project(P1, R_target), Project(P2, R_target)>`
-  - The `IO_Target` must be compatible with parallel execution (e.g., allowing concurrent operations or managing separate I/O resources for each branch if `R_target` is active in both).
-  - `R_target` participates in the projection of `P1` and `P2` in parallel.
-  - Well-formedness requires `ChanId`s in `P1` and `P2` to be disjoint. This ensures that `Project(P1, R_target)` and `Project(P2, R_target)` operate on distinct communication channels, even if `R_target` is involved in both.
+  - The `IO_Target` must be compatible with parallel execution and support any `ActionIOType`s required by `R_target`'s participation in `P1` or `P2`. This is ensured recursively by the `SupportsActionIO` bounds applied during the projection of actions within `P1` and `P2`.
 
-### Projecting Sequence
+### Seq Action
 
 Given `G = TChanSeq<P1, P2>`:
 
 - `Project(G, R_target) = EpSeq<IO_Target, Project(P1, R_target), Project(P2, R_target)>`
-  - `R_target` first executes its part in `P1`, then its part in `P2`.
-  - The `IO_Target` reflects sequential execution.
+  - The `IO_Target` must support any `ActionIOType`s required by `R_target`'s participation in `P1` and `P2`, ensured recursively.
 
-### Projecting Recursion
+### Rec Action
 
 Given `G = TChanRec<X, P>`:
 
 - `Project(G, R_target) = EpRec<IO_Target, X, Project(P, R_target)>`
- 
-  - The recursion variable `X` is preserved.
- 
-  - The body `P` is projected onto `R_target`.
-  - `IO_Target` is consistent with the recursive structure.
+  - `IO_Target` must be consistent and support `ActionIOType`s within `P`, ensured recursively.
 
-### Projecting Continue
+### Continue Action
 
 Given `G = TChanContinue<X>`:
 
@@ -919,22 +898,22 @@ Given `G = TChanContinue<X>`:
   - The recursion invocation `X` is preserved.
   - `IO_Target` matches the `IO` of the `EpRec` it refers to.
 
-### Projecting Init
+### Init Action
 
 Given `G = TChanInit<P>`:
 
 - `Project(G, R_target) = EpInit<IO_Target, Project(P, R_target)>`
-  - Marks the initialization of the local endpoint's participation.
+  - `IO_Target` must support `ActionIOType`s within `P`, ensured recursively.
 
-### Projecting End
+### End Action
 
 Given `G = TChanEnd`:
 
 - `Project(G, R_target) = EpEnd<IO_Target>`
   - Marks the termination of the local endpoint's participation.
-  - `IO_Target` reflects the final state of I/O capabilities.
+  - `IO_Target` reflects the final state of the I/O capabilities.
 
-This set of projection rules ensures that each role's local specification is correctly derived from the global protocol, forming the basis for verifying duality and well-formedness.
+This set of projection rules, incorporating `SupportsActionIO` checks, ensures that each role's local specification is correctly derived from the global protocol and that the role is capable of performing its required I/O operations, forming the basis for verifying duality and overall well-formedness.
 
 ## Type-Level Implementation in Rust
 
@@ -945,15 +924,15 @@ Implementing the concepts of Duality, Well-Formedness, and Projection at the typ
 As detailed in the "Core Protocol Constructs" section, each global and local protocol construct is represented by a Rust struct, typically using `PhantomData` to hold generic type parameters.
 
 - **Global Types (`TChan*`)**:
-  Example: `struct TChanSend<S: Role, R: Role, M: CommMetadata, Msg, P: TChan>(PhantomData<(S, R, M, Msg, P)>);`
+  Example: `struct TChanSend<S, R, M, Msg, P>(PhantomData<(S, R, M, Msg, P)>);`
   - `S`, `R`: Marker types representing roles.
   - `M`: A struct implementing a `CommMetadata` trait, e.g., `struct MyCommMetadata<Id: ChanId, Lbl: MsgLbl>(PhantomData<(Id, Lbl)>);`. `ChanId` and `MsgLbl` would themselves be marker types or types carrying specific identifiers.
   - `Msg`: The type of the message being transferred.
   - `P`: The continuation Global Protocol (`TChan`).
 
 - **Local Endpoint Types (`Ep*`)**:
-  Example: `struct EpSend<IO, M: CommMetadata, Msg, P: Ep>(PhantomData<(IO, M, Msg, P)>);`
-  - `IO`: A generic parameter representing session context, I/O capabilities (e.g., `In`, `Out`, `InOutSession`), or an effects system. Its consistent use is vital for type safety at the local level.
+  Example: `struct EpSend<IO, M, Msg, P>(PhantomData<(IO, M, Msg, P)>);`
+  - `IO`: A generic parameter representing session context, I/O capabilities (e.g., `In`, `Out`, `InOutSession`), or an effects system. Its precise nature depends on the specific MPST implementation. It is crucial for ensuring type safety at the local endpoint level.
   - `M`: The `CommMetadata` for this specific action, derived from the Global Protocol.
   - `Msg`: The type of the message.
   - `P`: The continuation Local Endpoint Protocol (`Ep`), which also carries the `IO` parameter, e.g., `P: Ep<IO>`.
@@ -1021,35 +1000,30 @@ impl<IO: SessionIO> IsDual<EpEnd<IO>, IO> for EpEnd<IO> {
 
 `IsWellFormed` for a Global Protocol `G` is a more encompassing check. It typically involves:
 
-1. **Projection**: A mechanism (e.g., a `Project` trait) to derive all Local Endpoint Types from `G`.
+1. **Projection**: A mechanism (e.g., a `Project` trait) to derive all Local Endpoint
+   Types from `G`. As detailed in the "Well-Formedness of Global Protocols (IsWellFormed)" section, this projection process
+   is also responsible for ensuring that each role's session I/O capability
+   (the `IO` parameter in its projected `Ep<IO, ...>` type) can support the
+   specific `ActionIOType` required by each action it participates in. This is
+   enforced via `SupportsActionIO<AIO: ActionIOTMarker>` trait bounds during
+   the projection of individual actions.
 2. **Pairwise Duality Checks**: Using the `IsDual` trait for all interacting pairs of roles.
 3. **Structural Checks**:
    - **Disjoint `ChanId`s for `Par`**: This might require type-level sets or custom traits to collect and compare `ChanId`s used in parallel branches.
-
-     ```rust
-     // Conceptual:
-     // trait CollectChanIds { type Ids: TypeLevelSet<ChanId>; }
-     // trait AreDisjoint<OtherIds> { }
-     // impl<P1, P2> IsWellFormed for TChanPar<P1, P2>
-     // where
-     //     P1: IsWellFormed + CollectChanIds,
-     //     P2: IsWellFormed + CollectChanIds,
-     //     P1::Ids: AreDisjoint<P2::Ids>,
-     // { ... }
-     ```
-
    - **Guarded Recursion for `Rec`**: This is challenging to fully automate at the type level in stable Rust without advanced techniques (like dependent types, which Rust doesn't have). It often relies on careful construction or runtime checks. However, basic forms can be encouraged by ensuring recursive calls are nested within action types.
 
-A top-level `IsWellFormed` trait might look like:
+A top-level `IsWellFormedGlobal` trait might look like:
 
 ```rust
 trait IsWellFormedGlobal: TChan {
     // This trait would embody the rules described in the
     // "Well-Formedness of Global Protocols (IsWellFormed)" section.
     // Its implementation for each TChan* type would trigger
-    // projection and IsDual checks.
+    // projection (including SupportsActionIO checks) and IsDual checks.
+    // A protocol G satisfying IsWellFormedGlobal is not only logically
+    // coherent but also practically instantiable, meaning roles with
+    // appropriate IO capabilities can execute it.
 }
 ```
 
-For Local Endpoint Types (`EpP<IO, ...>`), `IsWellFormedLocal` would primarily check internal consistency properties, like guarded recursion if not fully covered by the global check, and consistent `IO` usage.
-````
+For Local Endpoint Types (`EpP<IO, ...>`), `IsWellFormedLocal` would primarily check internal consistency properties, like guarded recursion if not fully covered by the global check, and consistent `IO` usage (which is already heavily constrained by the `SupportsActionIO` checks during its derivation via projection).
