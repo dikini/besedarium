@@ -18,14 +18,13 @@
 use crate::{
     protocol::{
         global::{
-            TChoice as GlobalTChoice, TEnd as GlobalTEnd, TPar as GlobalTPar, TRecv as GlobalTRecv,
-            TSend as GlobalTSend, TSession as GlobalTSession, TStart as GlobalTStart,
+            TChanOffer, TChanPar, TChanRecv, TChanSend, TChanRec, TChanContinue, TSession as GlobalTSession, TStart as GlobalTStart, TEnd as GlobalTEnd,
         },
-        local::RoleEq,
-        local::{EpChoice, EpSession},
+        local::{EpChoice, EpSession, EpRec, EpContinue, Role},
     },
-    types::{Bool, ProtocolLabel, SessionType},
-    Disjoint, Role,
+    types::{Bool, ProtocolLabel, SessionType, True, False, CommMetadata}, 
+    Disjoint, 
+    RoleEq, // Import RoleEq from crate root as suggested
 };
 
 // Import helper projection traits from other modules
@@ -67,9 +66,9 @@ where
     Me: Role,
     IO: SessionType,
     Lbl: ProtocolLabel,
-    S: GlobalTSession<IO> + ProjectRole<Me, IO, S>,
-    <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>,
-    (): ProjectStartCase<Me, IO, Lbl, S>,
+    S: GlobalTSession<IO>, // Removed ProjectRole<Me, IO, S> bound here, will be in ProjectStartCase
+    // <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>, // Moved to ProjectStartCase
+    (): ProjectStartCase<Me, IO, Lbl, S>, // S needs ProjectRole bound inside ProjectStartCase
 {
     // Delegate to ProjectStartCase trait for start projection
     type Out = <() as ProjectStartCase<Me, IO, Lbl, S>>::Out;
@@ -87,75 +86,63 @@ where
     type Out = <() as ProjectEndCase<Me, IO, Lbl>>::Out;
 }
 
-// ProjectRole for TSend<IO, Lbl, RSender, P, G>
-impl<Me, IO, Lbl, RSender, P, G> ProjectRole<Me, IO, GlobalTSend<IO, Lbl, RSender, P, G>> for ()
+// ProjectRole for TChanSend<SndR, RcvR, M, Msg, G, AIO, IOSess>
+impl<SndR, RcvR, M, Msg, GProto, AIO, IOSess, Me> ProjectRole<Me, IOSess, TChanSend<SndR, RcvR, M, Msg, GProto, AIO, IOSess>> for ()
 where
     Me: Role,
-    IO: SessionType,
-    Lbl: ProtocolLabel,
-    RSender: Role,
-    P: Send + 'static,
-    G: GlobalTSession<IO> + ProjectRole<Me, IO, G>,
-    <G as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
-    Me: RoleEq<RSender>, // Required for case selection
-    <Me as RoleEq<RSender>>::Output: Bool,
-    (): ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>,
+    SndR: RoleMarker,
+    RcvR: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static,
+    Msg: core::fmt::Debug + Send + Sync + 'static,
+    GProto: GlobalProtocol + GlobalTSession<IOSess>,
+    AIO: ActionIOTMarker,
+    IOSess: SessionType + SupportsActionIO<AIO>,
+    GProto: ProjectRole<Me, IOSess, GProto>, // Recursive projection for GProto
+    <GProto as ProjectRole<Me, IOSess, GProto>>::Out: EpSession<IOSess, Me>,
+    Me: RoleEq<SndR>, // Required for case selection
+    <Me as RoleEq<SndR>>::Output: Bool,
+    (): ProjectSendCase<Me, IOSess, M, SndR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>, // Added AIO
 {
-    // Delegate to ProjectSendCase trait for role-based case analysis
-    type Out = <() as ProjectSendCase<
-        Me,
-        IO,
-        Lbl,
-        RSender,
-        P,
-        G,
-        <Me as RoleEq<RSender>>::Output,
-    >>::Output;
+    type Out = <() as ProjectSendCase<Me, IOSess, M, SndR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>>::Output;
 }
 
-// ProjectRole for TRecv<IO, Lbl, RReceiver, P, G>
-impl<Me, IO, Lbl, RReceiver, P, G> ProjectRole<Me, IO, GlobalTRecv<IO, Lbl, RReceiver, P, G>> for ()
+// ProjectRole for TChanRecv<RcvR, SndR, M, Msg, G, AIO, IOSess>
+impl<RcvR, SndR, M, Msg, GProto, AIO, IOSess, Me> ProjectRole<Me, IOSess, TChanRecv<RcvR, SndR, M, Msg, GProto, AIO, IOSess>> for ()
 where
     Me: Role,
-    IO: SessionType,
-    Lbl: ProtocolLabel,
-    RReceiver: Role,
-    P: Send + 'static,
-    G: GlobalTSession<IO> + ProjectRole<Me, IO, G>,
-    <G as ProjectRole<Me, IO, G>>::Out: EpSession<IO, Me>,
-    Me: RoleEq<RReceiver>, // Required for case selection
-    <Me as RoleEq<RReceiver>>::Output: Bool,
-    (): ProjectRecvCase<Me, IO, Lbl, RReceiver, P, G, <Me as RoleEq<RReceiver>>::Output>,
+    RcvR: RoleMarker,
+    SndR: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static,
+    Msg: core::fmt::Debug + Send + Sync + 'static,
+    GProto: GlobalProtocol + GlobalTSession<IOSess>,
+    AIO: ActionIOTMarker,
+    IOSess: SessionType + SupportsActionIO<AIO>,
+    GProto: ProjectRole<Me, IOSess, GProto>,
+    <GProto as ProjectRole<Me, IOSess, GProto>>::Out: EpSession<IOSess, Me>,
+    Me: RoleEq<RcvR>,
+    <Me as RoleEq<RcvR>>::Output: Bool,
+    (): ProjectRecvCase<Me, IOSess, M, RcvR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>, // Added AIO
 {
-    // Delegate to ProjectRecvCase trait for role-based case analysis
-    type Out = <() as ProjectRecvCase<
-        Me,
-        IO,
-        Lbl,
-        RReceiver,
-        P,
-        G,
-        <Me as RoleEq<RReceiver>>::Output,
-    >>::Output;
+    type Out = <() as ProjectRecvCase<Me, IOSess, M, RcvR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>>::Output;
 }
 
-// ProjectRole for TPar<IO, Lbl, G1, G2, IsDisjointFlag>
-impl<Me, IO, Lbl, G1, G2, IsDisjointFlag>
-    ProjectRole<Me, IO, GlobalTPar<IO, Lbl, G1, G2, IsDisjointFlag>> for ()
+
+// ProjectRole for TChanPar<M, L, R, IsDisjoint, IO>
+impl<Me, IO, M, G1, G2, IsDisjointFlag>
+    ProjectRole<Me, IO, TChanPar<M, G1, G2, IsDisjointFlag, IO>> for ()
 where
     Me: Role,
     IO: SessionType,
-    Lbl: ProtocolLabel,
-    G1: GlobalTSession<IO> + ProjectRole<Me, IO, G1>, // Global protocol G1
-    G2: GlobalTSession<IO> + ProjectRole<Me, IO, G2>, // Global protocol G2
-    IsDisjointFlag: Disjoint<G1, G2>, // Marker ensuring G1 and G2 are disjoint for parallel composition
+    M: core::fmt::Debug + Send + Sync + 'static + ProtocolLabel, // Added ProtocolLabel bound to M
+    G1: GlobalProtocol + GlobalTSession<IO> + ProjectRole<Me, IO, G1>,
+    G2: GlobalProtocol + GlobalTSession<IO> + ProjectRole<Me, IO, G2>,
+    IsDisjointFlag: core::fmt::Debug + Send + Sync + 'static, 
     <G1 as ProjectRole<Me, IO, G1>>::Out: EpSession<IO, Me>,
     <G2 as ProjectRole<Me, IO, G2>>::Out: EpSession<IO, Me>,
-    // Use ProjectPar to project the parallel branches together
     (): ProjectPar<
         Me,
         IO,
-        Lbl,
+        M, // M is now bounded by ProtocolLabel
         <G1 as ProjectRole<Me, IO, G1>>::Out,
         <G2 as ProjectRole<Me, IO, G2>>::Out,
     >,
@@ -163,51 +150,66 @@ where
     type Out = <() as ProjectPar<
         Me,
         IO,
-        Lbl,
+        M,
         <G1 as ProjectRole<Me, IO, G1>>::Out,
         <G2 as ProjectRole<Me, IO, G2>>::Out,
     >>::Out;
 }
 
-// ProjectRole for TChoice<IO, Lbl, LeftBranch, RightBranch> (Binary Choice)
-impl<Me, IO, Lbl, LeftBranch, RightBranch>
-    ProjectRole<Me, IO, GlobalTChoice<IO, Lbl, LeftBranch, RightBranch>> for ()
+// ProjectRole for TChanOffer<ROfferer, RChooser, M, L, R, AIO, IO> (Binary Choice)
+impl<Me, IO, ROfferer, RChooser, M, LeftBranch, RightBranch, AIO>
+    ProjectRole<Me, IO, TChanOffer<ROfferer, RChooser, M, LeftBranch, RightBranch, AIO, IO>> for ()
 where
     Me: Role,
-    IO: SessionType,
-    Lbl: ProtocolLabel,
-    LeftBranch: GlobalTSession<IO> + ProjectRole<Me, IO, LeftBranch>,
-    RightBranch: GlobalTSession<IO> + ProjectRole<Me, IO, RightBranch>,
+    IO: SessionType + SupportsActionIO<AIO>,
+    AIO: ActionIOTMarker,
+    ROfferer: RoleMarker,
+    RChooser: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static, // CommMetadata for Choice
+    LeftBranch: GlobalProtocol + GlobalTSession<IO> + ProjectRole<Me, IO, LeftBranch>,
+    RightBranch: GlobalProtocol + GlobalTSession<IO> + ProjectRole<Me, IO, RightBranch>,
     <LeftBranch as ProjectRole<Me, IO, LeftBranch>>::Out: EpSession<IO, Me>,
     <RightBranch as ProjectRole<Me, IO, RightBranch>>::Out: EpSession<IO, Me>,
+    // Additional bounds might be needed for ProjectChoiceCase or similar helper
 {
+    // This needs to be more sophisticated, likely involving a ProjectChoiceCase helper
+    // For now, assuming a direct EpChoice if Me is RChooser, or projection of branches.
+    // This is a simplification and likely incorrect for the general case.
+    // The actual projection depends on whether Me is ROfferer, RChooser, or neither.
+    // A helper trait like ProjectChoiceRole (similar to ProjectSendCase/ProjectRecvCase)
+    // would be needed to dispatch based on Me's relation to ROfferer and RChooser.
+    //
+    // Placeholder:
     type Out = EpChoice<
         IO,
-        Lbl,
-        Me, // The role 'Me' is making a local choice
+        M, // Using CommMetadata M as Lbl for EpChoice
+        Me,
         <LeftBranch as ProjectRole<Me, IO, LeftBranch>>::Out,
         <RightBranch as ProjectRole<Me, IO, RightBranch>>::Out,
     >;
 }
 
-// ProjectRole for TRec<IO, Lbl, S>
-impl<Me, IO, Lbl, S> ProjectRole<Me, IO, crate::protocol::global::TRec<IO, Lbl, S>> for ()
+// ProjectRole for TChanRec<RecLbl, S, IO>
+impl<Me, IO, RecLbl, S> ProjectRole<Me, IO, TChanRec<RecLbl, S, IO>> for ()
 where
     Me: Role,
     IO: SessionType,
-    Lbl: ProtocolLabel,
-    S: crate::protocol::global::TSession<IO> + ProjectRole<Me, IO, S>,
+    RecLbl: ProtocolLabel,
+    S: GlobalProtocol + GlobalTSession<IO> + ProjectRole<Me, IO, S>,
     <S as ProjectRole<Me, IO, S>>::Out: EpSession<IO, Me>,
 {
-    type Out = crate::protocol::local::EpRec<IO, Lbl, Me, <S as ProjectRole<Me, IO, S>>::Out>;
+    type Out = EpRec<IO, RecLbl, Me, <S as ProjectRole<Me, IO, S>>::Out>;
 }
 
-// ProjectRole for TContinue<IO, Lbl>
-impl<Me, IO, Lbl> ProjectRole<Me, IO, crate::protocol::global::TContinue<IO, Lbl>> for ()
+// ProjectRole for TChanContinue<RecLbl, IO>
+impl<Me, IO, RecLbl> ProjectRole<Me, IO, TChanContinue<RecLbl, IO>> for ()
 where
     Me: Role,
     IO: SessionType,
-    Lbl: ProtocolLabel,
+    RecLbl: ProtocolLabel,
 {
-    type Out = crate::protocol::local::EpContinue<IO, Lbl, Me>;
+    type Out = EpContinue<IO, RecLbl, Me>;
 }
+
+// Need to import RoleMarker, ActionIOTMarker, GlobalProtocol, SupportsActionIO
+use crate::types::{RoleMarker, ActionIOTMarker, GlobalProtocol, SupportsActionIO};

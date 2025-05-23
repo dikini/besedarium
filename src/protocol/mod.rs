@@ -38,9 +38,10 @@ pub use self::global::{
 };
 pub use self::local::{
     EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, EpStart, GetEpSkipTypeMarker, IsEnd,
-    IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, RoleEq, TBroker, TClient,
-    TServer, TWorker, Void,
+    IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, TBroker, TClient, TServer,
+    TWorker, Void,
 };
+pub use self::base::RoleEq; // Correctly re-exporting RoleEq from base
 pub use self::transforms::*;
 pub use self::utils::{
     CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,

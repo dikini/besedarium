@@ -23,9 +23,7 @@ use crate::sealed;
 use core::marker::PhantomData;
 // Corrected and refined imports
 use crate::types::{
-    ActionIOTMarker, CommMetadata, // CommMetadata struct for aliases
-    GlobalProtocol, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO, Tcp, // Tcp for aliases
-    True, // Assuming True will be a type-level boolean in types.rs
+    ActionIOTMarker, CommMetadata, GlobalProtocol, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO, Tcp, True,
 };
 
 /// Core trait for all global session type combinators.
@@ -42,27 +40,30 @@ pub trait TSession<IO: SessionType>: sealed::Sealed + GlobalProtocol {}
 /// - `IO`: Overall session I/O capability type.
 /// - `S`: Continuation protocol.
 #[derive(Debug, Clone)]
-pub struct TStart<IO: SessionType, S: GlobalProtocol> {
+pub struct TStart<IO: SessionType, Lbl: ProtocolLabel, S: GlobalProtocol> {
     _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
     _s: PhantomData<S>,
 }
 
-impl<IO: SessionType, S: GlobalProtocol> sealed::Sealed for TStart<IO, S> {}
-impl<IO: SessionType, S: GlobalProtocol> TSession<IO> for TStart<IO, S> {}
-impl<IO: SessionType, S: GlobalProtocol> GlobalProtocol for TStart<IO, S> {}
+impl<IO: SessionType, Lbl: ProtocolLabel, S: GlobalProtocol> sealed::Sealed for TStart<IO, Lbl, S> {}
+impl<IO: SessionType, Lbl: ProtocolLabel, S: GlobalProtocol> TSession<IO> for TStart<IO, Lbl, S> {}
+impl<IO: SessionType, Lbl: ProtocolLabel, S: GlobalProtocol> GlobalProtocol for TStart<IO, Lbl, S> {}
 
 
 /// Protocol termination.
 ///
 /// - `IO`: Overall session I/O capability type.
+/// - `Lbl`: Label for this termination point.
 #[derive(Debug, Clone)]
-pub struct TEnd<IO: SessionType> {
-    _io: PhantomData<IO>
+pub struct TEnd<IO: SessionType, Lbl: ProtocolLabel> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
 }
 
-impl<IO: SessionType> sealed::Sealed for TEnd<IO> {}
-impl<IO: SessionType> TSession<IO> for TEnd<IO> {}
-impl<IO: SessionType> GlobalProtocol for TEnd<IO> {}
+impl<IO: SessionType, Lbl: ProtocolLabel> sealed::Sealed for TEnd<IO, Lbl> {}
+impl<IO: SessionType, Lbl: ProtocolLabel> TSession<IO> for TEnd<IO, Lbl> {}
+impl<IO: SessionType, Lbl: ProtocolLabel> GlobalProtocol for TEnd<IO, Lbl> {}
 
 /// Global Type: Represents sending a message.
 ///
@@ -333,11 +334,11 @@ impl<RecLbl: ProtocolLabel, IO: SessionType> GlobalProtocol for TChanContinue<Re
 // These aliases attempt to bridge old type signatures to new ones.
 // They might need further refinement based on how strictly the old types need to be supported.
 
-#[deprecated(note = "Use TStart instead. Lbl parameter is no longer part of TStart.")]
-pub type TStartOld<IO, S> = TStart<IO, S>;
+#[deprecated(note = "Use TStart<IO, Lbl, S> instead.")]
+pub type TStartOld<IO, Lbl: ProtocolLabel, S> = TStart<IO, Lbl, S>;
 
-#[deprecated(note = "Use TEnd instead. Lbl parameter is no longer part of TEnd.")]
-pub type TEndOld<IO> = TEnd<IO>;
+#[deprecated(note = "Use TEnd<IO, Lbl> instead.")]
+pub type TEndOld<IO, Lbl: ProtocolLabel> = TEnd<IO, Lbl>;
 
 #[deprecated(note = "Use TChanSend instead. This alias fixes CommMetadata to crate::types::CommMetadata and AIO to crate::types::Tcp.")]
 pub type TSend<SndR, RcvR, MsgPayload, GProto, IOSess> = 
