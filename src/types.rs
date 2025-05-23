@@ -66,6 +66,12 @@ pub struct MqttIo; // Renamed from Mqtt to avoid conflict with the existing Mqtt
 impl sealed::Sealed for MqttIo {}
 impl ActionIOTMarker for MqttIo {}
 
+/// Marker trait for types representing roles in a protocol.
+///
+/// This trait is implemented by types that identify participants
+/// in a communication session (e.g., `Client`, `Server`, `Alice`, `Bob`).
+pub trait RoleMarker: sealed::Sealed + Send + Sync + 'static + core::fmt::Debug {}
+
 /// Indicates that a session's overall I/O capability (`Self`, the `IO` parameter)
 /// can support a specific `ActionIOType` (`AIO`).
 ///

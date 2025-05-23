@@ -23,6 +23,18 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
   - [ ] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
   - [ ] **Task 1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.
   - [ ] **Task 1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks.
+  - [ ] **Review comment 1**:  sr/types.rs:48 The trait name ActionIOTMarker and docs refer to the concept as ActionIOType. Align the naming between code and documentation (e.g., rename the trait or update docs) for clarity.
+
+```rust 
+pub trait ActionIOTMarker: sealed::Sealed + Send + Sync + 'static + core::fmt::Debug {}
+```
+
+- [ ] **Review comment 2**: src/protocol/global.rs:30  The TSession trait no longer defines the associated type Compose or const IS_EMPTY, removing critical type-level composition behavior. Consider reintroducing those members (or providing equivalent functionality) to maintain existing protocol composition logic.
+
+```rust
+pub trait TSession<IO>: sealed::Sealed {}
+```
+
 - [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
   - [ ] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design.
   - [ ] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`).
