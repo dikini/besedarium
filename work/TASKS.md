@@ -6,7 +6,7 @@ incorporating the development approach notes below.
 
 ## Development Approach Notes
 
-- **Priority on Core Implementation**: Focus on correctly implementing library features, especially changes related to `duality.md` (structs, traits, interfaces).
+- **Priority on Core Implementation**: Focus on correctly implementing library features, especially changes related to `docs/duality.md` (structs, traits, interfaces).
 - **Doccomments**: Defer extensive doccomments until core functionality is stable.
 - **Unit Tests**: Implement unit tests in parallel with feature development. Existing unit tests may need significant rework or replacement.
 - **Integration Tests**: Plan to redo integration tests. Consider removing existing ones initially to avoid churn.
