@@ -17,14 +17,19 @@
 
 use crate::{
     protocol::{
-        global::{
-            TChanOffer, TChanPar, TChanRecv, TChanSend, TChanRec, TChanContinue, TSession as GlobalTSession, TStart as GlobalTStart, TEnd as GlobalTEnd,
-        },
-        local::{EpChoice, EpSession, EpRec, EpContinue, Role},
+        // Global protocol types from protocol::global
+        TChanContinue, TChanOffer, TChanPar, TChanRec, TChanRecv, TChanSend,
+        TEnd as GlobalTEnd, TSession as GlobalTSession, TStart as GlobalTStart,
+
+        // Local protocol types from protocol::local
+        EpChoice, EpContinue, EpRec, EpSession, LocalRole as Role, // Correctly import Role
+
+        // Shared types (re-exported by protocol::mod.rs from crate::types or protocol::base)
+        ActionIOTMarker, Bool, GlobalProtocol, ProtocolLabel, RoleEq, RoleMarker, SessionType,
+        SupportsActionIO,
     },
-    types::{Bool, ProtocolLabel, SessionType, True, False, CommMetadata}, 
-    Disjoint, 
-    RoleEq, // Import RoleEq from crate root as suggested
+    // Disjoint is likely used by ProjectPar, so keep it if ProjectPar is used.
+    // For now, let's assume it's not directly used in this file's top-level scope.
 };
 
 // Import helper projection traits from other modules
@@ -101,9 +106,9 @@ where
     <GProto as ProjectRole<Me, IOSess, GProto>>::Out: EpSession<IOSess, Me>,
     Me: RoleEq<SndR>, // Required for case selection
     <Me as RoleEq<SndR>>::Output: Bool,
-    (): ProjectSendCase<Me, IOSess, M, SndR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>, // Added AIO
+    (): ProjectSendCase<Me, IOSess, M, SndR, RcvR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>, // Added RcvR as RPeer
 {
-    type Out = <() as ProjectSendCase<Me, IOSess, M, SndR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>>::Output;
+    type Out = <() as ProjectSendCase<Me, IOSess, M, SndR, RcvR, Msg, GProto, <Me as RoleEq<SndR>>::Output, AIO>>::Output; // Added RcvR as RPeer
 }
 
 // ProjectRole for TChanRecv<RcvR, SndR, M, Msg, G, AIO, IOSess>
@@ -121,9 +126,9 @@ where
     <GProto as ProjectRole<Me, IOSess, GProto>>::Out: EpSession<IOSess, Me>,
     Me: RoleEq<RcvR>,
     <Me as RoleEq<RcvR>>::Output: Bool,
-    (): ProjectRecvCase<Me, IOSess, M, RcvR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>, // Added AIO
+    (): ProjectRecvCase<Me, IOSess, M, RcvR, SndR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>, // Added SndR as RPeer
 {
-    type Out = <() as ProjectRecvCase<Me, IOSess, M, RcvR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>>::Output;
+    type Out = <() as ProjectRecvCase<Me, IOSess, M, RcvR, SndR, Msg, GProto, <Me as RoleEq<RcvR>>::Output, AIO>>::Output; // Added SndR as RPeer
 }
 
 
@@ -210,6 +215,3 @@ where
 {
     type Out = EpContinue<IO, RecLbl, Me>;
 }
-
-// Need to import RoleMarker, ActionIOTMarker, GlobalProtocol, SupportsActionIO
-use crate::types::{RoleMarker, ActionIOTMarker, GlobalProtocol, SupportsActionIO};

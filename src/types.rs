@@ -173,9 +173,6 @@ pub trait ProtocolLabel: sealed::Sealed + core::fmt::Debug + Send + Sync + 'stat
 /// definitions, ensuring they represent valid session types.
 pub trait SessionType: sealed::Sealed + core::fmt::Debug + Send + Sync + 'static {}
 
-/// Marker trait for types that represent a global protocol.
-pub trait GlobalProtocol: sealed::Sealed + Send + Sync + 'static + core::fmt::Debug {}
-
 /// Marker trait for types that represent a local protocol endpoint.
 pub trait LocalProtocol: sealed::Sealed + Send + Sync + 'static + core::fmt::Debug {}
 
@@ -198,3 +195,30 @@ pub trait LocalProtocol: sealed::Sealed + Send + Sync + 'static + core::fmt::Deb
 
 // Note: The actual `impl sealed::Sealed for ...` will likely be in the
 // `crate::sealed` module or handled by macros to ensure proper sealing.
+
+// ADDED: Import NotTypeEq for RoleEq implementations
+use crate::protocol::base::NotTypeEq;
+
+/// Type-level trait to check if two roles are the same.
+///
+/// Compares a role `Self` with `OtherRole`.
+/// - `Output = True` if `Self` and `OtherRole` are the same type.
+/// - `Output = False` if `Self` and `OtherRole` are different types.
+pub trait RoleEq<OtherRole: RoleMarker> {
+    type Output: Bool;
+}
+
+/// Implementation of `RoleEq` for when the two roles are the same type.
+impl<R: RoleMarker> RoleEq<R> for R {
+    type Output = True;
+}
+
+/// Implementation of `RoleEq` for when the two roles are different types.
+///
+/// This relies on the `NotTypeEq` trait to ensure `R1` and `R2` are indeed different.
+impl<R1: RoleMarker, R2: RoleMarker> RoleEq<R2> for R1
+where
+    R1: NotTypeEq<R2>, // R1 is not the same type as R2
+{
+    type Output = False;
+}

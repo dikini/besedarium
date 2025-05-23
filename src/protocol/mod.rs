@@ -32,17 +32,62 @@ pub mod test_helpers;
 pub mod test_overrides;
 
 // Re-export commonly used items at the protocol module level
-pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList};
+
+// From base.rs
+pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList, TypeEq};
+
+// From global.rs
 pub use self::global::{
-    AssertDisjoint, TChoice, TEnd, TPar, TRec, TRecv, TSend, TSession, TStart, ToTChoice, ToTPar,
+    GlobalProtocol,
+    TChanContinue,
+    TChanOffer,
+    TChanPar,
+    TChanRec,
+    TChanRecv,
+    TChanSend,
+    TEnd,
+    TStart,
+    TSession,
+    // Deprecated Aliases
+    TChoice, TCont, TEndOld, TPar, TRec, TRecv, TSend, TStartOld,
 };
+
+// From local.rs
 pub use self::local::{
-    EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, EpStart, GetEpSkipTypeMarker, IsEnd,
-    IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, TBroker, TClient, TServer,
-    TWorker, Void,
+    EpChoice,
+    EpContinue,
+    EpEnd,
+    EpPar,
+    EpRec,
+    EpRecv,
+    EpSend,
+    EpSession,
+    EpSkip,
+    EpStart,
+    EpSilent,
+    GetEpSkipTypeMarker,
+    IsEpEndVariant,
+    IsEpSkipTypeImpl,
+    IsEpSkipVariant,
+    IsEnd,
+    IsSkip,
+    IsEpSkipType,
+    IsNotEpSkipType,
+    Role as LocalRole, // Role trait from local.rs
 };
-pub use self::base::RoleEq; // Correctly re-exporting RoleEq from base
+
+// Re-export fundamental types from crate::types that are core to the protocol system
+pub use crate::types::{
+    ActionIOTMarker, Bool, CommMetadata, False, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO, True, RoleEq, // Added RoleEq here
+};
+
+// From transforms.rs (glob export)
 pub use self::transforms::*;
-pub use self::utils::{
-    CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,
-};
+
+// From utils.rs (glob export)
+pub use self::utils::*;
+
+// Items like TBroker, TClient, TServer, TWorker, Void, AssertDisjoint, ToTChoice, ToTPar
+// are not defined as re-exportable types in global.rs or local.rs in the provided snippets.
+// They are likely specific roles, utility types defined elsewhere, or conceptual.
+// GlobalTSession, GlobalTStart, GlobalTEnd were not found as specific types but rather TSession, TStart, TEnd.

@@ -23,7 +23,7 @@ use crate::sealed;
 use core::marker::PhantomData;
 // Corrected and refined imports
 use crate::types::{
-    ActionIOTMarker, CommMetadata, GlobalProtocol, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO, Tcp, True,
+    ActionIOTMarker, CommMetadata, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO, Tcp, True,
 };
 
 /// Core trait for all global session type combinators.
@@ -328,6 +328,10 @@ pub struct TChanContinue<RecLbl: ProtocolLabel, IO: SessionType> {
 impl<RecLbl: ProtocolLabel, IO: SessionType> sealed::Sealed for TChanContinue<RecLbl, IO> {}
 impl<RecLbl: ProtocolLabel, IO: SessionType> TSession<IO> for TChanContinue<RecLbl, IO> {}
 impl<RecLbl: ProtocolLabel, IO: SessionType> GlobalProtocol for TChanContinue<RecLbl, IO> {}
+
+
+/// Marker trait for types that represent a global protocol.
+pub trait GlobalProtocol: sealed::Sealed + Send + Sync + 'static + core::fmt::Debug {}
 
 
 // Deprecated Aliases

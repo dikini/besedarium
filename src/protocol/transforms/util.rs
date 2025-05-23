@@ -2,13 +2,15 @@
 //!
 //! Contains helpers such as `ContainsRole`, `NotContainsRole`, `GetProtocolLabel`, etc.
 
-use crate::protocol::global::{TChoice, TEnd, TPar, TRecv, TSend};
-use crate::protocol::local::RoleEq;
-use crate::types;
+use crate::protocol::global::{
+    TChanOffer, TEnd, TChanPar, TChanRecv, TChanSend, GlobalProtocol
+};
+use crate::RoleEq;
+use crate::types::{self, ActionIOTMarker, Bool, BoolOr, ProtocolLabel, RoleMarker, SessionType, SupportsActionIO};
 
 /// Returns a type-level boolean indicating whether the role is present.
 pub trait ContainsRole<R> {
-    type Output: types::Bool;
+    type Output: Bool;
 }
 
 /// Helper trait to check if a role is NOT present in a protocol branch.
@@ -16,67 +18,113 @@ pub trait NotContainsRole<R> {}
 
 /// Extracts the protocol label from a protocol or endpoint type.
 pub trait GetProtocolLabel {
-    type Label: types::ProtocolLabel;
+    type Label: ProtocolLabel;
 }
 
 /// Extracts the label from a local endpoint type.
 pub trait GetLocalLabel {
-    type Label: types::ProtocolLabel;
+    type Label: ProtocolLabel;
 }
 
 // Base case: TEnd doesn't contain any role
-impl<IO, Lbl: types::ProtocolLabel, R> ContainsRole<R> for TEnd<IO, Lbl> {
+impl<IO: SessionType, Lbl: ProtocolLabel, R> ContainsRole<R> for TEnd<IO, Lbl> {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, R> NotContainsRole<R> for TEnd<IO, Lbl> {}
+impl<IO: SessionType, Lbl: ProtocolLabel, R> NotContainsRole<R> for TEnd<IO, Lbl> {}
 
-// TSend contains the role if the sender matches, or the continuation contains the role
-impl<IO, Lbl: types::ProtocolLabel, To, H, T, RoleT> ContainsRole<RoleT>
-    for TSend<IO, Lbl, To, H, T>
+// TChanSend contains the role if the sender matches, or the continuation contains the role
+impl<Snd, Rcv, M, Msg, G, AIO, IO, RoleT> ContainsRole<RoleT>
+    for TChanSend<Snd, Rcv, M, Msg, G, AIO, IO>
 where
-    To: RoleEq<RoleT>,
-    <To as RoleEq<RoleT>>::Output: types::Bool,
-    T: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <T as ContainsRole<RoleT>>::Output: types::Bool,
-    <To as RoleEq<RoleT>>::Output: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
+    Snd: RoleMarker,
+    Rcv: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static, 
+    Msg: core::fmt::Debug + Send + Sync + 'static,
+    G: GlobalProtocol + ContainsRole<RoleT>,
+    AIO: ActionIOTMarker,
+    IO: SessionType + SupportsActionIO<AIO>,
+    Snd: RoleEq<RoleT>,
+    <Snd as RoleEq<RoleT>>::Output: Bool,
+    <G as ContainsRole<RoleT>>::Output: Bool,
+    <Snd as RoleEq<RoleT>>::Output: BoolOr<<G as ContainsRole<RoleT>>::Output>,
 {
-    type Output = types::Or<<To as RoleEq<RoleT>>::Output, <T as ContainsRole<RoleT>>::Output>;
+    type Output = <<Snd as RoleEq<RoleT>>::Output as BoolOr<<G as ContainsRole<RoleT>>::Output>>::Output;
 }
 
-// TRecv contains the role if the receiver matches, or the continuation contains the role
-impl<IO, Lbl: types::ProtocolLabel, From, H, T, RoleT> ContainsRole<RoleT>
-    for TRecv<IO, Lbl, From, H, T>
+// TChanRecv contains the role if the receiver matches, or the continuation contains the role
+impl<Rcv, Snd, M, Msg, G, AIO, IO, RoleT> ContainsRole<RoleT>
+    for TChanRecv<Rcv, Snd, M, Msg, G, AIO, IO>
 where
-    From: RoleEq<RoleT>,
-    <From as RoleEq<RoleT>>::Output: types::Bool,
-    T: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <T as ContainsRole<RoleT>>::Output: types::Bool,
-    <From as RoleEq<RoleT>>::Output: types::BoolOr<<T as ContainsRole<RoleT>>::Output>,
+    Rcv: RoleMarker,
+    Snd: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static,
+    Msg: core::fmt::Debug + Send + Sync + 'static,
+    G: GlobalProtocol + ContainsRole<RoleT>,
+    AIO: ActionIOTMarker,
+    IO: SessionType + SupportsActionIO<AIO>,
+    Rcv: RoleEq<RoleT>,
+    <Rcv as RoleEq<RoleT>>::Output: Bool,
+    <G as ContainsRole<RoleT>>::Output: Bool,
+    <Rcv as RoleEq<RoleT>>::Output: BoolOr<<G as ContainsRole<RoleT>>::Output>,
 {
-    type Output = types::Or<<From as RoleEq<RoleT>>::Output, <T as ContainsRole<RoleT>>::Output>;
+    type Output = <<Rcv as RoleEq<RoleT>>::Output as BoolOr<<G as ContainsRole<RoleT>>::Output>>::Output;
 }
 
-// TChoice contains the role if either branch contains it
-impl<IO, Lbl: types::ProtocolLabel, L, R, RoleT> ContainsRole<RoleT> for TChoice<IO, Lbl, L, R>
+// TChanOffer contains the role if either branch contains it, or if the offerer/chooser is the role.
+// For simplicity, we check branches. A more precise check might involve ROfferer and RChooser.
+impl<ROfferer, RChooser, M, L, R, AIO, IO, RoleT> ContainsRole<RoleT>
+    for TChanOffer<ROfferer, RChooser, M, L, R, AIO, IO>
 where
-    L: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <L as ContainsRole<RoleT>>::Output: types::Bool,
-    R: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <R as ContainsRole<RoleT>>::Output: types::Bool,
-    <L as ContainsRole<RoleT>>::Output: types::BoolOr<<R as ContainsRole<RoleT>>::Output>,
+    ROfferer: RoleMarker,
+    RChooser: RoleMarker,
+    M: core::fmt::Debug + Send + Sync + 'static,
+    L: GlobalProtocol + ContainsRole<RoleT>,
+    R: GlobalProtocol + ContainsRole<RoleT>,
+    AIO: ActionIOTMarker,
+    IO: SessionType + SupportsActionIO<AIO>,
+    <L as ContainsRole<RoleT>>::Output: Bool,
+    <R as ContainsRole<RoleT>>::Output: Bool,
+    <L as ContainsRole<RoleT>>::Output: BoolOr<<R as ContainsRole<RoleT>>::Output>,
+    // Optionally, check if ROfferer or RChooser is RoleT
+    // ROfferer: RoleEq<RoleT>,
+    // RChooser: RoleEq<RoleT>,
+    // ... and combine with BoolOr
 {
-    type Output = types::Or<<L as ContainsRole<RoleT>>::Output, <R as ContainsRole<RoleT>>::Output>;
+    type Output = <<L as ContainsRole<RoleT>>::Output as BoolOr<<R as ContainsRole<RoleT>>::Output>>::Output;
 }
 
-// TPar contains the role if either branch contains it
-impl<IO, Lbl: types::ProtocolLabel, L, R, IsDisjoint, RoleT> ContainsRole<RoleT>
-    for TPar<IO, Lbl, L, R, IsDisjoint>
+// TChanPar contains the role if either branch contains it
+impl<M, L, R, IsDisjoint, IO, RoleT> ContainsRole<RoleT>
+    for TChanPar<M, L, R, IsDisjoint, IO>
 where
-    L: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <L as ContainsRole<RoleT>>::Output: types::Bool,
-    R: ContainsRole<RoleT> + crate::protocol::global::TSession<IO>,
-    <R as ContainsRole<RoleT>>::Output: types::Bool,
-    <L as ContainsRole<RoleT>>::Output: types::BoolOr<<R as ContainsRole<RoleT>>::Output>,
+    M: core::fmt::Debug + Send + Sync + 'static,
+    L: GlobalProtocol + ContainsRole<RoleT>,
+    R: GlobalProtocol + ContainsRole<RoleT>,
+    IsDisjoint: core::fmt::Debug + Send + Sync + 'static, // Kept as per TChanPar definition, ideally types::Bool
+    IO: SessionType,
+    <L as ContainsRole<RoleT>>::Output: Bool,
+    <R as ContainsRole<RoleT>>::Output: Bool,
+    <L as ContainsRole<RoleT>>::Output: BoolOr<<R as ContainsRole<RoleT>>::Output>,
 {
-    type Output = types::Or<<L as ContainsRole<RoleT>>::Output, <R as ContainsRole<RoleT>>::Output>;
+    type Output = <<L as ContainsRole<RoleT>>::Output as BoolOr<<R as ContainsRole<RoleT>>::Output>>::Output;
 }
+
+// TODO: Add ContainsRole for TChanRec and TChanContinue
+// TChanRec<RecLbl, S, IO>
+// TChanContinue<RecLbl, IO>
+
+// Example for TChanRec:
+// impl<RecLbl: ProtocolLabel, S: GlobalProtocol + ContainsRole<RoleT>, IO: SessionType, RoleT> ContainsRole<RoleT>
+//     for TChanRec<RecLbl, S, IO>
+// where
+//     <S as ContainsRole<RoleT>>::Output: Bool,
+// {
+//     type Output = <S as ContainsRole<RoleT>>::Output;
+// }
+
+// TChanContinue does not directly contain roles other than through its context in TChanRec.
+// Its ContainsRole might be considered False or depend on a more complex analysis.
+// For now, let's assume it doesn't introduce new roles for simplicity in projection rules.
+// impl<RecLbl: ProtocolLabel, IO: SessionType, RoleT> ContainsRole<RoleT> for TChanContinue<RecLbl, IO> {
+// type Output = types::False;
+// }
