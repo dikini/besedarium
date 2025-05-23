@@ -58,6 +58,9 @@ protocol examples.
   - Section on determining the dual action for well-formedness, with algorithmic matching.
   - Concrete Rust-style protocol examples, including three-role protocols (well-formed and not well-formed).
   - Type-level trait pseudocode for IsDual and IsWellFormed, and documentation on compile-time protocol verification patterns.
+  - Detailed explanation of the Projection function (`Project(G, R_target)`), its semantics, and integration with IO/AIO types.
+  - Comprehensive section on the Type-Level Implementation in Rust, covering `IsDual`, `Project`, and `WellFormed` traits, including their structure, implementation strategies, and compile-time verification benefits.
+  - Conclusion summarizing the document and outlining future work.
 - Updated `work/learnings.md` with key learnings and patterns from the new documentation, including Rust type-level programming, trait design, and protocol verification strategies.
 
 ### Fixed

@@ -162,6 +162,8 @@ This document provides a status overview of the Besedarium session types library
 
 - Protocol transform modularization: **completed** implementing `ProjectSendCase` and `ProjectRecvCase` in their own modules
 - Next step: Update tests in `test_overrides.rs` to work with the new modular structure
+- Finalizing documentation for core concepts:
+  - `docs/duality.md` (Duality, Well-Formedness, Projection, and Type-Level Implementation) is now complete.
 
 ### 5.2 Current Issues
 
