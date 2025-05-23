@@ -15,10 +15,10 @@ incorporating the development approach notes below.
 ## Phase 1: Core Protocol & Duality Implementation (Guided by `docs/duality.md`)
 
 This phase focuses on implementing the foundational elements of the library,
-with a strong emphasis on the concepts outlined in `duality.md`.
+with a strong emphasis on the concepts outlined in `docs/duality.md`.
 
 - [ ] **Task 1.1**: Implement Core Types and Traits based on `duality.md`
-  - [ ] **Task 1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts).
+  - [ ] **Task 1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts) (wip).
   - [ ] **Task 1.1.2**: Implement Global Protocol Types (e.g., `TChanSend`, `TChanRecv`, `TChanOffer`, `TChanChoice`, `TChanPar`, `TChanRec`, `TChanVar`, `TChanEnd`, `TChanContinue`, `TChanStart`) incorporating `CommMetadata` and `ActionIOType`.
   - [ ] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
   - [ ] **Task 1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.

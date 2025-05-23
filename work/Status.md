@@ -165,6 +165,13 @@ This document provides a status overview of the Besedarium session types library
 - Finalizing documentation for core concepts:
   - `docs/duality.md` (Duality, Well-Formedness, Projection, and Type-Level Implementation) is now complete.
 
+## Current Work In Progress
+
+- **Phase 1: Core Protocol & Duality Implementation**
+  - **Task 1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts) based on `docs/duality.md`. (wip)
+    - Status: Analyzing `docs/duality.md` for requirements.
+    - Next Steps: Propose data structures and traits for `CommMetadata` and related concepts.
+
 ### 5.2 Current Issues
 
 - Tests in `test_overrides.rs` need updates to work with the new modular structure
