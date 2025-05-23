@@ -19,9 +19,7 @@
 //! produce local (endpoint) protocols that describe the behavior of
 //! individual participants.
 
-use super::base::{Cons, Nil};
 use crate::sealed;
-use crate::types;
 use core::marker::PhantomData;
 
 /// Core trait for all global session type combinators.
@@ -29,251 +27,152 @@ use core::marker::PhantomData;
 /// - `IO`: Protocol marker type (e.g., Http, Mqtt).
 /// - Implemented by all protocol combinators (TEnd, TSend, TRecv, TChoice, TPar, TRec).
 /// - Used for type-level composition and compile-time protocol checks.
-pub trait TSession<IO>: sealed::Sealed {
-    /// Compose this session with another session of the same IO type.
-    type Compose<Rhs: TSession<IO>>: TSession<IO>;
-    /// Is this session type empty (TEnd)?
-    const IS_EMPTY: bool;
-}
+pub trait TSession<IO>: sealed::Sealed {}
 
-/// End of a protocol session.
+/// Protocol entry point.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this end (default: EmptyLabel).
+/// - `Lbl`: Label for this start point.
+/// - `S`: Continuation protocol.
+pub struct TStart<IO, Lbl, S> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _s: PhantomData<S>,
+}
+
+impl<IO, Lbl, S> sealed::Sealed for TStart<IO, Lbl, S> {}
+impl<IO, Lbl, S> TSession<IO> for TStart<IO, Lbl, S> {}
+
+/// Protocol termination.
 ///
-/// Used to indicate protocol termination.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TEnd<IO, Lbl = types::EmptyLabel>(PhantomData<(IO, Lbl)>);
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this end point.
+pub struct TEnd<IO, Lbl> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+}
 
 impl<IO, Lbl> sealed::Sealed for TEnd<IO, Lbl> {}
-impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {
-    type Compose<Rhs: TSession<IO>> = Rhs;
-    const IS_EMPTY: bool = true;
-}
+impl<IO, Lbl> TSession<IO> for TEnd<IO, Lbl> {}
 
-/// Protocol entry point that marks the beginning of a session.
-///
-/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `Lbl`: Label for this start point (for projection and debugging).
-/// - `S`: The continuation protocol after this start point.
-///
-/// Used to provide a clear starting point for protocols, improving clarity and consistency.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TStart<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
-
-impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TStart<IO, Lbl, S> {}
-impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TStart<IO, Lbl, S> {
-    type Compose<Rhs: TSession<IO>> = TStart<IO, Lbl, S::Compose<Rhs>>;
-    const IS_EMPTY: bool = false;
-}
-
-/// Implement GetProtocolLabel for TStart to adhere to the protocol label invariant.
-/// This allows for label extraction and preservation during projection.
-impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> crate::protocol::transforms::GetProtocolLabel
-    for TStart<IO, Lbl, S>
-{
-    type Label = Lbl;
-}
-
-/// Represents a single send action in a protocol session.
-///
-/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `Lbl`: Label for this send (for projection and debugging).
-/// - `R`: Role performing the send.
-/// - `H`: Message type being sent.
-/// - `T`: Continuation protocol after this send.
-///
-/// Used to model a single send step in a protocol.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TSend<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
-    PhantomData<(IO, Lbl, R, H, T)>,
-);
-
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
-    for TSend<IO, Lbl, R, H, T>
-{
-}
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
-    for TSend<IO, Lbl, R, H, T>
-{
-    type Compose<Rhs: TSession<IO>> = TSend<IO, Lbl, R, H, T::Compose<Rhs>>;
-    const IS_EMPTY: bool = false;
-}
-
-/// Represents a single receive action in a protocol session.
-///
-/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
-/// - `Lbl`: Label for this receive (for projection and debugging).
-/// - `R`: Role performing the receive.
-/// - `H`: Message type being received.
-/// - `T`: Continuation protocol after this receive.
-///
-/// Used to model a single receive step in a protocol.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRecv<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>>(
-    PhantomData<(IO, Lbl, R, H, T)>,
-);
-
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> sealed::Sealed
-    for TRecv<IO, Lbl, R, H, T>
-{
-}
-impl<IO, Lbl: types::ProtocolLabel, R, H, T: TSession<IO>> TSession<IO>
-    for TRecv<IO, Lbl, R, H, T>
-{
-    type Compose<Rhs: TSession<IO>> = TRecv<IO, Lbl, R, H, T::Compose<Rhs>>;
-    const IS_EMPTY: bool = false;
-}
-
-/// Binary protocol choice between two branches.
+/// Individual send action between roles.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this choice (for projection and debugging).
-/// - `L`, `R`: The two protocol branches.
-///
-/// Used to model branching points in a protocol (e.g., offer/choose).
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TChoice<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>>(
-    PhantomData<(IO, Lbl, L, R)>,
-);
-
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> sealed::Sealed
-    for TChoice<IO, Lbl, L, R>
-{
-}
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>> TSession<IO>
-    for TChoice<IO, Lbl, L, R>
-{
-    type Compose<Rhs: TSession<IO>> = TChoice<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>>;
-    const IS_EMPTY: bool = false;
+/// - `M`: Communication metadata (`CommMetadata`).
+/// - `RSender`: Sending role.
+/// - `RReceiver`: Receiving role.
+/// - `Msg`: Message type being sent.
+/// - `G`: Continuation protocol.
+pub struct TSend<IO, M, RSender, RReceiver, Msg, G> {
+    _io: PhantomData<IO>,
+    _m: PhantomData<M>,
+    _sender: PhantomData<RSender>,
+    _receiver: PhantomData<RReceiver>,
+    _msg: PhantomData<Msg>,
+    _g: PhantomData<G>,
 }
 
-/// Recursive session type for repeating protocol fragments.
+impl<IO, M, RSender, RReceiver, Msg, G> sealed::Sealed
+    for TSend<IO, M, RSender, RReceiver, Msg, G>
+{
+}
+impl<IO, M, RSender, RReceiver, Msg, G> TSession<IO>
+    for TSend<IO, M, RSender, RReceiver, Msg, G>
+{
+}
+
+/// Individual receive action between roles.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this recursion (for projection and debugging).
-/// - `S`: The protocol fragment to repeat (may refer to itself).
+/// - `M`: Communication metadata (`CommMetadata`).
+/// - `RReceiver`: Receiving role.
+/// - `RSender`: Sending role.
+/// - `Msg`: Message type being received.
+/// - `G`: Continuation protocol.
+pub struct TRecv<IO, M, RReceiver, RSender, Msg, G> {
+    _io: PhantomData<IO>,
+    _m: PhantomData<M>,
+    _receiver: PhantomData<RReceiver>,
+    _sender: PhantomData<RSender>,
+    _msg: PhantomData<Msg>,
+    _g: PhantomData<G>,
+}
+
+impl<IO, M, RReceiver, RSender, Msg, G> sealed::Sealed
+    for TRecv<IO, M, RReceiver, RSender, Msg, G>
+{
+}
+impl<IO, M, RReceiver, RSender, Msg, G> TSession<IO>
+    for TRecv<IO, M, RReceiver, RSender, Msg, G>
+{
+}
+
+/// Binary protocol choice offered by one role to another.
 ///
-/// Used to model loops or streaming protocols.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TRec<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
-
-impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> sealed::Sealed for TRec<IO, Lbl, S> {}
-impl<IO, Lbl: types::ProtocolLabel, S: TSession<IO>> TSession<IO> for TRec<IO, Lbl, S> {
-    type Compose<Rhs: TSession<IO>> = TRec<IO, Lbl, S::Compose<Rhs>>;
-    const IS_EMPTY: bool = false;
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this choice.
+/// - `ROfferer`: Role offering the choice.
+/// - `RChooser`: Role making the choice.
+/// - `L`: Protocol for the left branch of the choice.
+/// - `R`: Protocol for the right branch of the choice.
+pub struct TChoice<IO, Lbl, ROfferer, RChooser, L, R> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _offerer: PhantomData<ROfferer>,
+    _chooser: PhantomData<RChooser>,
+    _l: PhantomData<L>,
+    _r: PhantomData<R>,
 }
 
-/// Continue recursion at the protocol fragment labeled by `Lbl`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TContinue<IO, Lbl: types::ProtocolLabel>(PhantomData<(IO, Lbl)>);
-
-impl<IO, Lbl: types::ProtocolLabel> sealed::Sealed for TContinue<IO, Lbl> {}
-impl<IO, Lbl: types::ProtocolLabel> TSession<IO> for TContinue<IO, Lbl> {
-    type Compose<Rhs: TSession<IO>> = TContinue<IO, Lbl>;
-    const IS_EMPTY: bool = false;
+impl<IO, Lbl, ROfferer, RChooser, L, R> sealed::Sealed
+    for TChoice<IO, Lbl, ROfferer, RChooser, L, R>
+{
+}
+impl<IO, Lbl, ROfferer, RChooser, L, R> TSession<IO>
+    for TChoice<IO, Lbl, ROfferer, RChooser, L, R>
+{
 }
 
-/// Branded parallel composition of two protocol branches.
+/// Parallel protocol composition.
 ///
 /// - `IO`: Protocol marker type.
 /// - `Lbl`: Label for this parallel composition.
-/// - `L`, `R`: The two protocol branches to run in parallel.
-/// - `IsDisjoint`: Type-level boolean indicating if branches are disjoint.
+/// - `L`: Left protocol branch.
+/// - `R`: Right protocol branch.
+/// - `IsDisjoint`: Type-level boolean indicating if roles in L and R are disjoint.
+pub struct TPar<IO, Lbl, L, R, IsDisjoint> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _l: PhantomData<L>,
+    _r: PhantomData<R>,
+    _is_disjoint: PhantomData<IsDisjoint>,
+}
+
+impl<IO, Lbl, L, R, IsDisjoint> sealed::Sealed for TPar<IO, Lbl, L, R, IsDisjoint> {}
+impl<IO, Lbl, L, R, IsDisjoint> TSession<IO> for TPar<IO, Lbl, L, R, IsDisjoint> {}
+
+/// Recursive protocol definition.
 ///
-/// Used to model concurrency in protocols. Disjointness is enforced at compile time.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TPar<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint>(
-    PhantomData<(IO, Lbl, L, R, IsDisjoint)>,
-);
-
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> sealed::Sealed
-    for TPar<IO, Lbl, L, R, IsDisjoint>
-{
-}
-impl<IO, Lbl: types::ProtocolLabel, L: TSession<IO>, R: TSession<IO>, IsDisjoint> TSession<IO>
-    for TPar<IO, Lbl, L, R, IsDisjoint>
-{
-    type Compose<Rhs: TSession<IO>> = TPar<IO, Lbl, L::Compose<Rhs>, R::Compose<Rhs>, IsDisjoint>;
-    const IS_EMPTY: bool = false;
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this recursion point (used by `TContinue`).
+/// - `S`: Protocol body, which may contain `TContinue<Lbl>`.
+pub struct TRec<IO, Lbl, S> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _s: PhantomData<S>,
 }
 
-/// Trait for mapping a type-level list to a nested `TChoice`.
+impl<IO, Lbl, S> sealed::Sealed for TRec<IO, Lbl, S> {}
+impl<IO, Lbl, S> TSession<IO> for TRec<IO, Lbl, S> {}
+
+/// Continue to a recursion point.
 ///
-/// # Examples
-/// ```ignore
-/// use besedarium::*;
-/// // Create a list of two end-of-session branches
-/// type EndList = tlist!(
-///     TEnd<Http>,
-///     TEnd<Http>,
-/// );
-/// // Map to a protocol choice
-/// type Choice = <EndList as ToTChoice<Http>>::Output;
-/// // Equivalent to a binary choice between two ends
-/// assert_type_eq!(
-///     Choice,
-///     TChoice<
-///         Http,
-///         EmptyLabel,
-///         TEnd<Http>,
-///         TEnd<Http>
-///     >
-/// );
-/// ```
-pub trait ToTChoice<IO> {
-    type Output: TSession<IO>;
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label of the `TRec` to continue to.
+pub struct TContinue<IO, Lbl> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
 }
 
-/// Trait for mapping a type-level list to a nested `TPar`.
-///
-/// # Examples
-/// ```ignore
-/// use besedarium::*;
-/// // Create a list of two end-of-session branches
-/// type EndList = tlist!(
-///     TEnd<Http>,
-///     TEnd<Http>,
-/// );
-/// // Map to a parallel composition
-/// type Par = <EndList as ToTPar<Http>>::Output;
-/// // Equivalent to running two sessions in parallel
-/// assert_type_eq!(
-///     Par,
-///     TPar<
-///         Http,
-///         EmptyLabel,
-///         TEnd<Http>,
-///         TEnd<Http>,
-///         FalseB
-///     >
-/// );
-/// ```
-pub trait ToTPar<IO> {
-    type Output: TSession<IO>;
-}
-
-// --- ToTChoice trait, base case for Nil ---
-impl<IO> ToTChoice<IO> for Nil {
-    type Output = TEnd<IO>;
-}
-
-// --- ToTChoice trait, recursive case ---
-impl<IO, H: TSession<IO>, T: ToTChoice<IO>> ToTChoice<IO> for Cons<H, T> {
-    type Output = TChoice<IO, types::EmptyLabel, H, <T as ToTChoice<IO>>::Output>;
-}
-
-// --- ToTPar trait, base case for Nil ---
-impl<IO> ToTPar<IO> for Nil {
-    type Output = TEnd<IO>;
-}
-
-// --- ToTPar trait, recursive case ---
-impl<IO, H: TSession<IO>, T: ToTPar<IO>> ToTPar<IO> for Cons<H, T> {
-    type Output = TPar<IO, types::EmptyLabel, H, <T as ToTPar<IO>>::Output, types::False>;
-}
-
-/// Compile-time Disjointness Assertion Machinery
-pub trait AssertDisjoint {
-    type Output;
-}
+impl<IO, Lbl> sealed::Sealed for TContinue<IO, Lbl> {}
+impl<IO, Lbl> TSession<IO> for TContinue<IO, Lbl> {}

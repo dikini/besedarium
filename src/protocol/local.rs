@@ -26,134 +26,180 @@
 //! label preservation throughout all protocol transformations.
 
 use crate::sealed;
-use crate::types;
+use crate::types; // Import the types module
 use core::marker::PhantomData;
 
-/// Concrete roles for protocols and tests
-pub struct TClient;
-pub struct TServer;
-pub struct TBroker;
-pub struct TWorker;
-
-/// Placeholder parameter for protocol handlers
-/// Never actually used at runtime, just for type-level protocol descriptors
-pub struct Void;
-
-/// Marker trait for protocol participants (roles).
+/// Core trait for all local session types.
 ///
-/// Implement this trait for each participant in your protocol.
-pub trait Role {}
-impl Role for TClient {}
-impl Role for TServer {}
-impl Role for TBroker {}
-impl Role for TWorker {}
-impl Role for Void {}
+/// - `IO`: Protocol marker type (e.g., Http, Mqtt).
+/// - `Me`: The role this endpoint belongs to.
+/// - Implemented by all local protocol combinators.
+pub trait EpSession<IO, Me>: sealed::Sealed {}
 
-/// Type-level equality for roles.
+/// Local protocol entry point.
 ///
-/// Used to determine if two roles are the same at compile time (for projection).
-pub trait RoleEq<R> {
-    type Output;
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this start point.
+/// - `Me`: The role this endpoint belongs to.
+/// - `S`: Continuation local protocol.
+pub struct EpStart<IO, Lbl, Me, S> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+    _s: PhantomData<S>,
 }
 
-/// Trait for all local (endpoint) session types.
-///
-/// - `IO`: Protocol marker type.
-/// - `R`: Role being projected.
-pub trait EpSession<IO, R>: sealed::Sealed {}
+impl<IO, Lbl, Me, S> sealed::Sealed for EpStart<IO, Lbl, Me, S> {}
+impl<IO, Lbl, Me, S> EpSession<IO, Me> for EpStart<IO, Lbl, Me, S> {}
 
-/// Endpoint type for sending a message in a local protocol.
+/// Endpoint sending operation.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this interaction (for traceability and debugging).
-/// - `R`: Role performing the send.
-/// - `H`: Message type being sent.
-/// - `T`: Continuation after sending.
-pub struct EpSend<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> EpSession<IO, R> for EpSend<IO, Lbl, R, H, T> {}
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> sealed::Sealed for EpSend<IO, Lbl, R, H, T> {}
+/// - `M`: Communication metadata (`CommMetadata`).
+/// - `RMe`: The role this endpoint belongs to (sender).
+/// - `RPeer`: The peer role (receiver).
+/// - `Msg`: Message type being sent.
+/// - `G`: Continuation local protocol.
+pub struct EpSend<IO, M, RMe, RPeer, Msg, G> {
+    _io: PhantomData<IO>,
+    _m: PhantomData<M>,
+    _me: PhantomData<RMe>,
+    _peer: PhantomData<RPeer>,
+    _msg: PhantomData<Msg>,
+    _g: PhantomData<G>,
+}
 
-/// Endpoint type for receiving a message in a local protocol.
-///
-/// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this interaction (for traceability and debugging).
-/// - `R`: Role performing the receive.
-/// - `H`: Message type being received.
-/// - `T`: Continuation after receiving.
-pub struct EpRecv<IO, Lbl: types::ProtocolLabel, R, H, T>(PhantomData<(IO, Lbl, R, H, T)>);
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> EpSession<IO, R> for EpRecv<IO, Lbl, R, H, T> {}
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> sealed::Sealed for EpRecv<IO, Lbl, R, H, T> {}
+impl<IO, M, RMe, RPeer, Msg, G> sealed::Sealed for EpSend<IO, M, RMe, RPeer, Msg, G> {}
+impl<IO, M, RMe, RPeer, Msg, G> EpSession<IO, RMe> for EpSend<IO, M, RMe, RPeer, Msg, G> {}
 
-/// Endpoint type for protocol termination in a local protocol.
+/// Endpoint receiving operation.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this endpoint (for traceability and debugging).
-/// - `R`: Role for which the protocol ends.
-pub struct EpEnd<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
-impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpEnd<IO, Lbl, R> {}
-impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpEnd<IO, Lbl, R> {}
+/// - `M`: Communication metadata (`CommMetadata`).
+/// - `RMe`: The role this endpoint belongs to (receiver).
+/// - `RPeer`: The peer role (sender).
+/// - `Msg`: Message type being received.
+/// - `G`: Continuation local protocol.
+pub struct EpRecv<IO, M, RMe, RPeer, Msg, G> {
+    _io: PhantomData<IO>,
+    _m: PhantomData<M>,
+    _me: PhantomData<RMe>,
+    _peer: PhantomData<RPeer>,
+    _msg: PhantomData<Msg>,
+    _g: PhantomData<G>,
+}
 
-/// Endpoint type for local protocol branching (choice/offer).
-///
-/// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this choice (for traceability and debugging).
-/// - `Me`: The role being projected.
-/// - `L`, `R`: The two local protocol branches.
-pub struct EpChoice<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Lbl, Me, L, R> {}
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> sealed::Sealed for EpChoice<IO, Lbl, Me, L, R> {}
+impl<IO, M, RMe, RPeer, Msg, G> sealed::Sealed for EpRecv<IO, M, RMe, RPeer, Msg, G> {}
+impl<IO, M, RMe, RPeer, Msg, G> EpSession<IO, RMe> for EpRecv<IO, M, RMe, RPeer, Msg, G> {}
 
-/// Endpoint type for local protocol parallel composition.
+/// Endpoint protocol choice.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this parallel composition (for traceability and debugging).
-/// - `Me`: The role being projected.
-/// - `L`, `R`: The two local protocol branches.
-pub struct EpPar<IO, Lbl: types::ProtocolLabel, Me, L, R>(PhantomData<(IO, Lbl, Me, L, R)>);
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> EpSession<IO, Me> for EpPar<IO, Lbl, Me, L, R> {}
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> sealed::Sealed for EpPar<IO, Lbl, Me, L, R> {}
+/// - `Lbl`: Label for this choice point.
+/// - `Me`: The role this endpoint belongs to.
+/// - `L`: Local protocol for the left branch.
+/// - `R`: Local protocol for the right branch.
+pub struct EpChoice<IO, Lbl, Me, L, R> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+    _l: PhantomData<L>,
+    _r: PhantomData<R>,
+}
 
-/// No-op endpoint type for roles uninvolved in a protocol branch.
-///
-/// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this skip operation (for traceability and debugging).
-/// - `R`: Role that is skipping this branch.
-///
-/// Used to improve type-level precision for projections.
-pub struct EpSkip<IO, Lbl: types::ProtocolLabel, R>(PhantomData<(IO, Lbl, R)>);
-impl<IO, Lbl: types::ProtocolLabel, R> EpSession<IO, R> for EpSkip<IO, Lbl, R> {}
-impl<IO, Lbl: types::ProtocolLabel, R> sealed::Sealed for EpSkip<IO, Lbl, R> {}
+impl<IO, Lbl, Me, L, R> sealed::Sealed for EpChoice<IO, Lbl, Me, L, R> {}
+impl<IO, Lbl, Me, L, R> EpSession<IO, Me> for EpChoice<IO, Lbl, Me, L, R> {}
 
-/// Endpoint type for protocol starting point.
+/// Endpoint parallel composition.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this start point (for traceability and debugging).
-/// - `Me`: Role for which the protocol starts.
-/// - `T`: Continuation after the start point.
-pub struct EpStart<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
-impl<IO, Lbl: types::ProtocolLabel, Me, T> EpSession<IO, Me> for EpStart<IO, Lbl, Me, T> {}
-impl<IO, Lbl: types::ProtocolLabel, Me, T> sealed::Sealed for EpStart<IO, Lbl, Me, T> {}
+/// - `Lbl`: Label for this parallel composition.
+/// - `Me`: The role this endpoint belongs to.
+/// - `L`: Left local protocol branch.
+/// - `R`: Right local protocol branch.
+pub struct EpPar<IO, Lbl, Me, L, R> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+    _l: PhantomData<L>,
+    _r: PhantomData<R>,
+}
 
-/// Endpoint type for recursion in a local protocol.
-///
-/// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this recursion (for traceability and debugging).
-/// - `Me`: The role being projected.
-/// - `T`: The protocol fragment to repeat (may refer to itself).
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct EpRec<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
-impl<IO, Lbl: types::ProtocolLabel, Me, T> EpSession<IO, Me> for EpRec<IO, Lbl, Me, T> {}
-impl<IO, Lbl: types::ProtocolLabel, Me, T> sealed::Sealed for EpRec<IO, Lbl, Me, T> {}
+impl<IO, Lbl, Me, L, R> sealed::Sealed for EpPar<IO, Lbl, Me, L, R> {}
+impl<IO, Lbl, Me, L, R> EpSession<IO, Me> for EpPar<IO, Lbl, Me, L, R> {}
 
-/// Endpoint type for continue recursion in a local protocol.
+/// Endpoint protocol termination.
 ///
 /// - `IO`: Protocol marker type.
-/// - `Lbl`: Label for this continue (for traceability and debugging).
-/// - `Me`: The role being projected.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct EpContinue<IO, Lbl: types::ProtocolLabel, Me>(PhantomData<(IO, Lbl, Me)>);
-impl<IO, Lbl: types::ProtocolLabel, Me> EpSession<IO, Me> for EpContinue<IO, Lbl, Me> {}
-impl<IO, Lbl: types::ProtocolLabel, Me> sealed::Sealed for EpContinue<IO, Lbl, Me> {}
+/// - `Lbl`: Label for this end point.
+/// - `Me`: The role this endpoint belongs to.
+pub struct EpEnd<IO, Lbl, Me> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+}
+
+impl<IO, Lbl, Me> sealed::Sealed for EpEnd<IO, Lbl, Me> {}
+impl<IO, Lbl, Me> EpSession<IO, Me> for EpEnd<IO, Lbl, Me> {}
+
+/// No-op type for roles not involved in a branch or action.
+///
+/// - `IO`: Protocol marker type.
+/// - `Me`: The role this endpoint belongs to.
+pub struct EpSkip<IO, Me> {
+    _io: PhantomData<IO>,
+    _me: PhantomData<Me>,
+}
+
+impl<IO, Me> sealed::Sealed for EpSkip<IO, Me> {}
+impl<IO, Me> EpSession<IO, Me> for EpSkip<IO, Me> {}
+
+/// Local recursion point.
+///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label for this recursion point.
+/// - `Me`: The role this endpoint belongs to.
+/// - `S`: Local protocol body.
+pub struct EpRec<IO, Lbl, Me, S> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+    _s: PhantomData<S>,
+}
+
+impl<IO, Lbl, Me, S> sealed::Sealed for EpRec<IO, Lbl, Me, S> {}
+impl<IO, Lbl, Me, S> EpSession<IO, Me> for EpRec<IO, Lbl, Me, S> {}
+
+/// Local continue to a recursion point.
+///
+/// - `IO`: Protocol marker type.
+/// - `Lbl`: Label of the `EpRec` to continue to.
+/// - `Me`: The role this endpoint belongs to.
+pub struct EpContinue<IO, Lbl, Me> {
+    _io: PhantomData<IO>,
+    _lbl: PhantomData<Lbl>,
+    _me: PhantomData<Me>,
+}
+
+impl<IO, Lbl, Me> sealed::Sealed for EpContinue<IO, Lbl, Me> {}
+impl<IO, Lbl, Me> EpSession<IO, Me> for EpContinue<IO, Lbl, Me> {}
+
+/// Represents a role in a protocol.
+///
+/// This trait is used to mark types that can represent roles.
+pub trait Role: sealed::Sealed + core::fmt::Debug + Send + Sync + 'static {}
+
+/// Represents a silent action for a role (internal computation).
+///
+/// - `IO`: Protocol marker type.
+/// - `Me`: The role this endpoint belongs to.
+pub struct EpSilent<IO, Me> {
+    _io: PhantomData<IO>,
+    _me: PhantomData<Me>,
+}
+
+impl<IO, Me> sealed::Sealed for EpSilent<IO, Me> {}
+impl<IO, Me> EpSession<IO, Me> for EpSilent<IO, Me> {}
 
 /// Implements the protocol label invariant for EpSkip.
 /// See: Protocol Label Invariant in project documentation.
