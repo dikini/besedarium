@@ -1,404 +1,261 @@
-<!-- filepath: /home/dikini/Projects/besedarium/work/Plan.md -->
-# Plan for Completing docs/duality.md
+# Project Implementation Plan: Besedarium
 
-This plan outlines the steps to finalize the `docs/duality.md` document, ensuring all sections are complete, accurate, and well-explained.
+This document outlines the next phases of development for the Besedarium project,
+based on the re-structured priorities in `work/TASKS.md`. It focuses on core
+library implementation first, followed by testing, advanced features, and documentation.
 
-## Phase 1: Core Protocol Constructs Completion
+## Development Approach Notes
 
-This phase focuses on completing the detailed descriptions and Rust definitions for each protocol construct.
+- **Priority on Core Implementation**: Focus on correctly implementing library features, especially changes related to `duality.md` (structs, traits, interfaces).
+- **Doccomments**: Defer extensive doccomments until core functionality is stable.
+- **Unit Tests**: Implement unit tests in parallel with feature development. Existing unit tests may need significant rework or replacement.
+- **Integration Tests**: Plan to redo integration tests. Consider removing existing ones initially to avoid churn.
+- **Documentation**: Address full documentation after the implementation and testing phases are mature.
 
-### Sub-task 1.1: Verify Table of Contents and Document Structure
+## Phase 1: Core Protocol & Duality Implementation (Guided by `docs/duality.md`)
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Table of Contents", Overall document
-- **Goal:** Ensure the ToC is perfectly synchronized with all H2 and H3 headings and that the overall document structure is sound.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - Existing correct content is preserved.
-- **Pre-conditions:**
-  - `docs/duality.md` exists and has a basic structure.
-  - Previous ToC and heading standardization edits have been applied.
-- **Post-conditions:**
-  - ToC accurately reflects all H2 and H3 headings.
-  - All ToC links are valid and point to the correct sections.
-  - Document structure is logical and easy to navigate.
-- **Acceptance Criteria:**
-  - Manual verification confirms ToC accuracy and link validity.
-  - No MD051 (link-fragment) errors related to the ToC.
-  - Headings are consistently formatted (no numbering, correct capitalization).
+This phase focuses on implementing the foundational elements of the library,
+with a strong emphasis on the concepts outlined in `docs/duality.md`.
 
-### Sub-task 1.2: Complete "Role I/O Capabilities and Action I/O Types"
+### Task 1.1: Implement Core Types and Traits based on `duality.md`
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Role I/O Capabilities and Action I/O Types"
-- **Goal:** Finalize the explanation and Rust code examples for `ActionIOType`, `IO` parameter, and `SupportsActionIO` trait.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The core concept of linking session capabilities to action I/O requirements is maintained.
-- **Pre-conditions:**
-  - Sub-task 1.1 completed.
-  - The basic structure and some content for this section exist.
-- **Post-conditions:**
-  - The explanation of `ActionIOType`, `IO` parameter, and `SupportsActionIO` is clear, complete, and accurate.
-  - Rust code examples for `ActionIOTMarker`, `SupportsActionIO`, and their usage are complete, correct, and well-formatted (including the currently truncated example).
-  - The "Verification during Projection" subsection is fully elaborated.
-- **Acceptance Criteria:**
-  - All conceptual explanations are unambiguous.
-  - Rust code examples are idiomatic and clearly illustrate the concepts.
-  - The section fully explains how I/O capabilities are managed in the MPST framework.
-  - Markdown is correctly formatted.
+- **Objective**: Define and implement the fundamental types and traits required by the protocol logic, incorporating `CommMetadata` and `ActionIOType` concepts as described in `duality.md`.
+- **Sub-tasks & Key Sections**:
+  - **1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts).
+  - **1.1.2**: Implement Global Protocol Types (e.g., `TChanSend`, `TChanRecv`, `TChanOffer`, `TChanChoice`, `TChanPar`, `TChanRec`, `TChanVar`, `TChanEnd`, `TChanContinue`, `TChanStart`) incorporating `CommMetadata` and `ActionIOType`.
+  - **1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
+  - **1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.
+  - **1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks.
+- **Affected Code**: `src/types.rs`, `src/protocol/*.rs`, potentially new modules.
+- **Dependencies**: `docs/duality.md`.
+- **Estimated Edits**: 8-12 (multiple files, significant new type and trait definitions).
+- **Verification**: `cargo build`, `cargo clippy`, `cargo fmt`. Unit tests developed in Phase 2.
 
-### Sub-task 1.3: Complete "Send Action" Section
+### Task 1.2: Implement Label Preservation and Transformation Logic
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Send Action"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Send action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Send action are preserved.
-  - Consistency with other action descriptions is maintained.
-- **Pre-conditions:**
-  - Sub-task 1.2 completed.
-  - A placeholder or basic structure for the "Send Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear and comprehensive.
-  - Rust definitions for Global Type (`TChanSend`) and Local Endpoint Type (`EpSend`) are complete, correct, and include necessary generic parameters (like `IO`, `M`, `Msg`, roles, continuations).
-  - `CommMetadata` integration is clearly explained, including the roles of `ChanId` and `MsgLbl`.
-  - Duality rule is correctly stated and explained.
-  - Invariants for both Global and Local types are thoroughly listed.
-  - Involved roles are correctly identified.
-  - Parameters for both Global and Local type definitions are accurately listed.
-- **Acceptance Criteria:**
-  - All subsections (Semantics, Rust Definitions, `CommMetadata` Integration, Duality Rule, Invariants, Involved Roles, Parameters) are fully populated and accurate.
-  - Rust type definitions are plausible and follow conventions established in the document.
-  - Explanations are consistent with MPST theory.
-  - Markdown is correctly formatted.
+- **Objective**: Enhance protocol definitions with sophisticated label management, including mechanisms for preserving and transforming labels during protocol operations.
+- **Sub-tasks & Key Sections**:
+  - **1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design.
+  - **1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`).
+    - `TMap<L, F>`: Applies a type-level function `F` to transform label `L`.
+    - `TCollect<Protocols, Role>`: Collects all labels offered/received by a `Role` in a `Choice` or `Parallel`.
+    - `TFilter<Labels, Predicate>`: Filters a list of labels based on a `Predicate`.
+  - **1.2.3**: Implement the designed label transformation traits and integrate them with protocol types.
+- **Affected Code**: `src/types.rs`, `src/protocol/*.rs`, new modules for label transformations.
+- **Dependencies**: Stable core primitives from Task 1.1.
+- **Estimated Edits**: 5-7 (multiple files, new modules, tests).
+- **Verification**: `cargo build`, `cargo clippy`, `cargo fmt`. Unit tests developed in Phase 2.
 
-### Sub-task 1.4: Complete "Receive Action" Section
+### Task 1.3: Implement Basic Runtime Components
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Receive Action"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Receive action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Receive action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.3 completed.
-  - Basic structure for the "Receive Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear.
-  - Rust definitions for `TChanRecv` and `EpRecv` are complete.
-  - `CommMetadata` integration is detailed.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Markdown is well-formatted.
+- **Objective**: Provide a foundational runtime component for executing session-typed protocols, including state management and basic error handling.
+- **Sub-tasks & Key Sections**:
+  - **1.3.1**: Design a foundational runtime state machine for protocol execution: Define how protocol states are tracked at runtime.
+  - **1.3.2**: Implement basic channel communication logic: Adapt or create channel abstractions for sending/receiving typed messages according to protocol specifications.
+  - **1.3.3**: Define core error types for protocol violations and communication errors at runtime.
+- **Affected Code**: New `src/runtime/` module, examples.
+- **Dependencies**: Stable core protocol definitions from Task 1.1.
+- **Estimated Edits**: 6-8 (new modules, significant implementation effort).
+- **Verification**: `cargo build`, `cargo clippy`, `cargo fmt`. Unit tests developed in Phase 2.
 
-### Sub-task 1.5: Complete "Offer Action (External Choice - Offering Side)" Section
+### Task 1.4: Research and Formalize Duality Concepts
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Offer Action (External Choice - Offering Side)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Offer action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Offer action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.4 completed.
-  - Basic structure for the "Offer Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear, noting the nature of external choice.
-  - Rust definitions for conceptual `TChanOffer` and `EpOffer` (with type-level lists for branches) are complete.
-  - `CommMetadata` integration for choice signaling is detailed.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct and handle branches appropriately.
-  - Markdown is well-formatted.
+- **Objective**: Deepen the understanding and formalization of session type duality within the project, ensuring the implementation aligns with theoretical underpinnings.
+- **Key Activities**:
+  - **1.4.1**: Further research formal definitions of duality for all implemented primitives.
+  - **1.4.2**: Investigate and document how duality is checked at the type level within the Rust implementation.
+  - **1.4.3**: Explore and document potential for generating dual protocols or verifying compatibility automatically.
+- **Affected Code**: Primarily documentation (`docs/duality.md` update), potentially influencing trait design in Task 1.1.
+- **Dependencies**: Initial implementation of `IsDual` (Task 1.1.4).
+- **Estimated Edits**: 2-3 (documentation, potential minor code adjustments).
+- **Verification**: Conceptual soundness, clarity of documentation.
 
-### Sub-task 1.6: Complete "Choice Action (External Choice - Choosing Side)" Section
+## Phase 2: Core Feature Testing
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Choice Action (External Choice - Choosing Side)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Choice action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Choice action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.5 completed.
-  - Basic structure for the "Choice Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear.
-  - Rust definitions for conceptual `TChanChoice` and `EpChoice` (with type-level lists for branches) are complete.
-  - `CommMetadata` integration for choice signaling is detailed.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Markdown is well-formatted.
+This phase focuses on ensuring the correctness and robustness of the core library
+features implemented in Phase 1. Unit tests should be developed in parallel with
+Phase 1 tasks where feasible, but this phase ensures comprehensive coverage.
 
-### Sub-task 1.7: Complete "Par Action (Parallel Composition)" Section
+### Task 2.1: Develop Unit Tests for Core Types and Duality Logic
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Par Action (Parallel Composition)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Par action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Par action are preserved.
-  - Emphasis on `ChanId` disjointness is maintained.
-- **Pre-conditions:**
-  - Sub-task 1.6 completed.
-  - Basic structure for the "Par Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear.
-  - Rust definitions for `TChanPar` and `EpPar` are complete.
-  - `CommMetadata` integration explains how constituent protocols use their own `CommMetadata` and the disjointness requirement for `ChanId`s.
-  - Duality rule, invariants (including `ChanId` disjointness), roles, and parameters are accurate.
-  - Mermaid diagram illustrating parallel execution with disjoint `ChanId`s is present, correct, and renders properly.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Explanation of `ChanId` disjointness is clear.
-  - Mermaid diagram is correct and illustrative.
-  - Markdown is well-formatted.
+- **Objective**: Create a comprehensive suite of unit tests for all core types, traits, and duality-related logic implemented in Phase 1.
+- **Sub-tasks**:
+  - **2.1.1**: Write unit tests for `CommMetadata`, Global Types (`TChan*`), and Local Endpoint Types (`Ep*`).
+  - **2.1.2**: Write unit tests for the `IsDual` predicate/trait, covering various protocol constructs and edge cases.
+  - **2.1.3**: Write unit tests for the `Project<P, Role>` trait, verifying correct projection for all primitives.
+  - **2.1.4**: Write unit tests for `SupportsActionIO` and `ActionIOType` integration and correctness.
+- **Affected Code**: New files in `tests/` directory.
+- **Dependencies**: Completion of Task 1.1.
+- **Estimated Edits**: Numerous small test files/modules.
+- **Verification**: `cargo test` passes for all new unit tests.
 
-### Sub-task 1.8: Complete "Seq Action (Sequential Composition)" Section
+### Task 2.2: Develop Unit Tests for Label Logic
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Seq Action (Sequential Composition)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Seq action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Seq action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.7 completed.
-  - Basic structure for the "Seq Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation is clear.
-  - Rust definitions for `TChanSeq` and `EpSeq` are complete.
-  - `CommMetadata` integration explains how constituent protocols use their own `CommMetadata`.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Markdown is well-formatted.
+- **Objective**: Ensure the label preservation and transformation logic is correct through targeted unit tests.
+- **Sub-tasks**:
+  - **2.2.1**: Write unit tests for label transformation traits (`TMap`, `TCollect`, `TFilter`) and their integration.
+- **Affected Code**: New files/modules in `tests/` directory.
+- **Dependencies**: Completion of Task 1.2.
+- **Verification**: `cargo test` passes for all new label logic unit tests.
 
-### Sub-task 1.9: Complete "Rec Action (Recursion)" Section
+### Task 2.3: Develop Unit Tests for Basic Runtime Components
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Rec Action (Recursion)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Rec action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Rec action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.8 completed.
-  - Basic structure for the "Rec Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation of recursion and recursion variables is clear.
-  - Rust definitions for `TChanRec` and `EpRec` (using recursion variable types) are complete.
-  - `CommMetadata` integration (typically none for Rec itself, but for its body) is explained.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions correctly model recursion.
-  - Markdown is well-formatted.
+- **Objective**: Verify the functionality of the basic runtime components.
+- **Sub-tasks**:
+  - **2.3.1**: Write unit tests for the runtime state machine logic.
+  - **2.3.2**: Write unit tests for channel communication logic (mocking/simple cases).
+  - **2.3.3**: Write unit tests for error handling and propagation in the runtime.
+- **Affected Code**: New files/modules in `tests/` directory.
+- **Dependencies**: Completion of Task 1.3.
+- **Verification**: `cargo test` passes for all new runtime unit tests.
 
-### Sub-task 1.10: Complete "Continue Action (Recursion Invocation)" Section
+### Task 2.4: Develop Integration Tests (Complex Protocol Examples)
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Continue Action (Recursion Invocation)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Continue action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Continue action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.9 completed.
-  - Basic structure for the "Continue Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation of invoking a recursion variable is clear.
-  - Rust definitions for `TChanContinue` and `EpContinue` (using recursion variable types) are complete.
-  - `CommMetadata` integration (typically none) is explained.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions correctly model recursion invocation.
-  - Markdown is well-formatted.
+- **Objective**: Create integration tests using more complex protocol examples to ensure different components of the library work together correctly.
+- **Sub-tasks**:
+  - **2.4.1**: Remove or overhaul existing integration tests that are no longer relevant due to API changes.
+  - **2.4.2**: Implement multi-party protocol examples as integration tests.
+  - **2.4.3**: Implement examples with complex data serialization as integration tests.
+  - **2.4.4**: Implement examples integrating with async runtimes as integration tests (if basic async support is part of Task 1.3).
+- **Affected Code**: `tests/protocols/`, `tests/integration/` (or similar).
+- **Dependencies**: Completion of Phase 1 and Tasks 2.1-2.3.
+- **Estimated Edits**: 3-5 new complex test files.
+- **Verification**: `cargo test` passes for all integration tests.
 
-### Sub-task 1.11: Complete "Init Action (Session Initialization)" Section
+## Phase 3: Advanced Features, Optimizations & Tooling
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "Init Action (Session Initialization)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the Init action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the Init action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.10 completed.
-  - Basic structure for the "Init Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation of session initialization is clear.
-  - Rust definitions for `TChanInit` and `EpInit` are complete.
-  - `CommMetadata` integration (if applicable for signaling init) is explained.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Markdown is well-formatted.
+With a tested core library, this phase focuses on enhancements, performance, and
+developer experience.
 
-### Sub-task 1.12: Complete "End Action (Session Termination)" Section
+### Task 3.1: Enhance Runtime Checks and Error Handling
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Core Protocol Constructs: Definitions and Duality" -> "End Action (Session Termination)"
-- **Goal:** Provide a complete and accurate description, Rust definitions, `CommMetadata` integration, duality rule, invariants, roles, and parameters for the End action.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The fundamental semantics of the End action are preserved.
-- **Pre-conditions:**
-  - Sub-task 1.11 completed.
-  - Basic structure for the "End Action" section exists.
-- **Post-conditions:**
-  - Semantic explanation of session termination is clear.
-  - Rust definitions for `TChanEnd` and `EpEnd` are complete.
-  - `CommMetadata` integration (typically none) is explained.
-  - Duality rule, invariants, roles, and parameters are accurate.
-- **Acceptance Criteria:**
-  - All subsections are fully populated and accurate.
-  - Rust definitions are correct.
-  - Markdown is well-formatted.
+- **Objective**: Build upon the basic runtime (Task 1.3) to add more sophisticated runtime checks and robust error handling mechanisms.
+- **Details**: Further develop tasks from 1.3, adding more sophisticated mechanisms for state validation, error reporting, and recovery if applicable.
+- **Affected Code**: `src/runtime/`, error type definitions.
+- **Dependencies**: Completion of Task 1.3 and its unit tests (Task 2.3).
+- **Estimated Edits**: 4-6 (refinements and additions to runtime modules).
+- **Verification**: `cargo build`, `cargo test`, `cargo clippy`, `cargo fmt`.
 
-## Phase 2: Predicates and Functions Completion
+### Task 3.2: Investigate Performance and Optimization Opportunities
 
-This phase focuses on the detailed rules for `IsDual`, `IsWellFormed`, and the Projection Function.
+- **Objective**: Analyze the performance characteristics of the type-level machinery and runtime, and identify areas for optimization.
+- **Key Activities**:
+  - **3.2.1**: Profile compile times of type-level constructs.
+  - **3.2.2**: Benchmark runtime performance for common protocol operations.
+  - **3.2.3**: Explore and implement optimization techniques for type-level logic and runtime (e.g., reducing type-level complexity, optimizing runtime state transitions).
+- **Affected Code**: Potentially core types, runtime, build configurations.
+- **Dependencies**: Mature implementation of core and runtime features (Phase 1 & 2).
+- **Estimated Edits**: 2-4 (analysis, potential refactoring, build script changes).
+- **Verification**: Performance metrics, maintaining correctness (`cargo test`).
 
-### Sub-task 2.1: Complete "IsDual Predicate: Detailed Rules" Section
+### Task 3.3: Explore Macro-Based DSL for Protocol Definition
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "IsDual Predicate: Detailed Rules"
-- **Goal:** Ensure all correspondence rules (Send/Receive, Offer/Choice, etc.) are clearly explained and accurate.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The definition of duality is consistent with MPST principles.
-- **Pre-conditions:**
-  - Phase 1 (Sub-tasks 1.1 - 1.12) completed.
-  - Basic structure for this section exists.
-- **Post-conditions:**
-  - Each correspondence rule (Send/Receive, Offer/Choice, Parallel, Sequential, Recursive, Init, End) is fully elaborated and correct.
-  - The role of `CommMetadata`, message types, and `IO` consistency in duality checks is clear.
-  - The "Commentary" subsection, if present, provides valuable insights.
-- **Acceptance Criteria:**
-  - All subsections for correspondence rules are complete and accurate.
-  - Explanations are clear and unambiguous.
-  - Examples are provided if they enhance understanding.
-  - Markdown is correctly formatted.
+- **Objective**: Investigate and potentially develop a macro-based Domain Specific Language (DSL) to simplify protocol definition for users.
+- **Affected Code**: New `src/macros/` module or similar.
+- **Dependencies**: Stable core API.
+- **Estimated Edits**: 3-5 (macro definitions, examples, tests).
+- **Verification**: `cargo build`, `cargo test`, usability of the DSL.
 
-### Sub-task 2.2: Complete "Well-Formedness of Global Protocols (`IsWellFormed`)" Section
+### Task 3.4: Consider Integration with Existing Actor Frameworks
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Well-Formedness of Global Protocols (`IsWellFormed`)"
-- **Goal:** Detail the process for checking `IsWellFormed(G)` and explain local endpoint protocol well-formedness.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The definition of well-formedness is consistent with MPST principles and its reliance on duality.
-- **Pre-conditions:**
-  - Sub-task 2.1 completed.
-  - Basic structure for this section exists.
-- **Post-conditions:**
-  - The subsection "Global Protocol Well-Formedness (`IsWellFormed(G)`)" clearly explains the check.
-  - The subsection "Local Endpoint Protocol Well-Formedness (`IsWellFormed(EpP<IO, ...>)`)" is complete and accurate.
-  - The subsection "Predicate: `IsWellFormed(G)` (Summary of the Check Process)" provides a clear, step-by-step summary.
-  - The role of projection and pairwise duality checks is emphasized.
-- **Acceptance Criteria:**
-  - All subsections are fully elaborated and accurate.
-  - The relationship between global well-formedness, projection, and local duality is clearly explained.
-  - Markdown is correctly formatted.
+- **Objective**: Explore the feasibility and benefits of integrating Besedarium with existing Rust actor frameworks.
+- **Affected Code**: Potentially adapter modules, examples.
+- **Dependencies**: Stable core API and runtime.
+- **Estimated Edits**: 2-4 (research, proof-of-concept integrations).
+- **Verification**: Feasibility analysis, example integrations.
 
-### Sub-task 2.3: Complete "Projection Function: Detailed Rules" Section
+### Task 3.5: Develop Visualization Tools for Protocols (Optional/Future)
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Projection Function: Detailed Rules"
-- **Goal:** Ensure each projection rule (Projecting Send Action, Projecting Receive Action, etc.) is clearly explained and accurate.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - Projection rules are consistent with MPST theory.
-  - Headings follow the "Projecting X Action" format.
-- **Pre-conditions:**
-  - Sub-task 2.2 completed.
-  - Headings in this section are already standardized.
-  - Basic structure for projection rules exists.
-- **Post-conditions:**
-  - Each projection rule (Send, Receive, Offer, Choice, Par, Seq, Rec, Continue, Init, End) is fully explained.
-  - The explanation details how a global action translates to a local action for a specific role.
-  - The role of `IO` capabilities and `SupportsActionIO` checks during projection is reiterated where relevant.
-- **Acceptance Criteria:**
-  - All "Projecting X Action" subsections are complete and accurate.
-  - Explanations are clear, detailing the transformation from global to local types.
-  - Examples are provided if they enhance understanding.
-  - Markdown is correctly formatted.
+- **Objective**: Consider tools or techniques for visualizing protocol definitions, which can aid in understanding and debugging.
+- **Details**: This is an optional/future task, depending on resources and perceived value.
+- **Affected Code**: Potentially external scripts or a new utility crate.
+- **Dependencies**: Stable protocol definition format.
+- **Estimated Edits**: N/A (exploratory).
+- **Verification**: N/A.
 
-## Phase 3: Rust Implementation and Finalization
+## Phase 4: Comprehensive Documentation
 
-### Sub-task 3.1: Complete "Type-Level Implementation in Rust" Section
+This phase focuses on creating user-facing documentation and in-code doccomments
+once the library features are stable and well-tested.
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** "Type-Level Implementation in Rust"
-- **Goal:** Detail how MPST constructs, `IsDual`, and `IsWellFormed` are implemented at the type-level in Rust.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - Explanations align with idiomatic Rust type-level programming patterns.
-- **Pre-conditions:**
-  - Phase 2 (Sub-tasks 2.1 - 2.3) completed.
-  - Basic structure for this section exists.
-- **Post-conditions:**
-  - "Representing Protocol Constructs": Clearly explains how Rust types and traits model global and local protocol actions.
-  - "Implementing `IsDual`": Explains the trait-based approach to checking duality at compile time.
-  - "Implementing `IsWellFormed`": Explains how projection and `IsDual` are combined for well-formedness checks.
-  - Conceptual Rust code snippets are provided to illustrate key implementation patterns.
-- **Acceptance Criteria:**
-  - All subsections are complete, accurate, and provide a good overview of the type-level implementation strategy.
-  - Explanations are accessible to readers familiar with Rust and type systems.
-  - Conceptual code snippets are illustrative and correct.
-  - Markdown is correctly formatted.
+### Task 4.1: Create Core Concept Documentation
 
-### Sub-task 3.2: Review and Refine Introduction and Conclusion
+- **Objective**: Document the core theoretical concepts and their implementation within Besedarium.
+- **Sub-tasks & Key Sections**:
+  - **4.1.1**: Create `docs/Projections.md`: Document the theory, implementation, and usage of the `Project<P, Role>` trait.
+    - Introduction to session type projections.
+    - Role of projections in distributed system safety.
+    - Detailed explanation of how `Project` is implemented for each core primitive.
+    - Examples of projection for simple and complex protocols.
+    - Common pitfalls and best practices.
+  - **4.1.2**: Create `docs/recursion.md`: Explain the type-level recursion mechanism (`Rec<P>`, `Var<N>`) in detail.
+    - Concept of recursion in session types.
+    - Implementation details of `Rec` and `Var` marker types.
+    - How recursion interacts with projection.
+    - Examples of recursive protocols (e.g., server loop, streaming).
+    - Limitations and advanced patterns.
+  - **4.1.3**: Update/Refine `docs/duality.md` with implementation insights and final decisions from Task 1.4.
+- **Dependencies**: Completion of Phase 1 & 2. `Project` implementation (Task 1.1.5), `Rec`/`Var` implementation (part of Task 1.1.2).
+- **Estimated Edits**: 3 new/updated major documentation files.
+- **Verification**: Markdown linting, clarity and accuracy of content.
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** Introduction (before ToC), "Conclusion"
-- **Goal:** Ensure the introduction accurately sets the stage for the document's content and the conclusion effectively summarizes key takeaways.
-- **Invariants:**
-  - Document remains markdownlint compliant.
-  - The core message of the document is preserved.
-- **Pre-conditions:**
-  - Sub-task 3.1 completed.
-  - Existing introduction and conclusion sections are present.
-- **Post-conditions:**
-  - Introduction clearly outlines the document's scope, including `CommMetadata`, `IO` parameters, `IsDual`, and well-formedness.
-  - Conclusion summarizes the importance of duality, `CommMetadata`, and the verification predicates.
-  - Both sections are polished, coherent, and engaging.
-- **Acceptance Criteria:**
-  - Introduction accurately reflects the final content of the document.
-  - Conclusion provides a strong summary and reinforces key concepts.
-  - Language is clear, concise, and professional.
-  - Markdown is correctly formatted.
+### Task 4.2: Write Comprehensive Usage Examples
 
-### Sub-task 3.3: Final Document Review and Linting
+- **Objective**: Provide a collection of practical examples demonstrating how to define and use protocols with Besedarium.
+- **Sub-tasks & Key Sections**:
+  - **4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4).
+    - Basic client-server interaction.
+    - Protocol with choices.
+    - Recursive protocol (e.g., persistent connection).
+    - Parallel composition of protocols.
+    - Advanced example combining multiple features.
+- **Content Source**: Adapt integration tests (Task 2.4) and create new illustrative ones.
+- **Dependencies**: Completion of Phase 1 & 2, especially Task 2.4.
+- **Estimated Edits**: 1 new major documentation file.
+- **Verification**: Markdown linting, code examples should be valid and illustrative.
 
-- **File(s):** `docs/duality.md`
-- **Section(s):** Entire document
-- **Goal:** Perform a comprehensive review for consistency, clarity, technical accuracy, and grammatical correctness. Ensure the document passes all markdown linting checks.
-- **Invariants:**
-  - All previously completed content remains correct.
-- **Pre-conditions:**
-  - Sub-task 3.2 completed.
-  - The document is feature-complete.
-- **Post-conditions:**
-  - The document is free of typos, grammatical errors, and awkward phrasing.
-  - Terminology is used consistently throughout.
-  - All explanations are clear and unambiguous.
-  - Technical details are accurate.
-  - The document flows logically.
-  - The document passes `markdownlint-cli2` checks without errors.
-- **Acceptance Criteria:**
-  - A full read-through confirms overall quality and coherence.
-  - All identified issues (content, grammar, style) are addressed.
-  - `scripts/md-lint.sh` (or equivalent `markdownlint-cli2` command) passes for `docs/duality.md`.
+### Task 4.3: Update Project README
+
+- **Objective**: Refresh the main `README.md` to reflect the current project status, features, and provide clear instructions for getting started.
+- **Key Sections**:
+  - Project overview and goals.
+  - Core features implemented.
+  - Installation and setup.
+  - Quick start guide with a simple example.
+  - Links to detailed documentation (newly created docs from Task 4.1, 4.2).
+  - Contribution guidelines.
+- **Dependencies**: Completion of Tasks 4.1 and 4.2.
+- **Estimated Edits**: 1 significant update to `README.md`.
+- **Verification**: Markdown linting, clarity and usefulness for new users.
+
+### Task 4.4: Add Doccomments
+
+- **Objective**: Add comprehensive doccomments to all public types, traits, and functions in the library, ensuring `cargo doc` produces useful API documentation.
+- **Sub-tasks**:
+  - **4.4.1**: Systematically go through `src/` and add detailed doccomments.
+- **Dependencies**: Stable API from Phase 1, 2, and 3.
+- **Estimated Edits**: Extensive edits across all source files.
+- **Verification**: `cargo doc` generates complete and helpful documentation. `cargo test --doc` passes.
+
+### Task 4.5: Review and Update Internal Documentation
+
+- **Objective**: Consolidate insights, patterns, and learnings from all development phases into internal documentation like `work/learnings.md`.
+- **Sub-tasks & Key Sections**:
+  - **4.5.1**: Review and update `work/learnings.md` with insights from all phases.
+    - Challenges encountered during implementation and testing.
+    - Clarifications on protocol logic or type-level programming.
+    - Useful patterns for explaining complex concepts or solving specific Rust challenges.
+- **Dependencies**: Completion of all prior phases.
+- **Estimated Edits**: 1 major update to `work/learnings.md`.
+- **Verification**: N/A (internal document).
+
+## Ongoing Tasks
+
+- **Refactoring**: Continuously refactor code for clarity, efficiency, and maintainability based on insights from new feature development and documentation.
+  - Refactor `Label` and `Labelled` types (as part of Task 1.2 or ongoing).
+  - Standardize error handling (as part of Task 1.3, 3.1 or ongoing).
+  - Improve `Projection` trait (as part of Task 1.1.5 or ongoing).
+- **Learning & Research**: Stay updated with advancements in type-level programming, session types, and formal methods.
+- **Changelog & Status**: Maintain `CHANGELOG.md` and `work/Status.md` with progress.
+
+This plan will be reviewed and updated as the project progresses.
