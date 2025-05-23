@@ -24,9 +24,17 @@
 //! must have a label parameter and implement the GetProtocolLabel trait.
 //! This enables type-level extraction and reasoning about protocol structure and
 //! label preservation throughout all protocol transformations.
+//endregion
 
-use crate::sealed;
-use crate::types; // Import the types module
+use crate::{
+    protocol::{
+        EpChoice as BaseEpChoice, EpEnd as BaseEpEnd, EpOffer as BaseEpOffer, EpPar as BaseEpPar,
+        EpRec as BaseEpRec, EpRecv as BaseEpRecv, EpSend as BaseEpSend, EpSkip as BaseEpSkip,
+        Message, ProtocolLabel, RecvKindMarker, RoleMarker, SendKindMarker, SessionIO, TSession,
+    },
+    sealed, // Added crate::sealed
+    types::{self, Bool, False, NoLabel, True}, // Corrected paths for types
+};
 use core::marker::PhantomData;
 
 /// Core trait for all local session types.
@@ -201,52 +209,114 @@ pub struct EpSilent<IO, Me> {
 impl<IO, Me> sealed::Sealed for EpSilent<IO, Me> {}
 impl<IO, Me> EpSession<IO, Me> for EpSilent<IO, Me> {}
 
+/// --- GetProtocolLabel ---
+
+/// Extracts the protocol label from an endpoint type.
+pub trait GetProtocolLabel {
+    type Output: ProtocolLabel;
+}
+
+// Implementations for endpoint types
+impl<IO: SessionIO, M: SendKindMarker + ProtocolLabel, RMe: RoleMarker, RPeer: RoleMarker, MsgBody: Message, G: TSession<IO = IO>> GetProtocolLabel
+    for EpSend<IO, M, RMe, RPeer, MsgBody, G>
+{
+    type Output = M;
+}
+
+impl<IO: SessionIO, M: RecvKindMarker + ProtocolLabel, RMe: RoleMarker, RPeer: RoleMarker, MsgBody: Message, G: TSession<IO = IO>> GetProtocolLabel
+    for EpRecv<IO, M, RMe, RPeer, MsgBody, G>
+{
+    type Output = M;
+}
+
+impl<IO: SessionIO, Me: RoleMarker> GetProtocolLabel for EpSkip<IO, Me> {
+    type Output = NoLabel; // Use crate::types::NoLabel, already imported as NoLabel
+}
+
 /// Implements the protocol label invariant for EpSkip.
 /// See: Protocol Label Invariant in project documentation.
-impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel
-    for EpSkip<IO, Lbl, R>
+impl<IO, Me> crate::protocol::transforms::GetProtocolLabel
+    for EpSkip<IO, Me>
+where
+    IO: SessionIO,
+    Me: RoleMarker,
 {
-    type Label = Lbl;
+    type Label = NoLabel; // Use crate::types::NoLabel
 }
 
 /// Implements the protocol label invariant for EpSend.
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> crate::protocol::transforms::GetProtocolLabel
-    for EpSend<IO, Lbl, R, H, T>
+impl<IO, M, RMe, RPeer, Msg, G> crate::protocol::transforms::GetProtocolLabel
+    for EpSend<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: SendKindMarker + types::ProtocolLabel, // M is the label
+    RMe: RoleMarker,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>, // G is a local session for RMe
 {
-    type Label = Lbl;
+    type Label = M;
 }
 
 /// Implements the protocol label invariant for EpRecv.
-impl<IO, Lbl: types::ProtocolLabel, R, H, T> crate::protocol::transforms::GetProtocolLabel
-    for EpRecv<IO, Lbl, R, H, T>
+impl<IO, M, RMe, RPeer, Msg, G> crate::protocol::transforms::GetProtocolLabel
+    for EpRecv<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: RecvKindMarker + types::ProtocolLabel, // M is the label
+    RMe: RoleMarker,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>, // G is a local session for RMe
 {
-    type Label = Lbl;
+    type Label = M;
 }
 
 /// Implements the protocol label invariant for EpEnd.
-impl<IO, Lbl: types::ProtocolLabel, R> crate::protocol::transforms::GetProtocolLabel
-    for EpEnd<IO, Lbl, R>
+impl<IO, Lbl, Me> crate::protocol::transforms::GetProtocolLabel
+    for BaseEpEnd<IO, Lbl, Me> // Using BaseEpEnd as EpEnd is defined locally
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    Me: RoleMarker,
 {
     type Label = Lbl;
 }
 
 /// Implements the protocol label invariant for EpChoice.
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetProtocolLabel
-    for EpChoice<IO, Lbl, Me, L, R>
+impl<IO, Lbl, Me, L, R> crate::protocol::transforms::GetProtocolLabel
+    for BaseEpChoice<IO, Lbl, Me, L, R> // Using BaseEpChoice
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    Me: RoleMarker,
+    L: EpSession<IO, Me>,
+    R: EpSession<IO, Me>,
 {
     type Label = Lbl;
 }
 
 /// Implements the protocol label invariant for EpPar.
-impl<IO, Lbl: types::ProtocolLabel, Me, L, R> crate::protocol::transforms::GetProtocolLabel
-    for EpPar<IO, Lbl, Me, L, R>
+impl<IO, Lbl, Me, L, R> crate::protocol::transforms::GetProtocolLabel
+    for BaseEpPar<IO, Lbl, Me, L, R> // Using BaseEpPar
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    Me: RoleMarker,
+    L: EpSession<IO, Me>,
+    R: EpSession<IO, Me>,
 {
     type Label = Lbl;
 }
 
 /// Implements the protocol label invariant for EpStart.
-impl<IO, Lbl: types::ProtocolLabel, Me, T> crate::protocol::transforms::GetProtocolLabel
-    for EpStart<IO, Lbl, Me, T>
+impl<IO, Lbl, Me, S> crate::protocol::transforms::GetProtocolLabel
+    for EpStart<IO, Lbl, Me, S>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    Me: RoleMarker,
+    S: EpSession<IO, Me>,
 {
     type Label = Lbl;
 }
@@ -261,32 +331,65 @@ pub trait IsEpSkipTypeImpl<IO, Me: Role> {
 }
 
 // EpSkip maps to IsEpSkipType
-impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Lbl, Me> {
+impl<IO, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpSkip<IO, Me>
+where
+    IO: SessionIO,
+{
     type TypeMarker = IsEpSkipType;
 }
 
 // All other EpSession<IO, Me> types map to IsNotEpSkipType
-impl<IO, Lbl: types::ProtocolLabel, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me>
-    for EpSend<IO, Lbl, Me, H, T>
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpSkipTypeImpl<IO, RMe>
+    for EpSend<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: SendKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Lbl: types::ProtocolLabel, Me: Role, H, T> IsEpSkipTypeImpl<IO, Me>
-    for EpRecv<IO, Lbl, Me, H, T>
+
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpSkipTypeImpl<IO, RMe>
+    for EpRecv<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: RecvKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R> IsEpSkipTypeImpl<IO, MeChoice>
+
+impl<IO, Lbl, MeChoice: Role, L, R> IsEpSkipTypeImpl<IO, MeChoice>
     for EpChoice<IO, Lbl, MeChoice, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MeChoice>,
+    R: EpSession<IO, MeChoice>,
 {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R> IsEpSkipTypeImpl<IO, MePar>
+
+impl<IO, Lbl, MePar: Role, L, R> IsEpSkipTypeImpl<IO, MePar>
     for EpPar<IO, Lbl, MePar, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MePar>,
+    R: EpSession<IO, MePar>,
 {
     type TypeMarker = IsNotEpSkipType;
 }
-impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpEnd<IO, Lbl, Me> {
+
+impl<IO, Lbl, Me: Role> IsEpSkipTypeImpl<IO, Me> for EpEnd<IO, Lbl, Me>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+{
     type TypeMarker = IsNotEpSkipType;
 }
 
@@ -303,61 +406,125 @@ pub trait IsEpEndVariant<IO, Me: Role> {
 }
 
 // Implementations for IsEpSkipVariant
-impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpSkipVariant<IO, Me> for EpSkip<IO, Lbl, Me> {
+impl<IO, Me: Role> IsEpSkipVariant<IO, Me> for EpSkip<IO, Me>
+where
+    IO: SessionIO,
+{
     type Output = types::True;
 }
-impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpSkipVariant<IO, Me>
-    for EpSend<IO, Lbl, R, H, T>
+
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpSkipVariant<IO, RMe>
+    for EpSend<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: SendKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpSkipVariant<IO, Me>
-    for EpRecv<IO, Lbl, R, H, T>
+
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpSkipVariant<IO, RMe>
+    for EpRecv<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: RecvKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R, MeFilter: Role>
-    IsEpSkipVariant<IO, MeFilter> for EpChoice<IO, Lbl, MeChoice, L, R>
+
+impl<IO, Lbl, MeChoice: Role, L, R> IsEpSkipVariant<IO, MeChoice>
+    for EpChoice<IO, Lbl, MeChoice, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MeChoice>,
+    R: EpSession<IO, MeChoice>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
+
+impl<IO, Lbl, MePar: Role, L, R> IsEpSkipVariant<IO, MePar>
     for EpPar<IO, Lbl, MePar, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MePar>,
+    R: EpSession<IO, MePar>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MeEnd: Role, MeFilter: Role> IsEpSkipVariant<IO, MeFilter>
-    for EpEnd<IO, Lbl, MeEnd>
+
+impl<IO, Lbl, MeEnd: Role> IsEpSkipVariant<IO, MeEnd> for EpEnd<IO, Lbl, MeEnd>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
 {
     type Output = types::False;
 }
 
 // Implementations for IsEpEndVariant
-impl<IO, Lbl: types::ProtocolLabel, Me: Role> IsEpEndVariant<IO, Me> for EpEnd<IO, Lbl, Me> {
+impl<IO, Lbl, Me: Role> IsEpEndVariant<IO, Me> for EpEnd<IO, Lbl, Me>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+{
     type Output = types::True;
 }
-impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpEndVariant<IO, Me>
-    for EpSend<IO, Lbl, R, H, T>
+
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpEndVariant<IO, RMe>
+    for EpSend<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: SendKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, R, H, T, Me: Role> IsEpEndVariant<IO, Me>
-    for EpRecv<IO, Lbl, R, H, T>
+
+impl<IO, M, RMe: Role, RPeer, Msg, G> IsEpEndVariant<IO, RMe>
+    for EpRecv<IO, M, RMe, RPeer, Msg, G>
+where
+    IO: SessionIO,
+    M: RecvKindMarker + types::ProtocolLabel,
+    RPeer: RoleMarker,
+    Msg: Message,
+    G: EpSession<IO, RMe>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MeChoice: Role, L, R, MeFilter: Role>
-    IsEpEndVariant<IO, MeFilter> for EpChoice<IO, Lbl, MeChoice, L, R>
+
+impl<IO, Lbl, MeChoice: Role, L, R> IsEpEndVariant<IO, MeChoice>
+    for EpChoice<IO, Lbl, MeChoice, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MeChoice>,
+    R: EpSession<IO, MeChoice>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MePar: Role, L, R, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
+
+impl<IO, Lbl, MePar: Role, L, R> IsEpEndVariant<IO, MePar>
     for EpPar<IO, Lbl, MePar, L, R>
+where
+    IO: SessionIO,
+    Lbl: types::ProtocolLabel,
+    L: EpSession<IO, MePar>,
+    R: EpSession<IO, MePar>,
 {
     type Output = types::False;
 }
-impl<IO, Lbl: types::ProtocolLabel, MeSkip: Role, MeFilter: Role> IsEpEndVariant<IO, MeFilter>
-    for EpSkip<IO, Lbl, MeSkip>
+
+impl<IO, MeSkip: Role> IsEpEndVariant<IO, MeSkip> for EpSkip<IO, MeSkip>
+where
+    IO: SessionIO,
 {
     type Output = types::False;
 }

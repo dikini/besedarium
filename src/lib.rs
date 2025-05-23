@@ -136,24 +136,10 @@ macro_rules! tlist {
 
 pub mod types;
 pub mod protocol;
-pub mod sealed;
+pub mod sealed; // This now correctly refers to src/sealed.rs
 
-pub(crate) mod sealed {
-    pub trait Sealed {}
-}
-
-// Update protocol module reference to use the directory module
-mod protocol;
-pub use protocol::*;
-mod introspection;
-mod types;
-pub use types::*;
-
-// Re-export key introspection traits
+mod introspection; // This should be fine if it's a private module or re-exported carefully
 pub use introspection::{LabelsOf, RolesOf};
 
-// Note: Most protocol types are now re-exported via protocol/mod.rs
-// so we don't need to repeat those here.
-
-// Re-export canonical type-level booleans from types
-pub use types::{Bool, False, True};
+// Re-export specific items from types if they are not covered by types/mod.rs's own pub uses
+pub use crate::types::{Bool, False, True}; // Assuming these are in crate::types
