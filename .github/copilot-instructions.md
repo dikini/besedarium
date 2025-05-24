@@ -197,6 +197,68 @@ When refactoring large files:
 - Consider temporary duplication as a valid interim step
 - Always indicate the refactoring pattern being applied
 
+
+Size and Module Structure Guidelines
+
+**Keep Files Compact and Focused:**
+
+- **Target Size**: Individual module files should stay under 300 lines including documentation
+- **Test Separation**: When a module reaches ~200 lines, extract tests to separate `tests.rs` files
+- **Implementation/Test Ratio**: Aim for roughly 2:1 implementation to test code ratio
+- **Documentation Balance**: Include essential documentation but avoid excessive inline examples
+- **Module Structure Pattern for Growth**: When modules grow beyond manageable size, follow this consistent structure:
+
+```text
+.../[module_name]/
+├── mod.rs              # Core implementation (~150-250 lines)
+├── tests.rs            # Unit tests (~50-150 lines)  
+├── builders.rs         # Builder functions/helpers (optional)
+└── examples.rs         # Extended examples (optional)
+```
+
+
+**Refactoring Process Pattern:**
+
+1. **Identify Split Points**: Look for natural boundaries (tests, type groups, helpers)
+2. **Create Module Directory**: Convert `module.rs` to `module/mod.rs`
+3. **Extract Tests**: Move all `#[cfg(test)]` blocks to `tests.rs`
+4. **Update Imports**: Add `mod tests;` declaration in `mod.rs`
+5. **Verify Compilation**: Ensure all tests still pass and no circular dependencies
+6. **Update Documentation**: Reflect new structure in module docs
+
+**When to Split Further:**
+
+1. **Single Responsibility**: If a module handles multiple distinct concepts
+2. **Size Threshold**: When mod.rs approaches 300 lines
+3. **Test Complexity**: When tests become more complex than implementation
+4. **Team Navigation**: When it takes >30 seconds to find relevant code
+
+**Module Naming Consistency:**
+
+- Core types in `mod.rs`
+- Tests in `tests.rs` 
+- Builders/helpers in `builders.rs`
+- Examples in `examples.rs`
+- Sub-modules as directories with same pattern
+
+**File Organization Anti-Patterns to Avoid:**
+
+- **Mega Files**: Single files >500 lines mixing concepts
+- **Scattered Tests**: Tests mixed throughout implementation files
+- **Inconsistent Structure**: Different organization patterns per module
+- **Deep Nesting**: More than 3 levels of module directories
+- **Circular Dependencies**: Modules importing from their children
+
+**Progressive Enhancement Strategy:**
+
+1. **Phase 1**: Extract tests when files reach ~200 lines
+2. **Phase 2**: Split implementation by concept when >300 lines
+3. **Phase 3**: Add specialized sub-modules (builders, examples) as needed
+4. **Phase 4**: Consider domain-specific organization for complex areas
+
+This pattern ensures predictable, scalable organization as the codebase grows while maintaining clear separation of concerns and excellent maintainability.
+
+
 ### RATE LIMIT AVOIDANCE
 
 - For very large files, suggest splitting changes across multiple sessions
@@ -211,4 +273,3 @@ When refactoring large files:
 ---
 
 Last updated: 2025-05-13
-`````
