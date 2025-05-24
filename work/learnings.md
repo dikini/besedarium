@@ -5,6 +5,45 @@ without relying on unstable features.
 
 ## Recent Enhancements (2025-05-24)
 
+### Task 1.1 Prompt Creation Completed
+
+**Comprehensive Implementation Prompts Created:** 
+
+Successfully created a complete set of LLM prompts for implementing, verifying, and debugging all Task 1.1 subtasks:
+
+1. **Implementation Prompts (5 files)**:
+
+   - `1.1.1-foundation-types.md`: Foundation trait definitions, CommMetadata, ActionIOTMarker system
+   - `1.1.2-global-protocol-types.md`: Global Protocol Types (TChanSend, TChanRecv, etc.)
+   - `1.1.3-local-endpoint-types.md`: Local Endpoint Types (EpSend, EpRecv, etc.)
+   - `1.1.4-duality-checking.md`: IsDual predicate/trait with type-level boolean operations
+   - `1.1.5-projection-trait.md`: Project<P, Role> trait with comprehensive projection implementations
+
+2. **Supporting Prompts (3 files)**:
+
+   - `1.1-verification-comprehensive.md`: Complete verification strategies and test patterns
+   - `1.1-debugging-comprehensive.md`: Systematic debugging approaches and troubleshooting
+   - `1.1-implementation-execution.md`: Coordinated execution plan with dependencies and phases
+
+**Key Design Patterns Established:**
+
+- **Marker Type Dispatch**: Core pattern for avoiding trait implementation conflicts in Rust stable
+- **Helper Trait Case Analysis**: Pattern for complex projections with multiple conditions
+- **Type-Level Boolean Logic**: TTrue/TFalse system with TypeAnd, TypeOr, TypeNot operations
+- **IO Capability Validation**: SupportsActionIO trait system for compile-time capability checking
+- **Metadata Consistency**: CommMetadata<C, L> pattern for channel and label type consistency
+- **Projection Validation**: Comprehensive error type system and validation mechanisms
+
+**Implementation Readiness:** All prompts provide concrete, actionable implementation guidance with:
+
+- Complete trait definitions and type signatures
+- Implementation patterns following Rust stable constraints
+- Comprehensive error handling and validation
+- Integration strategies with existing codebase
+- Debugging tools and verification approaches
+
+**Next Steps:** Execute the actual implementation following the established prompts and patterns.
+
 ### Documentation Review and Enhancement
 
 **Enhanced `docs/duality.md` with Implementation-Ready Content:**
@@ -196,7 +235,7 @@ where
   - Type definitions: All combinators must have a label parameter.
   - Trait implementations: All combinators must implement GetProtocolLabel.
   - Documentation: The invariant must be stated in module-level and trait-level docs, and code examples must use combinators with label parameters.
-- The review process involves:
+  - The review process involves:
   1. Auditing all combinators for label and trait coverage.
   2. Adding/correcting missing label parameters or trait implementations.
   3. Updating documentation and code examples to reflect the invariant.
@@ -397,3 +436,81 @@ Three proven approaches for implementing session types at runtime:
 ---
 
 _Last updated: 2025-05-20_
+
+## Module Organization and File Size Management (2025-05-24)
+
+### File Size and Module Structure Guidelines
+
+**Keep Files Compact and Focused:**
+
+- **Target Size**: Individual module files should stay under 300 lines including documentation
+- **Test Separation**: When a module reaches ~200 lines, extract tests to separate `tests.rs` files
+- **Implementation/Test Ratio**: Aim for roughly 2:1 implementation to test code ratio
+- **Documentation Balance**: Include essential documentation but avoid excessive inline examples
+
+**Module Structure Pattern for Growth:**
+
+When modules grow beyond manageable size, follow this consistent structure:
+
+```text
+src/protocol/[module_name]/
+├── mod.rs              # Core implementation (~150-250 lines)
+├── tests.rs            # Unit tests (~50-150 lines)  
+├── builders.rs         # Builder functions/helpers (optional)
+└── examples.rs         # Extended examples (optional)
+```
+
+**Applied Successfully:** Foundation and Global modules refactored from 200+ and 400+ line files to:
+
+- `foundation/mod.rs`: 122 lines (clean implementation)
+- `foundation/tests.rs`: 58 lines (focused tests)
+- `global/mod.rs`: 275 lines (implementation + type aliases)
+- `global/tests.rs`: 115 lines (comprehensive tests)
+
+**Benefits Achieved:**
+
+- **Better Organization**: Clear separation of concerns
+- **Maintainability**: Easier to navigate and understand
+- **Scalability**: Ready for continued development
+- **Consistency**: Predictable structure across modules
+
+**Refactoring Process Pattern:**
+
+1. **Identify Split Points**: Look for natural boundaries (tests, type groups, helpers)
+2. **Create Module Directory**: Convert `module.rs` to `module/mod.rs`
+3. **Extract Tests**: Move all `#[cfg(test)]` blocks to `tests.rs`
+4. **Update Imports**: Add `mod tests;` declaration in `mod.rs`
+5. **Verify Compilation**: Ensure all tests still pass and no circular dependencies
+6. **Update Documentation**: Reflect new structure in module docs
+
+**When to Split Further:**
+
+1. **Single Responsibility**: If a module handles multiple distinct concepts
+2. **Size Threshold**: When mod.rs approaches 300 lines
+3. **Test Complexity**: When tests become more complex than implementation
+4. **Team Navigation**: When it takes >30 seconds to find relevant code
+
+**Module Naming Consistency:**
+
+- Core types in `mod.rs`
+- Tests in `tests.rs` 
+- Builders/helpers in `builders.rs`
+- Examples in `examples.rs`
+- Sub-modules as directories with same pattern
+
+**File Organization Anti-Patterns to Avoid:**
+
+- **Mega Files**: Single files >500 lines mixing concepts
+- **Scattered Tests**: Tests mixed throughout implementation files
+- **Inconsistent Structure**: Different organization patterns per module
+- **Deep Nesting**: More than 3 levels of module directories
+- **Circular Dependencies**: Modules importing from their children
+
+**Progressive Enhancement Strategy:**
+
+1. **Phase 1**: Extract tests when files reach ~200 lines
+2. **Phase 2**: Split implementation by concept when >300 lines
+3. **Phase 3**: Add specialized sub-modules (builders, examples) as needed
+4. **Phase 4**: Consider domain-specific organization for complex areas
+
+This pattern ensures predictable, scalable organization as the codebase grows while maintaining clear separation of concerns and excellent maintainability.
