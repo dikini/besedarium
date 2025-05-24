@@ -3,6 +3,28 @@
 This document distills essential patterns for implementing type-level session types in Rust
 without relying on unstable features.
 
+## Recent Enhancements (2025-05-24)
+
+### Documentation Review and Enhancement
+
+**Enhanced `docs/duality.md` with Implementation-Ready Content:**
+
+1. **Foundation Types Section**: Added concrete Rust trait definitions for `Role`, `Message`, `GlobalProtocol`, `LocalProtocol`, plus complete `CommMetadata` infrastructure with `ChanId`, `MsgLbl`, and `ActionIOTMarker` support.
+
+2. **Projection Implementation Details**: Added comprehensive `Project<P, Role>` trait implementations with:
+   - Core projection patterns for all protocol constructs
+   - Helper traits for complex projections (`ProjectChoices`, `Not<Role>`, `ValidProjection`)
+   - Edge case handling (roles not involved in communications)
+   - Projection validation with `ProjectionError` types
+
+3. **Label Transformation Logic**: Added complete type-level label system with:
+   - `LabelList` operations and type-level boolean logic
+   - Label transformation traits (`TMap`, `TCollect`, `TFilter`)
+   - Label preservation and composition for protocol constructs
+   - Runtime and compile-time validation mechanisms
+
+**Implementation Readiness:** The enhanced duality.md now provides direct implementation guidance for Tasks 1.1.1-1.1.5, with concrete type definitions ready for use.
+
 ## Core Type-Level Programming Patterns
 
 ### Pattern: Marker Type Dispatch

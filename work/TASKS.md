@@ -19,22 +19,47 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
 
 - [ ] **Task 1.1**: Implement Core Types and Traits based on `duality.md`
   - [ ] **Task 1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts) (wip).
+    - [ ] **Task 1.1.1a**: Implement foundation trait definitions (`Role`, `Message`, `GlobalProtocol`, `LocalProtocol`) as defined in updated `duality.md`.
+    - [ ] **Task 1.1.1b**: Implement concrete `CommMetadata<C, L>` struct with `new()` method.
+    - [ ] **Task 1.1.1c**: Implement `ChanId` and `MsgLbl` traits with example types (`DefaultChan`, `HandshakeChan`, etc.).
+    - [ ] **Task 1.1.1d**: Implement `ActionIOTMarker` trait and standard action I/O types (`InputAction`, `OutputAction`, `BiDirectionalAction`).
+    - [ ] **Task 1.1.1e**: Implement `SupportsActionIO<AIO>` trait for capability verification.
   - [ ] **Task 1.1.2**: Implement Global Protocol Types (e.g., `TChanSend`, `TChanRecv`, `TChanOffer`, `TChanChoice`, `TChanPar`, `TChanRec`, `TChanVar`, `TChanEnd`, `TChanContinue`, `TChanStart`) incorporating `CommMetadata` and `ActionIOType`.
   - [ ] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
   - [ ] **Task 1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.
   - [ ] **Task 1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks.
+    - [ ] **Task 1.1.5a**: Implement core `Project<P, R>` trait with `Output: LocalProtocol` associated type.
+    - [ ] **Task 1.1.5b**: Implement projection for `TChanSend` to `EpSend`/`EpRecv` based on role involvement.
+    - [ ] **Task 1.1.5c**: Implement projection for `TChanChoice` to `EpChoice`/`EpOffer` constructs.
+    - [ ] **Task 1.1.5d**: Implement projection for `TChanPar`, `TChanRec`, `TChanEnd` constructs.
+    - [ ] **Task 1.1.5e**: Implement helper traits (`ProjectChoices`, `Not<Role>`, `ValidProjection`) for complex projections.
+    - [ ] **Task 1.1.5f**: Implement `ProjectionError` type and validation mechanisms.
 - [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
-  - [ ] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design.
-  - [ ] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`).
+  - [x] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design. (**COMPLETED** - documented in updated `duality.md`)
+  - [x] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`). (**COMPLETED** - detailed in updated `duality.md`)
   - [ ] **Task 1.2.3**: Implement the designed label transformation traits and integrate them with protocol types.
+    - [ ] **Task 1.2.3a**: Implement core `Label` trait and `LabelList` operations.
+    - [ ] **Task 1.2.3b**: Implement `TMap`, `TCollect`, `TFilter` traits for label transformations.
+    - [ ] **Task 1.2.3c**: Implement `LabelPreservation` and `LabelComposition` traits.
+    - [ ] **Task 1.2.3d**: Implement label validation traits (`ValidateChoiceLabels`, `LabelValidation`).
+    - [ ] **Task 1.2.3e**: Integrate label handling with `Choice`, `Offer`, `Parallel`, and `Recursion` constructs.
 - [ ] **Task 1.3**: Implement Basic Runtime Components
   - [ ] **Task 1.3.1**: Design a foundational runtime state machine for protocol execution.
   - [ ] **Task 1.3.2**: Implement basic channel communication logic for sending/receiving typed messages according to protocol specifications.
   - [ ] **Task 1.3.3**: Define core error types for protocol violations and communication errors at runtime.
 - [ ] **Task 1.4**: Research and Formalize Duality Concepts
-  - [ ] **Task 1.4.1**: Further research formal definitions of duality for all implemented primitives.
-  - [ ] **Task 1.4.2**: Investigate and document how duality is checked at the type level within the Rust implementation.
+  - [x] **Task 1.4.1**: Further research formal definitions of duality for all implemented primitives. (**COMPLETED** - enhanced in `duality.md`)
+  - [x] **Task 1.4.2**: Investigate and document how duality is checked at the type level within the Rust implementation. (**COMPLETED** - documented in `duality.md`)
   - [ ] **Task 1.4.3**: Explore and document potential for generating dual protocols or verifying compatibility automatically.
+
+## Documentation Enhancement Summary (2025-05-24)
+
+**Recent Updates to `docs/duality.md`:**
+
+- [x] **Added Foundation Types Section**: Concrete Rust implementations for all core traits (`Role`, `Message`, `GlobalProtocol`, `LocalProtocol`, `CommMetadata`, `ActionIOTMarker`, `SupportsActionIO`)
+- [x] **Added Projection Implementation Details**: Complete `Project<P, Role>` trait implementations with examples for all major protocol constructs
+- [x] **Added Label Transformation Logic**: Comprehensive type-level label operations (`TMap`, `TCollect`, `TFilter`) and validation mechanisms
+- [x] **Enhanced with Practical Examples**: Concrete types and implementation patterns ready for direct use in implementation
 
 ## Phase 2: Core Feature Testing
 
@@ -65,7 +90,7 @@ With a tested core library, this phase focuses on enhancements, performance, and
 developer experience.
 
 - [ ] **Task 3.1**: Enhance Runtime Checks and Error Handling
-    - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
+  - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
 - [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities
   - [ ] **Task 3.2.1**: Profile compile times of type-level constructs.
   - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations.

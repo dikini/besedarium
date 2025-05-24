@@ -14,6 +14,531 @@ The document will cover:
 
 By understanding duality and the role of `CommMetadata`, protocol designers can create more robust, verifiable, and maintainable MPST specifications.
 
+## Foundation Types: Core Rust Implementations
+
+Before diving into duality theory, we establish the foundational Rust types that everything builds upon. These concrete definitions guide the implementation of all protocol constructs and duality checking.
+
+### Basic Trait Definitions
+
+```rust
+use std::fmt::Debug;
+
+/// Fundamental trait for role identification in protocols
+pub trait Role: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {}
+
+/// Trait for messages that can be exchanged in protocols
+pub trait Message: Send + Sync + 'static + Debug + Clone {}
+
+/// Marker trait for Global Protocol types
+pub trait GlobalProtocol: Send + Sync + 'static + Debug {}
+
+/// Marker trait for Local Endpoint Protocol types
+pub trait LocalProtocol: Send + Sync + 'static + Debug {}
+```
+
+### CommMetadata: Explicit Channel Identification
+
+```rust
+/// Communication metadata for precise channel and message identification
+/// This is the key innovation for handling complex multiparty protocols
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CommMetadata<C: ChanId, L: MsgLbl> {
+    /// Unique identifier for the logical communication channel
+    pub chan_id: C,
+    /// Label for the specific message type within this channel
+    pub msg_lbl: L,
+}
+
+/// Trait for channel identifiers
+pub trait ChanId: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {}
+
+/// Trait for message labels within channels
+pub trait MsgLbl: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {}
+
+impl<C: ChanId, L: MsgLbl> CommMetadata<C, L> {
+    pub fn new(chan_id: C, msg_lbl: L) -> Self {
+        Self { chan_id, msg_lbl }
+    }
+}
+```
+
+### ActionIOType and IO Capability System
+
+```rust
+/// Marker trait for Action I/O Types - what I/O capability an action requires
+pub trait ActionIOTMarker: Send + Sync + 'static + Debug + Clone + PartialEq + Eq {}
+
+/// Standard Action I/O Types
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InputAction;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutputAction;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BiDirectionalAction;
+
+impl ActionIOTMarker for InputAction {}
+impl ActionIOTMarker for OutputAction {}
+impl ActionIOTMarker for BiDirectionalAction {}
+
+/// Trait to verify IO capability compatibility
+pub trait SupportsActionIO<AIO: ActionIOTMarker> {
+    /// Returns true if this IO capability can handle the specified action type
+    fn supports_action_io() -> bool;
+}
+```
+
+### Projection Infrastructure
+
+```rust
+/// Core trait for projecting Global Protocols to Local Endpoint Types
+/// This is essential for generating role-specific protocol implementations
+pub trait Project<P: GlobalProtocol, R: Role> {
+    type Output: LocalProtocol;
+}
+
+/// Projection context that maintains necessary state during projection
+pub struct ProjectionContext<IO> {
+    _phantom: std::marker::PhantomData<IO>,
+}
+
+impl<IO> ProjectionContext<IO> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+```
+
+### Example Concrete Types
+
+```rust
+/// Example role implementations
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Alice;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Bob;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Charlie;
+
+impl Role for Alice {}
+impl Role for Bob {}
+impl Role for Charlie {}
+
+/// Example channel and message label types
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DefaultChan;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct HandshakeChan;
+
+impl ChanId for DefaultChan {}
+impl ChanId for HandshakeChan {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RequestLbl;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResponseLbl;
+
+impl MsgLbl for RequestLbl {}
+impl MsgLbl for ResponseLbl {}
+
+/// Example message types
+#[derive(Debug, Clone)]
+pub struct HelloMsg(pub String);
+#[derive(Debug, Clone)]
+pub struct AckMsg;
+
+impl Message for HelloMsg {}
+impl Message for AckMsg {}
+```
+
+This foundation provides the concrete building blocks needed for implementing the duality concepts described in the following sections.
+
+## Projection Implementation Details
+
+Projection is the process of extracting the local protocol behavior for a specific role from a global protocol. This section provides concrete implementation guidance for the `Project<P, Role>` trait.
+
+### Core Projection Trait Implementation
+
+```rust
+/// Projects a Global Protocol to a Local Endpoint Type for a specific role
+pub trait Project<P: GlobalProtocol, R: Role> {
+    type Output: LocalProtocol;
+}
+
+/// Projection implementation for different protocol constructs
+impl<S: Role, R: Role, M, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
+    Project<TChanSend<S, R, M, Msg, P, AIO>, S> for ProjectionContext<IO>
+where
+    S: Role,
+    R: Role,
+    M: CommMetadata,
+    IO: SupportsActionIO<AIO>,
+    ProjectionContext<IO>: Project<P, S>,
+{
+    type Output = EpSend<IO, M, Msg, <ProjectionContext<IO> as Project<P, S>>::Output, AIO>;
+}
+
+impl<S: Role, R: Role, M, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
+    Project<TChanSend<S, R, M, Msg, P, AIO>, R> for ProjectionContext<IO>
+where
+    S: Role,
+    R: Role,
+    M: CommMetadata,
+    IO: SupportsActionIO<AIO>,
+    ProjectionContext<IO>: Project<P, R>,
+{
+    type Output = EpRecv<IO, M, Msg, <ProjectionContext<IO> as Project<P, R>>::Output, AIO>;
+}
+
+// For roles not involved in the communication, the projection skips the action
+impl<S: Role, R: Role, T: Role, M, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
+    Project<TChanSend<S, R, M, Msg, P, AIO>, T> for ProjectionContext<IO>
+where
+    S: Role,
+    R: Role,
+    T: Role,
+    T: Not<S> + Not<R>, // T is neither S nor R
+    ProjectionContext<IO>: Project<P, T>,
+{
+    type Output = <ProjectionContext<IO> as Project<P, T>>::Output;
+}
+```
+
+### Projection for Choice and Offer
+
+```rust
+/// Projection for Choice - the choosing role gets a Choice endpoint
+impl<S: Role, Choices: ChoiceList, AIO: ActionIOTMarker> 
+    Project<TChanChoice<S, Choices, AIO>, S> for ProjectionContext<IO>
+where
+    S: Role,
+    IO: SupportsActionIO<AIO>,
+    ProjectionContext<IO>: ProjectChoices<Choices, S>,
+{
+    type Output = EpChoice<IO, <ProjectionContext<IO> as ProjectChoices<Choices, S>>::Output, AIO>;
+}
+
+/// Projection for Choice - other roles get Offer endpoints
+impl<S: Role, R: Role, Choices: ChoiceList, AIO: ActionIOTMarker> 
+    Project<TChanChoice<S, Choices, AIO>, R> for ProjectionContext<IO>
+where
+    S: Role,
+    R: Role,
+    R: Not<S>, // R is not S
+    IO: SupportsActionIO<AIO>,
+    ProjectionContext<IO>: ProjectChoices<Choices, R>,
+{
+    type Output = EpOffer<IO, <ProjectionContext<IO> as ProjectChoices<Choices, R>>::Output, AIO>;
+}
+```
+
+### Projection Edge Cases
+
+```rust
+/// Projection for End - all roles get End
+impl<R: Role> Project<TChanEnd, R> for ProjectionContext<IO> {
+    type Output = EpEnd<IO>;
+}
+
+/// Projection for Parallel - both branches must be projected
+impl<P1: GlobalProtocol, P2: GlobalProtocol, R: Role> 
+    Project<TChanPar<P1, P2>, R> for ProjectionContext<IO>
+where
+    ProjectionContext<IO>: Project<P1, R> + Project<P2, R>,
+{
+    type Output = EpPar<
+        <ProjectionContext<IO> as Project<P1, R>>::Output,
+        <ProjectionContext<IO> as Project<P2, R>>::Output,
+        IO
+    >;
+}
+
+/// Projection for Recursion
+impl<P: GlobalProtocol, R: Role, RecVar> 
+    Project<TChanRec<RecVar, P>, R> for ProjectionContext<IO>
+where
+    ProjectionContext<IO>: Project<P, R>,
+{
+    type Output = EpRec<RecVar, <ProjectionContext<IO> as Project<P, R>>::Output, IO>;
+}
+```
+
+### Helper Traits for Complex Projections
+
+```rust
+/// Helper trait for projecting choice lists
+pub trait ProjectChoices<Choices: ChoiceList, R: Role> {
+    type Output: ChoiceList;
+}
+
+/// Type-level helper for determining if a role is not another role
+pub trait Not<Other: Role> {}
+
+/// Automatically implement Not<Other> for all roles that are different
+impl<T: Role, U: Role> Not<U> for T 
+where
+    T: Role,
+    U: Role,
+    // This would need additional trait bounds in practice to ensure T != U
+{}
+```
+
+### Projection Validation
+
+```rust
+/// Trait to validate that a projection is well-formed
+pub trait ValidProjection<P: GlobalProtocol, R: Role> {
+    type ProjectedType: LocalProtocol;
+    
+    /// Validate that the projection maintains protocol invariants
+    fn validate_projection() -> Result<(), ProjectionError>;
+}
+
+/// Errors that can occur during projection
+#[derive(Debug, Clone)]
+pub enum ProjectionError {
+    RoleNotInvolved,
+    IOCapabilityMismatch,
+    InvalidContinuation,
+    ChoiceProjectionError,
+}
+```
+
+This projection infrastructure enables the automatic generation of role-specific local protocols from global protocol specifications while maintaining type safety and enforcing IO capability constraints.
+
+## Label Transformation Logic
+
+Labels play a crucial role in multiparty session types, particularly in Choice and Offer constructs where they identify different branches of execution. This section details how labels are preserved, transformed, and manipulated during protocol operations.
+
+### Core Label Types and Operations
+
+```rust
+/// Trait for labels used in protocol branches
+pub trait Label: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {}
+
+/// A list of labeled protocol branches
+pub trait LabeledList: Send + Sync + 'static + Debug {
+    type Labels: LabelList;
+    type Protocols: ProtocolList;
+}
+
+/// Type-level list operations for labels
+pub trait LabelList: Send + Sync + 'static + Debug {
+    /// Check if a label is present in the list
+    type Contains<L: Label>: TypeBool;
+    
+    /// Get the length of the label list
+    type Length: TypeNat;
+    
+    /// Append a label to the list
+    type Append<L: Label>: LabelList;
+    
+    /// Filter labels based on a predicate
+    type Filter<P: LabelPredicate>: LabelList;
+}
+
+/// Type-level boolean for label operations
+pub trait TypeBool {
+    const VALUE: bool;
+}
+
+#[derive(Debug)]
+pub struct TTrue;
+#[derive(Debug)]
+pub struct TFalse;
+
+impl TypeBool for TTrue {
+    const VALUE: bool = true;
+}
+
+impl TypeBool for TFalse {
+    const VALUE: bool = false;
+}
+```
+
+### Label Transformation Traits
+
+```rust
+/// Map operation over label lists
+pub trait TMap<F: LabelTransform> {
+    type Output: LabelList;
+}
+
+/// Collect labels based on a condition
+pub trait TCollect<P: LabelPredicate> {
+    type Output: LabelList;
+}
+
+/// Filter labels based on a predicate
+pub trait TFilter<P: LabelPredicate> {
+    type Output: LabelList;
+}
+
+/// Trait for label transformation functions
+pub trait LabelTransform {
+    type Input: Label;
+    type Output: Label;
+}
+
+/// Trait for label predicates
+pub trait LabelPredicate {
+    type Input: Label;
+    type Output: TypeBool;
+}
+```
+
+### Label Behavior in Protocol Constructs
+
+#### Choice and Offer Label Handling
+
+```rust
+/// Choice preserves all labels from its branches
+impl<S: Role, Choices: LabeledList, AIO: ActionIOTMarker> LabelPreservation 
+    for TChanChoice<S, Choices, AIO>
+{
+    type PreservedLabels = <Choices as LabeledList>::Labels;
+}
+
+/// Offer mirrors the labels from the corresponding Choice
+impl<IO, Choices: LabeledList, AIO: ActionIOTMarker> LabelPreservation 
+    for EpOffer<IO, Choices, AIO>
+{
+    type PreservedLabels = <Choices as LabeledList>::Labels;
+}
+
+/// Label validation for Choice constructs
+pub trait ValidateChoiceLabels<Choices: LabeledList> {
+    /// Ensure no duplicate labels exist
+    type NoDuplicates: TypeBool;
+    
+    /// Ensure at least one choice is available
+    type NonEmpty: TypeBool;
+}
+```
+
+#### Parallel Label Composition
+
+```rust
+/// Parallel composition merges labels from both branches
+impl<P1: GlobalProtocol, P2: GlobalProtocol> LabelComposition<P1, P2> 
+    for TChanPar<P1, P2>
+where
+    P1: LabelPreservation,
+    P2: LabelPreservation,
+{
+    type ComposedLabels = MergeLabels<
+        <P1 as LabelPreservation>::PreservedLabels,
+        <P2 as LabelPreservation>::PreservedLabels
+    >;
+}
+
+/// Helper trait for merging label lists
+pub trait MergeLabels<L1: LabelList, L2: LabelList> {
+    type Output: LabelList;
+}
+```
+
+#### Recursion Label Handling
+
+```rust
+/// Recursion preserves labels from its body
+impl<RecVar, P: GlobalProtocol> LabelPreservation 
+    for TChanRec<RecVar, P>
+where
+    P: LabelPreservation,
+{
+    type PreservedLabels = <P as LabelPreservation>::PreservedLabels;
+}
+
+/// Recursion variable handling
+pub trait RecursionContext<RecVar> {
+    type LabelContext: LabelList;
+    
+    /// Add labels to the recursion context
+    type AddLabels<L: LabelList>: RecursionContext<RecVar>;
+    
+    /// Resolve labels in the context
+    type ResolveLabels: LabelList;
+}
+```
+
+### Practical Label Implementation Examples
+
+```rust
+/// Example label types
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LoginLabel;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LogoutLabel;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DataLabel;
+
+impl Label for LoginLabel {}
+impl Label for LogoutLabel {}
+impl Label for DataLabel {}
+
+/// Example labeled protocol list
+pub struct AuthChoices;
+
+impl LabeledList for AuthChoices {
+    type Labels = (LoginLabel, (LogoutLabel, ()));
+    type Protocols = (LoginProtocol, (LogoutProtocol, ()));
+}
+
+/// Label transformation examples
+pub struct ToUpperCase;
+
+impl LabelTransform for ToUpperCase {
+    type Input = LoginLabel;
+    type Output = LoginLabel; // In practice, this would transform the label
+}
+
+/// Label predicate examples
+pub struct IsAuthLabel;
+
+impl LabelPredicate for IsAuthLabel {
+    type Input = LoginLabel;
+    type Output = TTrue;
+}
+
+impl LabelPredicate for IsAuthLabel {
+    type Input = DataLabel;
+    type Output = TFalse;
+}
+```
+
+### Label Validation and Safety
+
+```rust
+/// Compile-time label validation
+pub trait LabelValidation {
+    /// Check that all required labels are present
+    type HasRequiredLabels: TypeBool;
+    
+    /// Check that no conflicting labels exist
+    type NoConflicts: TypeBool;
+    
+    /// Validate label ordering constraints
+    type ValidOrdering: TypeBool;
+}
+
+/// Runtime label validation for dynamic scenarios
+pub trait RuntimeLabelValidation {
+    fn validate_labels(&self) -> Result<(), LabelError>;
+}
+
+#[derive(Debug, Clone)]
+pub enum LabelError {
+    DuplicateLabel(String),
+    MissingLabel(String),
+    InvalidLabelSequence,
+    LabelOrderingViolation,
+}
+```
+
+This label transformation system enables sophisticated compile-time verification of protocol structures while maintaining flexibility for complex multiparty interactions.
+
 ## Motivation: Why Duality and Well-Formedness Matter
 
 Duality and well-formedness are foundational concepts in the theory and practice of session types, especially in the context of MPST. They ensure that communication protocols (Global Protocols) are safe, deadlock-free, and free from mismatches or orphan messages.

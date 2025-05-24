@@ -2,6 +2,19 @@
 
 This document provides a status overview of the Besedarium session types library, focusing on the core type-level components and ignoring runtime aspects.
 
+## Recent Status Update (2025-05-24)
+
+### Documentation Enhancement Completed
+
+**`docs/duality.md` Major Enhancement:**
+
+- ✅ **Foundation Types**: Complete trait definitions and concrete implementations
+- ✅ **Projection System**: Comprehensive `Project<P, Role>` trait implementations
+- ✅ **Label System**: Type-level label transformation and validation framework
+- ✅ **Implementation Guidance**: Ready-to-use patterns for core library implementation
+
+**Current Priority**: Implementing the foundation types and core protocol constructs based on the enhanced duality.md specifications.
+
 ## 1. Global Protocol Types Status
 
 ### 1.1 Implemented Features
