@@ -30,6 +30,9 @@
 // Core module containing the new MPST implementation
 pub mod protocol;
 
+// Type-level programming types and utilities
+pub mod types;
+
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
@@ -40,4 +43,4 @@ pub(crate) mod sealed {
 // Re-exports for completed Task 1.1 components
 pub use protocol::foundation::*;
 pub use protocol::global::*;
-pub use protocol::global::*;
+pub use types::*;

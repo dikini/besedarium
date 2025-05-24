@@ -33,11 +33,11 @@ pub mod global;
 // Local endpoint types (Task 1.1.3) - ✅ IMPLEMENTED
 pub mod local;
 
-// Duality checking (Task 1.1.4) - Ready for implementation
-// pub mod duality;
+// Duality checking (Task 1.1.4) - ✅ IMPLEMENTED
+pub mod duality;
 
-// Projection implementation (Task 1.1.5) - Ready for implementation
-// pub mod projection;
+// Projection implementation (Task 1.1.5) - ✅ IMPLEMENTED
+pub mod projection;
 
 // Re-exports will be added as modules are implemented
 // pub use foundation::*;
