@@ -25,6 +25,7 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
 - Execution plan: `work/prompts/1.1-implementation-execution.md`
 
 **✅ Legacy Code Cleanup Completed:**
+
 - Removed conflicting files: `src/types.rs`, `src/protocol/base.rs`, `src/protocol/global.rs`, `src/protocol/local.rs`, `src/protocol/transforms/`
 - Disabled test files using legacy patterns: All `tests/*.rs` and `tests/protocols/*.rs` files using old protocol types
 - Temporarily disabled introspection and utilities: `src/introspection.rs`, `src/protocol/utils.rs`, `src/protocol/test_overrides.rs`
@@ -39,7 +40,7 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
     - [x] **Task 1.1.1d**: Implement `ActionIOTMarker` trait and standard action I/O types (`InputAction`, `OutputAction`, `BiDirectionalAction`).
     - [x] **Task 1.1.1e**: Implement `SupportsActionIO<AIO>` trait for capability verification.
   - [x] **Task 1.1.2**: Implement Global Protocol Types (e.g., `TChanSend`, `TChanRecv`, `TChanOffer`, `TChanChoice`, `TChanPar`, `TChanRec`, `TChanVar`, `TChanEnd`, `TChanContinue`, `TChanStart`) incorporating `CommMetadata` and `ActionIOType`.
-  - [ ] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
+  - [x] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
   - [ ] **Task 1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.
   - [ ] **Task 1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks.
     - [ ] **Task 1.1.5a**: Implement core `Project<P, R>` trait with `Output: LocalProtocol` associated type.

@@ -4,7 +4,7 @@
 //! with channel-aware types, IO capability validation, and comprehensive duality checking.
 //!
 //! ## Current Status
-//! 
+//!
 //! This crate is undergoing a major restructuring to implement an enhanced MPST system
 //! based on the theoretical foundation in `docs/duality.md`. The current implementation
 //! is being replaced with a new system featuring:

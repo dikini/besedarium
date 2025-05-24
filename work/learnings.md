@@ -3,68 +3,80 @@
 This document distills essential patterns for implementing type-level session types in Rust
 without relying on unstable features.
 
-## Recent Enhancements (2025-05-24)
+## Recent Achievements (2025-05-24)
 
-### Task 1.1 Prompt Creation Completed
+### Task 1.1.3 Successfully Completed: Local Endpoint Types
 
-**Comprehensive Implementation Prompts Created:** 
+**Implementation Success:** Successfully implemented all local endpoint types using the extensible metadata pattern:
 
-Successfully created a complete set of LLM prompts for implementing, verifying, and debugging all Task 1.1 subtasks:
+**Types Implemented:**
 
-1. **Implementation Prompts (5 files)**:
+- `EpChanSend<IO, M, Msg, P, AIO>` - Local endpoint for sending messages  
+- `EpChanRecv<IO, M, Msg, P, AIO>` - Local endpoint for receiving messages
+- `EpChanOffer<IO, M, Left, Right, AIO>` - Local endpoint for offering choices
+- `EpChanChoice<IO, M, Left, Right, AIO>` - Local endpoint for making choices  
+- `EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>` - Local endpoint for parallel composition
+- `EpChanEnd<IO, M, AIO>` - Local endpoint for protocol termination
+- `EpChanStart<IO, M, Start, AIO>` - Local endpoint for protocol initialization
 
-   - `1.1.1-foundation-types.md`: Foundation trait definitions, CommMetadata, ActionIOTMarker system
-   - `1.1.2-global-protocol-types.md`: Global Protocol Types (TChanSend, TChanRecv, etc.)
-   - `1.1.3-local-endpoint-types.md`: Local Endpoint Types (EpSend, EpRecv, etc.)
-   - `1.1.4-duality-checking.md`: IsDual predicate/trait with type-level boolean operations
-   - `1.1.5-projection-trait.md`: Project<P, Role> trait with comprehensive projection implementations
+**Key Implementation Insights:**
 
-2. **Supporting Prompts (3 files)**:
+1. **Extensible Metadata Success**: The `CommMetadataTrait` approach enabled using `M: CommMetadataTrait` bounds while maintaining compatibility with `CommMetadata<C, L>` instances
 
-   - `1.1-verification-comprehensive.md`: Complete verification strategies and test patterns
-   - `1.1-debugging-comprehensive.md`: Systematic debugging approaches and troubleshooting
-   - `1.1-implementation-execution.md`: Coordinated execution plan with dependencies and phases
+2. **Type Signature Consistency**: Successfully established consistent pattern:
 
-**Key Design Patterns Established:**
+   ```rust
+   // 5 parameters for action types
+   EpChanSend<IO, M, Msg, P, AIO>
+   // 3 parameters for termination  
+   EpChanEnd<IO, M, AIO>
+   // 6 parameters for parallel (adds IsDisjoint)
+   EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>
+   ```
 
-- **Marker Type Dispatch**: Core pattern for avoiding trait implementation conflicts in Rust stable
-- **Helper Trait Case Analysis**: Pattern for complex projections with multiple conditions
-- **Type-Level Boolean Logic**: TTrue/TFalse system with TypeAnd, TypeOr, TypeNot operations
-- **IO Capability Validation**: SupportsActionIO trait system for compile-time capability checking
-- **Metadata Consistency**: CommMetadata<C, L> pattern for channel and label type consistency
-- **Projection Validation**: Comprehensive error type system and validation mechanisms
+3. **Test Infrastructure**: Created comprehensive test suite covering basic type creation, type aliases, trait implementations, IO constraints, and complex compositions
 
-**Implementation Readiness:** All prompts provide concrete, actionable implementation guidance with:
+4. **Compilation Success**: All tests pass and project compiles with proper error checking
 
-- Complete trait definitions and type signatures
-- Implementation patterns following Rust stable constraints
-- Comprehensive error handling and validation
-- Integration strategies with existing codebase
-- Debugging tools and verification approaches
+**Next Priority:** Task 1.1.4 (IsDual predicate) and Task 1.1.5 (Project trait) to complete the core protocol system.
 
-**Next Steps:** Execute the actual implementation following the established prompts and patterns.
+### Task 1.1 Implementation Prompts and Documentation
 
-### Documentation Review and Enhancement
-
-**Enhanced `docs/duality.md` with Implementation-Ready Content:**
-
-1. **Foundation Types Section**: Added concrete Rust trait definitions for `Role`, `Message`, `GlobalProtocol`, `LocalProtocol`, plus complete `CommMetadata` infrastructure with `ChanId`, `MsgLbl`, and `ActionIOTMarker` support.
-
-2. **Projection Implementation Details**: Added comprehensive `Project<P, Role>` trait implementations with:
-   - Core projection patterns for all protocol constructs
-   - Helper traits for complex projections (`ProjectChoices`, `Not<Role>`, `ValidProjection`)
-   - Edge case handling (roles not involved in communications)
-   - Projection validation with `ProjectionError` types
-
-3. **Label Transformation Logic**: Added complete type-level label system with:
-   - `LabelList` operations and type-level boolean logic
-   - Label transformation traits (`TMap`, `TCollect`, `TFilter`)
-   - Label preservation and composition for protocol constructs
-   - Runtime and compile-time validation mechanisms
-
-**Implementation Readiness:** The enhanced duality.md now provides direct implementation guidance for Tasks 1.1.1-1.1.5, with concrete type definitions ready for use.
+**Comprehensive Implementation Strategy:** Created complete set of LLM prompts and enhanced documentation for implementing all Task 1.1 subtasks, including foundation types, global protocol types, projection mechanisms, and duality checking with concrete trait definitions and implementation patterns.
 
 ## Core Type-Level Programming Patterns
+
+### Extensible Metadata Pattern
+
+**Key Insight:** The specification intentionally uses extensible compound data structures rather than individual parameters to enable downstream extensions and protocol evolution.
+
+**Implementation Strategy:**
+
+```rust
+// EXTENSIBLE: Allows downstream implementations to extend metadata
+pub struct EpChanSend<IO, M, Msg, P, AIO> 
+where 
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait, // trait that CommMetadata<C, L> implements
+    Msg: Message,
+    P: LocalProtocol,
+    AIO: ActionIOTMarker,
+
+// VS. NON-EXTENSIBLE: Fixed individual parameters  
+pub struct EpChanSend<IO, C, L, Msg, P, AIO>
+where
+    IO: SupportsActionIO<AIO>, 
+    C: ChanId,
+    L: MsgLbl,
+    // Cannot be extended by downstream implementations
+```
+
+**Benefits:**
+
+- **Downstream Extensions**: Add timestamps, priorities, routing info, etc.
+- **Compound Data Structure**: Groups related metadata for easier manipulation
+- **Type System Flexibility**: Metadata variants while maintaining type safety
+- **Protocol Evolution**: Metadata evolution without breaking type signatures
 
 ### Pattern: Marker Type Dispatch
 
@@ -228,21 +240,18 @@ where
 
 ## Protocol Label Invariant
 
-**Invariant:**
+**Invariant:** All protocol combinators (TSend, TRecv, TEnd, TChoice, TPar, TRec, TInteract, etc.) must have a label parameter and implement the GetProtocolLabel trait.
 
-- All protocol combinators (TSend, TRecv, TEnd, TChoice, TPar, TRec, TInteract, etc.) must have a label parameter and implement the GetProtocolLabel trait.
-- The invariant must be enforced in both code and documentation. This includes:
-  - Type definitions: All combinators must have a label parameter.
-  - Trait implementations: All combinators must implement GetProtocolLabel.
-  - Documentation: The invariant must be stated in module-level and trait-level docs, and code examples must use combinators with label parameters.
-  - The review process involves:
-  1. Auditing all combinators for label and trait coverage.
-  2. Adding/correcting missing label parameters or trait implementations.
-  3. Updating documentation and code examples to reflect the invariant.
-  4. Running all tests and checks to ensure correctness and no regressions.
-- Rationale: This invariant ensures that protocol labels are always available for type-level reasoning, protocol projection, and endpoint generation. It also improves maintainability and future extensibility.
-- Pattern: When adding a new protocol combinator, always include a label parameter and implement GetProtocolLabel. Document this requirement in both code and project planning.
-- Implications: Contributors must be aware of this invariant and check for it during code review. Automated tests and linting should be used to catch violations.
+**Enforcement:**
+
+- Type definitions: All combinators must have a label parameter
+- Trait implementations: All combinators must implement GetProtocolLabel
+- Documentation: The invariant must be stated in module-level and trait-level docs
+- Code examples must use combinators with label parameters
+
+**Rationale:** This invariant ensures that protocol labels are always available for type-level reasoning, protocol projection, and endpoint generation. It also improves maintainability and future extensibility.
+
+**Pattern:** When adding a new protocol combinator, always include a label parameter and implement GetProtocolLabel. Document this requirement in both code and project planning.
 
 ## Project Architecture Insights
 
@@ -275,7 +284,7 @@ Three proven approaches for implementing session types at runtime:
 2. **Code Generation**: Using procedural macros for generating boilerplate
 3. **State Machine Builders**: Explicitly modeling protocol states as types
 
-## Critical Insights
+## Critical Implementation Insights
 
 1. **Type-Level Dispatch** is fundamental for handling different protocol cases without specialization.
 
@@ -291,153 +300,7 @@ Three proven approaches for implementing session types at runtime:
 
 7. **Type Safety at Compile Time** is achievable through proper trait bounds and assertions.
 
-## Documentation Tooling
-
-1. **Markdown Linting** with markdownlint-cli2 using a standardized `.markdownlint-cli2.yaml` configuration file ensures consistent documentation formats.
-
-2. **Line Length Standards** set to 100 characters provide a balance between readability and efficient use of screen space.
-
-3. **List Formatting Rules** require proper indentation (2 spaces for top-level) and blank lines before and after lists.
-
-## Doctest/Test Failure Lessons (2025-05-18)
-
-- Rust doctests do not have access to crate macros unless explicitly exported and imported; integration tests do.
-- Type-level equality assertions (e.g., `assert_type_eq!`) may fail in doctests due to Rust's type identity limitations, even if types are structurally identical.
-- Macro-based protocol definitions (`tchoice!`, `tpar!`) should be tested in integration/compile-time tests, not doctests.
-- To avoid CI failures, README.md inclusion is now limited to docs.rs builds, and a warning is present in the README.
-- Always document these limitations for users and contributors.
-
-## Learnings
-
-### Protocol Transform Modularization (2025-05-18)
-
-- Modularizing protocol transformation logic improves maintainability, discoverability, and testability.
-- Rust stable type-level programming requires careful trait and module organization to avoid orphan rules and import conflicts.
-- Doctests must use public re-export paths (e.g., `besedarium::ProjectChoice`) to work for both users and CI.
-- Removing unused imports and running `cargo fmt`, `clippy`, and doctests is essential for a clean, CI-ready codebase.
-- Documentation should always reflect the public API and module structure, with clear examples and trait explanations.
-- When splitting large files, update all references and re-exports to avoid breakage in dependent modules and tests.
-- Use `pub use` in `mod.rs` to provide a stable, discoverable API surface for downstream users.
-- Maintain a running changelog and status file to track progress and ensure nothing is missed during large refactors.
-
-### Implementing Helper Traits for Projection (2025-05-19)
-
-- Implementing helper traits like `ProjectSendCase` and `ProjectRecvCase` in separate modules improves code organization and maintainability.
-- When implementing these traits, proper type bounds are critical - especially ensuring `IO: SessionType` and the role-specific requirements.
-- Using type-level booleans (`True`/`False`) for dispatch based on role equality is an effective pattern for handling different projection cases.
-- The implementation follows the "Helper Trait Case Analysis" pattern where:
-  1. The main trait (`ProjectRole`) delegates to case-specific helpers (`ProjectSendCase`, `ProjectRecvCase`)
-  2. The helpers handle different cases based on type-level boolean flags (`Me == RSender` vs `Me != RSender`)
-  3. Each implementation provides a different local protocol type based on role involvement
-- Trait bounds in the implementation must be carefully managed:
-  1. Need to explicitly declare `(): ProjectRole<Me, IO, G>` to ensure the unit type implements the recursive projection
-  2. Need to include `IO: SessionType` in all implementations to maintain consistent bounds
-  3. Properly reference external bounds from other modules using full paths when needed
-- Code reuse across modules requires careful attention to imports and visibility
-- Mirror implementations between `send.rs` and `recv.rs` help maintain consistency and symmetry
-- In `ProjectRole` implementations, we need to:
-  1. Include bounds for role equality: `Me: RoleEq<RSender>` and `<Me as RoleEq<RSender>>::Output: Bool`
-  2. Add bounds for the helper traits: `(): ProjectSendCase<Me, IO, Lbl, RSender, P, G, <Me as RoleEq<RSender>>::Output>`
-- Compiler errors provide valuable guidance for fixing trait bounds, especially the `consider extending the where clause` hints.
-- When testing modularized code, `cargo check --lib` is useful for isolating library compilation from test cases.
-
-### Test Overrides Update (2025-05-19)
-
-- When modularizing a project, it's important to update test files that contain special case implementations
-- Special case test implementations often need explicit trait bounds that weren't required before modularization
-- For test types like `Http`, `Alice`, etc., we need to implement traits like `SessionType` to satisfy bounds in the new modularized structure
-- After modularization, imports should reference specific module paths rather than wildcard imports (e.g., `use crate::protocol::transforms::projection::ProjectRole` instead of `use crate::protocol::transforms::*`)
-- The compiler provides valuable diagnostic information about missing trait implementations which can guide the update process
-- Test types defined in test files need the same trait implementations as their production counterparts to ensure type safety
-- Even when the structure of implementations doesn't change, the trait bounds and import paths need to be updated to match the new module organization
-
-### Protocol Combinator Implementation (2025-05-19)
-
-- When adding a new protocol combinator, follow these key steps:
-  1. Define the struct in `global.rs` with proper generic parameters and PhantomData
-  2. Implement `sealed::Sealed` to restrict trait implementations
-  3. Implement `TSession<IO>` with proper composition rules
-  4. Implement `GetProtocolLabel` to adhere to the protocol label invariant
-  5. Implement `ProjectRole` for projection to local protocols
-- All combinators must adhere to the protocol label invariant by having a label parameter and implementing GetProtocolLabel
-- For projection, consider how the new combinator should translate to local protocols
-- Maintain consistent pattern with existing combinators (e.g., TEnd, TSend, TRecv, TChoice)
-- Carefully define composition rules in the TSession implementation to ensure proper protocol composition
-- Add comprehensive documentation and test cases for the new combinator
-- Update integration tests to showcase the new combinator in real protocol scenarios
-- Consider the impact on existing code and maintain backward compatibility where possible
-
-### TStart Implementation (2025-05-19)
-
-- The `TStart` combinator provides an explicit entry point for protocols:
-  1. Defined `TStart<IO, Lbl, S>` in `global.rs` with label parameter and continuation
-  2. Created corresponding `EpStart<IO, Lbl, Me, T>` in `local.rs` for local protocols
-  3. Implemented `ProjectRole` to correctly project global `TStart` to local `EpStart`
-  4. Added label preservation via `GetProtocolLabel` implementation
-- Defined composition behavior: `TStart<IO, Lbl, S>::Compose<Rhs> = TStart<IO, Lbl, S::Compose<Rhs>>`
-- Added comprehensive tests:
-  1. Basic type construction tests
-  2. Projection correctness tests for multiple roles
-  3. Label preservation tests
-  4. Composition tests with other protocol combinators
-- Updated docs and examples to showcase `TStart` usage in practical protocol definitions
-- Protocol entry points improve protocol clarity and provide a consistent structure
-- The architecture follows the protocol label invariant, ensuring all type information is preserved during transformations
-- Benefits of explicit protocol entry points:
-  1. Clear delineation of protocol boundaries
-  2. Improved protocol readability and maintainability
-  3. Consistent structure for protocol definitions
-  4. Simplified debugging and error messages
-  5. Better support for protocol composition and reuse
-
----
-
-*This knowledge base distills the core patterns for implementing session types in Rust. Reference when implementing protocol-related functionality*
-
-## Duality and Well-Formedness in MPST (May 2025)
-
-### Key Concepts and Patterns
-
-- **Duality and Well-Formedness**
-  - Duality ensures that for every communication action (send/receive, offer/choice) between two roles, the actions are complementary.
-  - Well-formedness requires that all pairs of communicating roles are duals for their shared actions, preventing mismatches and deadlocks.
-
-- **Global (T*) vs Local (Ep*) Types**
-  - Global types (T*) describe the protocol as a whole; local types (Ep*) are projections for each role.
-  - Consistent naming and structuring clarify protocol intent and implementation.
-
-- **Type-Level Programming Patterns in Rust**
-  - Use marker types and PhantomData to encode protocol structure at the type level.
-  - Traits such as `TSession`, `Project`, `Dual`, `IsDual`, and `IsWellFormed` enable compile-time protocol verification.
-  - Boolean logic and recursive trait implementations are used for type-level checks.
-  - Compile-time assertions (e.g., `assert_type_eq!`) help enforce protocol invariants.
-
-- **Pairwise Duality Checking**
-  - For each communicating pair, filter projections to shared actions and check duality in lockstep.
-  - Algorithmic matching ensures that every send has a matching receive, and every offer has a matching choice.
-
-- **Example-Driven Documentation**
-  - Concrete Rust-style examples for two- and three-role protocols clarify both well-formed and ill-formed cases.
-  - Examples illustrate projection, duality, and well-formedness checks.
-
-- **Type-Level Well-Formedness Expression**
-  - `IsWellFormed<G>` trait aggregates pairwise duality checks for all communicating pairs.
-  - Uses type-level sets, filtering, and aggregation to ensure protocol safety at compile time.
-
-### Patterns and Insights
-
-- Prefer explicit, minimal struct definitions for each protocol action.
-- Use trait-based type-level functions for protocol analysis and verification.
-- Document invariants and requirements for each protocol construct.
-- Maintain clear separation between global and local protocol representations.
-- Use lockstep filtering and pairwise checks for robust well-formedness analysis.
-- Example-driven explanations improve clarity and correctness.
-
----
-
-_Last updated: 2025-05-20_
-
-## Module Organization and File Size Management (2025-05-24)
+## Module Organization and File Size Management
 
 ### File Size and Module Structure Guidelines
 
@@ -460,14 +323,7 @@ src/protocol/[module_name]/
 └── examples.rs         # Extended examples (optional)
 ```
 
-**Applied Successfully:** Foundation and Global modules refactored from 200+ and 400+ line files to:
-
-- `foundation/mod.rs`: 122 lines (clean implementation)
-- `foundation/tests.rs`: 58 lines (focused tests)
-- `global/mod.rs`: 275 lines (implementation + type aliases)
-- `global/tests.rs`: 115 lines (comprehensive tests)
-
-**Benefits Achieved:**
+**Benefits:**
 
 - **Better Organization**: Clear separation of concerns
 - **Maintainability**: Easier to navigate and understand
@@ -483,34 +339,87 @@ src/protocol/[module_name]/
 5. **Verify Compilation**: Ensure all tests still pass and no circular dependencies
 6. **Update Documentation**: Reflect new structure in module docs
 
-**When to Split Further:**
+## Duality and Well-Formedness in MPST
 
-1. **Single Responsibility**: If a module handles multiple distinct concepts
-2. **Size Threshold**: When mod.rs approaches 300 lines
-3. **Test Complexity**: When tests become more complex than implementation
-4. **Team Navigation**: When it takes >30 seconds to find relevant code
+### Key Concepts and Patterns
 
-**Module Naming Consistency:**
+- **Duality and Well-Formedness**
+  - Duality ensures that for every communication action (send/receive, offer/choice) between two roles, the actions are complementary.
+  - Well-formedness requires that all pairs of communicating roles are duals for their shared actions, preventing mismatches and deadlocks.
 
-- Core types in `mod.rs`
-- Tests in `tests.rs` 
-- Builders/helpers in `builders.rs`
-- Examples in `examples.rs`
-- Sub-modules as directories with same pattern
+- **Global (T*) vs Local (Ep*) Types**
+  - Global types (T*) describe the protocol as a whole; local types (Ep*) are projections for each role.
+  - Consistent naming and structuring clarify protocol intent and implementation.
 
-**File Organization Anti-Patterns to Avoid:**
+- **Type-Level Programming Patterns in Rust**
+  - Use marker types and PhantomData to encode protocol structure at the type level.
+  - Traits such as `TSession`, `Project`, `Dual`, `IsDual`, and `IsWellFormed` enable compile-time protocol verification.
+  - Boolean logic and recursive trait implementations are used for type-level checks.
+  - Compile-time assertions (e.g., `assert_type_eq!`) help enforce protocol invariants.
 
-- **Mega Files**: Single files >500 lines mixing concepts
-- **Scattered Tests**: Tests mixed throughout implementation files
-- **Inconsistent Structure**: Different organization patterns per module
-- **Deep Nesting**: More than 3 levels of module directories
-- **Circular Dependencies**: Modules importing from their children
+- **Pairwise Duality Checking**
+  - For each communicating pair, filter projections to shared actions and check duality in lockstep.
+  - Algorithmic matching ensures that every send has a matching receive, and every offer has a matching choice.
 
-**Progressive Enhancement Strategy:**
+- **Type-Level Well-Formedness Expression**
+  - `IsWellFormed<G>` trait aggregates pairwise duality checks for all communicating pairs.
+  - Uses type-level sets, filtering, and aggregation to ensure protocol safety at compile time.
 
-1. **Phase 1**: Extract tests when files reach ~200 lines
-2. **Phase 2**: Split implementation by concept when >300 lines
-3. **Phase 3**: Add specialized sub-modules (builders, examples) as needed
-4. **Phase 4**: Consider domain-specific organization for complex areas
+### Implementation Patterns and Insights
 
-This pattern ensures predictable, scalable organization as the codebase grows while maintaining clear separation of concerns and excellent maintainability.
+- Prefer explicit, minimal struct definitions for each protocol action.
+- Use trait-based type-level functions for protocol analysis and verification.
+- Document invariants and requirements for each protocol construct.
+- Maintain clear separation between global and local protocol representations.
+- Use lockstep filtering and pairwise checks for robust well-formedness analysis.
+- Example-driven explanations improve clarity and correctness.
+
+## Development Best Practices
+
+### Documentation and Testing
+
+1. **Markdown Linting** with markdownlint-cli2 using a standardized `.markdownlint-cli2.yaml` configuration file ensures consistent documentation formats.
+
+2. **Line Length Standards** set to 100 characters provide a balance between readability and efficient use of screen space.
+
+3. **List Formatting Rules** require proper indentation (2 spaces for top-level) and blank lines before and after lists.
+
+### Doctest and Test Management
+
+- Rust doctests do not have access to crate macros unless explicitly exported and imported; integration tests do.
+- Type-level equality assertions (e.g., `assert_type_eq!`) may fail in doctests due to Rust's type identity limitations, even if types are structurally identical.
+- Macro-based protocol definitions (`tchoice!`, `tpar!`) should be tested in integration/compile-time tests, not doctests.
+- Always document these limitations for users and contributors.
+
+### Modularization Learnings
+
+- Modularizing protocol transformation logic improves maintainability, discoverability, and testability.
+- Rust stable type-level programming requires careful trait and module organization to avoid orphan rules and import conflicts.
+- Doctests must use public re-export paths (e.g., `besedarium::ProjectChoice`) to work for both users and CI.
+- When splitting large files, update all references and re-exports to avoid breakage in dependent modules and tests.
+- Use `pub use` in `mod.rs` to provide a stable, discoverable API surface for downstream users.
+
+### Protocol Combinator Implementation
+
+When adding a new protocol combinator, follow these key steps:
+
+1. Define the struct in `global.rs` with proper generic parameters and PhantomData
+2. Implement `sealed::Sealed` to restrict trait implementations
+3. Implement `TSession<IO>` with proper composition rules
+4. Implement `GetProtocolLabel` to adhere to the protocol label invariant
+5. Implement `ProjectRole` for projection to local protocols
+6. Add comprehensive documentation and test cases
+7. Update integration tests to showcase the new combinator in real protocol scenarios
+
+### Helper Trait Implementation
+
+- Implementing helper traits like `ProjectSendCase` and `ProjectRecvCase` in separate modules improves code organization and maintainability.
+- Using type-level booleans (`True`/`False`) for dispatch based on role equality is an effective pattern for handling different projection cases.
+- The implementation follows the "Helper Trait Case Analysis" pattern where the main trait delegates to case-specific helpers that handle different cases based on type-level boolean flags.
+- Trait bounds in the implementation must be carefully managed, especially ensuring proper bounds for role equality and recursive projections.
+
+---
+
+*This knowledge base distills the core patterns for implementing session types in Rust. Reference when implementing protocol-related functionality.*
+
+*Last updated: 2025-05-24*

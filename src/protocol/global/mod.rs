@@ -1,6 +1,6 @@
 //! # Global Protocol Types for Enhanced MPST System
 //!
-//! This module provides Global Protocol Types that incorporate `CommMetadata` and 
+//! This module provides Global Protocol Types that incorporate `CommMetadata` and
 //! `ActionIOType` concepts as specified in `docs/duality.md`. These types represent
 //! the choreography of multi-party protocols with explicit channel management.
 //!
@@ -14,11 +14,11 @@
 //! - **Builder Functions**: Easy construction of complex protocols
 
 use crate::protocol::foundation::{
-    Role, Message, GlobalProtocol, CommMetadata, ActionIOTMarker, ChanId, MsgLbl,
-    DefaultChan, RequestLbl, ResponseLbl, BiDirectionalAction,
+    ActionIOTMarker, BiDirectionalAction, ChanId, CommMetadata, DefaultChan, GlobalProtocol,
+    Message, MsgLbl, RequestLbl, ResponseLbl, Role,
 };
-use std::marker::PhantomData;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 // ============================================================================
 // Core Global Protocol Types
@@ -34,7 +34,15 @@ use std::fmt::Debug;
 /// - `P`: Continuation Global Protocol after the send
 /// - `AIO`: ActionIOTMarker specifying required I/O type
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TChanSend<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> {
+pub struct TChanSend<
+    S: Role,
+    R: Role,
+    C: ChanId,
+    L: MsgLbl,
+    Msg: Message,
+    P: GlobalProtocol,
+    AIO: ActionIOTMarker,
+> {
     _sender: PhantomData<S>,
     _receiver: PhantomData<R>,
     _chan: PhantomData<C>,
@@ -44,12 +52,28 @@ pub struct TChanSend<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: Gl
     _aio: PhantomData<AIO>,
 }
 
-impl<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanSend<S, R, C, L, Msg, P, AIO> {}
+impl<
+        S: Role,
+        R: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > GlobalProtocol for TChanSend<S, R, C, L, Msg, P, AIO>
+{
+}
 
-impl<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
-    TChanSend<S, R, C, L, Msg, P, AIO> {
-    
+impl<
+        S: Role,
+        R: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > TChanSend<S, R, C, L, Msg, P, AIO>
+{
     pub fn new() -> Self {
         Self {
             _sender: PhantomData,
@@ -61,7 +85,7 @@ impl<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AI
             _aio: PhantomData,
         }
     }
-    
+
     /// Get CommMetadata for this send operation
     pub fn metadata() -> CommMetadata<C, L>
     where
@@ -82,7 +106,15 @@ impl<S: Role, R: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AI
 /// - `P`: Continuation Global Protocol after the receive
 /// - `AIO`: ActionIOTMarker specifying required I/O type
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TChanRecv<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> {
+pub struct TChanRecv<
+    R: Role,
+    S: Role,
+    C: ChanId,
+    L: MsgLbl,
+    Msg: Message,
+    P: GlobalProtocol,
+    AIO: ActionIOTMarker,
+> {
     _receiver: PhantomData<R>,
     _sender: PhantomData<S>,
     _chan: PhantomData<C>,
@@ -92,12 +124,28 @@ pub struct TChanRecv<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: Gl
     _aio: PhantomData<AIO>,
 }
 
-impl<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanRecv<R, S, C, L, Msg, P, AIO> {}
+impl<
+        R: Role,
+        S: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > GlobalProtocol for TChanRecv<R, S, C, L, Msg, P, AIO>
+{
+}
 
-impl<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AIO: ActionIOTMarker> 
-    TChanRecv<R, S, C, L, Msg, P, AIO> {
-    
+impl<
+        R: Role,
+        S: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > TChanRecv<R, S, C, L, Msg, P, AIO>
+{
     pub fn new() -> Self {
         Self {
             _receiver: PhantomData,
@@ -109,7 +157,7 @@ impl<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AI
             _aio: PhantomData,
         }
     }
-    
+
     /// Get CommMetadata for this receive operation
     pub fn metadata() -> CommMetadata<C, L>
     where
@@ -129,7 +177,14 @@ impl<R: Role, S: Role, C: ChanId, L: MsgLbl, Msg: Message, P: GlobalProtocol, AI
 /// - `Right`: Right branch protocol  
 /// - `AIO`: ActionIOTMarker for choice communication
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TChanChoice<R: Role, C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, AIO: ActionIOTMarker> {
+pub struct TChanChoice<
+    R: Role,
+    C: ChanId,
+    Lbl: MsgLbl,
+    Left: GlobalProtocol,
+    Right: GlobalProtocol,
+    AIO: ActionIOTMarker,
+> {
     _chooser: PhantomData<R>,
     _chan: PhantomData<C>,
     _lbl: PhantomData<Lbl>,
@@ -138,12 +193,26 @@ pub struct TChanChoice<R: Role, C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Ri
     _aio: PhantomData<AIO>,
 }
 
-impl<R: Role, C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanChoice<R, C, Lbl, Left, Right, AIO> {}
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > GlobalProtocol for TChanChoice<R, C, Lbl, Left, Right, AIO>
+{
+}
 
-impl<R: Role, C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, AIO: ActionIOTMarker> 
-    TChanChoice<R, C, Lbl, Left, Right, AIO> {
-    
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > TChanChoice<R, C, Lbl, Left, Right, AIO>
+{
     pub fn new() -> Self {
         Self {
             _chooser: PhantomData,
@@ -165,7 +234,14 @@ impl<R: Role, C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtoco
 /// - `IsDisjoint`: Marker ensuring branches are disjoint (must be Send + Sync + Debug)
 /// - `AIO`: ActionIOTMarker for parallel coordination
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TChanPar<C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, IsDisjoint: Send + Sync + 'static + Debug, AIO: ActionIOTMarker> {
+pub struct TChanPar<
+    C: ChanId,
+    Lbl: MsgLbl,
+    Left: GlobalProtocol,
+    Right: GlobalProtocol,
+    IsDisjoint: Send + Sync + 'static + Debug,
+    AIO: ActionIOTMarker,
+> {
     _chan: PhantomData<C>,
     _lbl: PhantomData<Lbl>,
     _left: PhantomData<Left>,
@@ -174,12 +250,26 @@ pub struct TChanPar<C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalP
     _aio: PhantomData<AIO>,
 }
 
-impl<C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, IsDisjoint: Send + Sync + 'static + Debug, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO> {}
+impl<
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        IsDisjoint: Send + Sync + 'static + Debug,
+        AIO: ActionIOTMarker,
+    > GlobalProtocol for TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO>
+{
+}
 
-impl<C: ChanId, Lbl: MsgLbl, Left: GlobalProtocol, Right: GlobalProtocol, IsDisjoint: Send + Sync + 'static + Debug, AIO: ActionIOTMarker> 
-    TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO> {
-    
+impl<
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        IsDisjoint: Send + Sync + 'static + Debug,
+        AIO: ActionIOTMarker,
+    > TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO>
+{
     pub fn new() -> Self {
         Self {
             _chan: PhantomData,
@@ -204,12 +294,9 @@ pub struct TChanEnd<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> {
     _aio: PhantomData<AIO>,
 }
 
-impl<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanEnd<C, L, AIO> {}
+impl<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> GlobalProtocol for TChanEnd<C, L, AIO> {}
 
-impl<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> 
-    TChanEnd<C, L, AIO> {
-    
+impl<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> TChanEnd<C, L, AIO> {
     pub fn new() -> Self {
         Self {
             _chan: PhantomData,
@@ -233,12 +320,14 @@ pub struct TChanStart<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIO
     _aio: PhantomData<AIO>,
 }
 
-impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker> 
-    GlobalProtocol for TChanStart<C, L, Start, AIO> {}
+impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker> GlobalProtocol
+    for TChanStart<C, L, Start, AIO>
+{
+}
 
-impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker> 
-    TChanStart<C, L, Start, AIO> {
-    
+impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker>
+    TChanStart<C, L, Start, AIO>
+{
     pub fn new() -> Self {
         Self {
             _chan: PhantomData,
@@ -254,61 +343,27 @@ impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker>
 // ============================================================================
 
 /// Convenience type alias for simple send with default channel
-pub type SimpleChannelSend<S, R, Msg, P> = TChanSend<
-    S, 
-    R, 
-    DefaultChan,
-    RequestLbl,
-    Msg, 
-    P, 
-    BiDirectionalAction
->;
+pub type SimpleChannelSend<S, R, Msg, P> =
+    TChanSend<S, R, DefaultChan, RequestLbl, Msg, P, BiDirectionalAction>;
 
 /// Convenience type alias for simple receive with default channel  
-pub type SimpleChannelRecv<R, S, Msg, P> = TChanRecv<
-    R, 
-    S, 
-    DefaultChan,
-    ResponseLbl,
-    Msg, 
-    P, 
-    BiDirectionalAction
->;
+pub type SimpleChannelRecv<R, S, Msg, P> =
+    TChanRecv<R, S, DefaultChan, ResponseLbl, Msg, P, BiDirectionalAction>;
 
 /// Convenience type alias for simple choice with default channel
-pub type SimpleChannelChoice<R, Left, Right> = TChanChoice<
-    R,
-    DefaultChan,
-    RequestLbl,
-    Left,
-    Right,
-    BiDirectionalAction
->;
+pub type SimpleChannelChoice<R, Left, Right> =
+    TChanChoice<R, DefaultChan, RequestLbl, Left, Right, BiDirectionalAction>;
 
 /// Convenience type alias for simple parallel composition with default channel  
-pub type SimpleChannelPar<Left, Right, IsDisjoint> = TChanPar<
-    DefaultChan,
-    RequestLbl,
-    Left,
-    Right,
-    IsDisjoint,
-    BiDirectionalAction
->;
+pub type SimpleChannelPar<Left, Right, IsDisjoint> =
+    TChanPar<DefaultChan, RequestLbl, Left, Right, IsDisjoint, BiDirectionalAction>;
 
 /// Convenience type alias for simple termination with default channel
-pub type SimpleChannelEnd = TChanEnd<
-    DefaultChan,
-    RequestLbl,
-    BiDirectionalAction
->;
+pub type SimpleChannelEnd = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
 /// Convenience type alias for simple start with default channel
-pub type SimpleChannelStart<Start> = TChanStart<
-    DefaultChan,
-    RequestLbl,
-    Start,
-    BiDirectionalAction
->;
+pub type SimpleChannelStart<Start> =
+    TChanStart<DefaultChan, RequestLbl, Start, BiDirectionalAction>;
 
 // ============================================================================
 // Tests

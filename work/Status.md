@@ -4,16 +4,24 @@ This document provides a status overview of the Besedarium session types library
 
 ## Recent Status Update (2025-05-24)
 
-### Documentation Enhancement Completed
+### Task 1.1.3 Completed: Local Endpoint Types Implementation
 
-**`docs/duality.md` Major Enhancement:**
+**✅ Local Endpoint Types - COMPLETED:**
 
-- ✅ **Foundation Types**: Complete trait definitions and concrete implementations
-- ✅ **Projection System**: Comprehensive `Project<P, Role>` trait implementations
-- ✅ **Label System**: Type-level label transformation and validation framework
-- ✅ **Implementation Guidance**: Ready-to-use patterns for core library implementation
+- **All Types Implemented**: Successfully implemented all local endpoint types with extensible metadata pattern
+- **Compilation Success**: All types compile correctly with proper trait bounds and error checking  
+- **Test Coverage**: Comprehensive test suite covering all endpoint types and usage patterns
+- **Type Safety**: Full integration with IO capability system and LocalProtocol trait
+- **Extensibility**: Proper support for downstream metadata extensions via CommMetadataTrait
 
-**Current Priority**: Implementing the foundation types and core protocol constructs based on the enhanced duality.md specifications.
+**Types Completed:**
+
+- `EpChanSend<IO, M, Msg, P, AIO>`, `EpChanRecv<IO, M, Msg, P, AIO>` - Message operations
+- `EpChanChoice<IO, M, Left, Right, AIO>`, `EpChanOffer<IO, M, Left, Right, AIO>` - Choice operations  
+- `EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>` - Parallel composition
+- `EpChanEnd<IO, M, AIO>`, `EpChanStart<IO, M, Start, AIO>` - Protocol lifecycle
+
+**Current Priority**: Task 1.1.4 (IsDual predicate) and Task 1.1.5 (Project trait) to complete core protocol system.
 
 ## 1. Global Protocol Types Status
 

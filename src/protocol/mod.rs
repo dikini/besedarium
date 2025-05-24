@@ -7,7 +7,7 @@
 //!
 //! The implementation follows Task 1.1 as outlined in `work/TASKS.md`:
 //!
-//! - **foundation**: Core types and traits (Task 1.1.1) 
+//! - **foundation**: Core types and traits (Task 1.1.1)
 //! - **global**: Global protocol types representing multi-party choreography (Task 1.1.2)
 //! - **local**: Local protocol types representing endpoint behavior (Task 1.1.3)
 //! - **duality**: Duality checking and validation (Task 1.1.4)
@@ -30,8 +30,8 @@ pub mod foundation;
 // Global protocol types (Task 1.1.2) - ✅ IMPLEMENTED
 pub mod global;
 
-// Local endpoint types (Task 1.1.3) - Ready for implementation
-// pub mod local;
+// Local endpoint types (Task 1.1.3) - ✅ IMPLEMENTED
+pub mod local;
 
 // Duality checking (Task 1.1.4) - Ready for implementation
 // pub mod duality;

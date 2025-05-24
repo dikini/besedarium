@@ -12,11 +12,15 @@ fn test_action_io_support() {
     // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
-    
+    assert!(<TcpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
+
     // Test HttpOnlySessionIO supports output and bidirectional
     assert!(<HttpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<HttpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    assert!(<HttpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
 }
 
 // Test that example roles implement the Role trait
@@ -48,12 +52,12 @@ fn test_type_safety() {
     // This should work
     type ExampleMetadata = CommMetadata<DefaultChan, RequestLbl>;
     let meta = ExampleMetadata::new(DefaultChan, RequestLbl);
-    
+
     // This should provide proper type safety
     fn process_metadata<C: ChanId, L: MsgLbl>(_meta: CommMetadata<C, L>) {
         // Implementation
     }
-    
+
     process_metadata(meta);
 }
 
@@ -62,7 +66,7 @@ fn test_action_io_markers() {
     let input = InputAction;
     let output = OutputAction;
     let bidirectional = BiDirectionalAction;
-    
+
     assert_eq!(input, InputAction);
     assert_eq!(output, OutputAction);
     assert_eq!(bidirectional, BiDirectionalAction);

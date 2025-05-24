@@ -1,6 +1,6 @@
 //! # Foundation Types for Enhanced MPST System
 //!
-//! This module provides the foundational trait definitions and core infrastructure 
+//! This module provides the foundational trait definitions and core infrastructure
 //! for the Besedarium MPST library as specified in `docs/duality.md`.
 //!
 //! ## Key Components
@@ -64,6 +64,20 @@ impl MsgLbl for ResponseLbl {}
 // Task 1.1.1b: CommMetadata Implementation
 // ============================================================================
 
+/// Trait for communication metadata types that can be used in protocols
+/// This enables downstream implementations to extend metadata capabilities
+pub trait Metadata: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {
+    /// Channel identifier type for this metadata
+    type ChanId: ChanId;
+    /// Message label type for this metadata  
+    type MsgLbl: MsgLbl;
+
+    /// Get the channel ID from this metadata
+    fn chan_id(&self) -> &Self::ChanId;
+    /// Get the message label from this metadata
+    fn msg_lbl(&self) -> &Self::MsgLbl;
+}
+
 /// Communication metadata for precise channel and message identification
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CommMetadata<C: ChanId, L: MsgLbl> {
@@ -74,6 +88,19 @@ pub struct CommMetadata<C: ChanId, L: MsgLbl> {
 impl<C: ChanId, L: MsgLbl> CommMetadata<C, L> {
     pub fn new(chan_id: C, msg_lbl: L) -> Self {
         Self { chan_id, msg_lbl }
+    }
+}
+
+impl<C: ChanId, L: MsgLbl> Metadata for CommMetadata<C, L> {
+    type ChanId = C;
+    type MsgLbl = L;
+
+    fn chan_id(&self) -> &Self::ChanId {
+        &self.chan_id
+    }
+
+    fn msg_lbl(&self) -> &Self::MsgLbl {
+        &self.msg_lbl
     }
 }
 
@@ -88,7 +115,7 @@ pub trait ActionIOTMarker: Send + Sync + 'static + Debug + Clone + PartialEq + E
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputAction;
 
-#[derive(Debug, Clone, PartialEq, Eq)] 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutputAction;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -125,6 +152,54 @@ pub struct HttpOnlySessionIO;
 impl SupportsActionIO<OutputAction> for HttpOnlySessionIO {}
 impl SupportsActionIO<BiDirectionalAction> for HttpOnlySessionIO {}
 // Note: HttpOnlySessionIO doesn't support InputAction
+
+// ============================================================================
+// Extensible Metadata Infrastructure
+// ============================================================================
+
+/// Trait for extensible communication metadata
+///
+/// This trait enables downstream implementations to extend metadata
+/// while maintaining compatibility with the core CommMetadata type.
+///
+/// Example extensions:
+/// - Timestamped metadata for audit trails
+/// - Priority-aware metadata for QoS
+/// - Routing metadata for distributed protocols
+pub trait CommMetadataTrait: Send + Sync + 'static + Debug + Clone + PartialEq + Eq {
+    /// The channel identifier type
+    type ChanId: ChanId;
+
+    /// The message label type
+    type MsgLbl: MsgLbl;
+
+    /// Get the channel identifier
+    fn chan_id(&self) -> &Self::ChanId;
+
+    /// Get the message label
+    fn msg_lbl(&self) -> &Self::MsgLbl;
+
+    /// Create new metadata from channel and label
+    fn new(chan_id: Self::ChanId, msg_lbl: Self::MsgLbl) -> Self;
+}
+
+/// Implementation of CommMetadataTrait for the standard CommMetadata type
+impl<C: ChanId, L: MsgLbl> CommMetadataTrait for CommMetadata<C, L> {
+    type ChanId = C;
+    type MsgLbl = L;
+
+    fn chan_id(&self) -> &Self::ChanId {
+        &self.chan_id
+    }
+
+    fn msg_lbl(&self) -> &Self::MsgLbl {
+        &self.msg_lbl
+    }
+
+    fn new(chan_id: Self::ChanId, msg_lbl: Self::MsgLbl) -> Self {
+        CommMetadata::new(chan_id, msg_lbl)
+    }
+}
 
 // ============================================================================
 // Tests
