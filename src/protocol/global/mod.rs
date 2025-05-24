@@ -225,6 +225,63 @@ impl<
     }
 }
 
+/// Global Type: Represents offering branches to another role
+///
+/// - `R`: Role offering the branches (dual to chooser)
+/// - `C`: Channel ID type
+/// - `Lbl`: Message label type for the offer point
+/// - `Left`: Left branch protocol
+/// - `Right`: Right branch protocol  
+/// - `AIO`: ActionIOTMarker for offer communication
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TChanOffer<
+    R: Role,
+    C: ChanId,
+    Lbl: MsgLbl,
+    Left: GlobalProtocol,
+    Right: GlobalProtocol,
+    AIO: ActionIOTMarker,
+> {
+    _offerer: PhantomData<R>,
+    _chan: PhantomData<C>,
+    _lbl: PhantomData<Lbl>,
+    _left: PhantomData<Left>,
+    _right: PhantomData<Right>,
+    _aio: PhantomData<AIO>,
+}
+
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > GlobalProtocol for TChanOffer<R, C, Lbl, Left, Right, AIO>
+{
+}
+
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > TChanOffer<R, C, Lbl, Left, Right, AIO>
+{
+    pub fn new() -> Self {
+        Self {
+            _offerer: PhantomData,
+            _chan: PhantomData,
+            _lbl: PhantomData,
+            _left: PhantomData,
+            _right: PhantomData,
+            _aio: PhantomData,
+        }
+    }
+}
+
 /// Global Type: Represents parallel composition of protocols
 ///
 /// - `C`: Channel ID type
@@ -353,6 +410,10 @@ pub type SimpleChannelRecv<R, S, Msg, P> =
 /// Convenience type alias for simple choice with default channel
 pub type SimpleChannelChoice<R, Left, Right> =
     TChanChoice<R, DefaultChan, RequestLbl, Left, Right, BiDirectionalAction>;
+
+/// Convenience type alias for simple offer with default channel
+pub type SimpleChannelOffer<R, Left, Right> =
+    TChanOffer<R, DefaultChan, RequestLbl, Left, Right, BiDirectionalAction>;
 
 /// Convenience type alias for simple parallel composition with default channel  
 pub type SimpleChannelPar<Left, Right, IsDisjoint> =

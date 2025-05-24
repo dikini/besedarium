@@ -2,26 +2,32 @@
 
 This document provides a status overview of the Besedarium session types library, focusing on the core type-level components and ignoring runtime aspects.
 
+# Status Summary: Besedarium Session Types Library
+
+This document provides a status overview of the Besedarium session types library, focusing on the core type-level components and ignoring runtime aspects.
+
 ## Recent Status Update (2025-05-24)
 
-### Task 1.1.3 Completed: Local Endpoint Types Implementation
+### Task 1.1.5 Completed: Project Trait Implementation
 
-**✅ Local Endpoint Types - COMPLETED:**
+**✅ Project Trait - COMPLETED:**
 
-- **All Types Implemented**: Successfully implemented all local endpoint types with extensible metadata pattern
-- **Compilation Success**: All types compile correctly with proper trait bounds and error checking  
-- **Test Coverage**: Comprehensive test suite covering all endpoint types and usage patterns
-- **Type Safety**: Full integration with IO capability system and LocalProtocol trait
-- **Extensibility**: Proper support for downstream metadata extensions via CommMetadataTrait
+- **Type System Migration**: Successfully migrated projection module from legacy types (`TSend`, `TRecv`) to foundation types (`TChanSend`, `TChanRecv`)
+- **Role-Based Dispatch**: Implemented comprehensive role-based projection using helper traits (`ProjectSendCase`, `ProjectRecvCase`)
+- **All Protocol Types**: Complete projection implementations for all global protocol constructs
+- **Test Coverage**: Updated test suite to use foundation types with proper type signatures
+- **Compilation Success**: Projection module compiles correctly with no type resolution errors
 
-**Types Completed:**
+**Core Phase 1.1 Progress - 5/6 Tasks Complete:**
 
-- `EpChanSend<IO, M, Msg, P, AIO>`, `EpChanRecv<IO, M, Msg, P, AIO>` - Message operations
-- `EpChanChoice<IO, M, Left, Right, AIO>`, `EpChanOffer<IO, M, Left, Right, AIO>` - Choice operations  
-- `EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>` - Parallel composition
-- `EpChanEnd<IO, M, AIO>`, `EpChanStart<IO, M, Start, AIO>` - Protocol lifecycle
+- ✅ **Task 1.1.1**: Foundation types (Role, Message, GlobalProtocol, LocalProtocol, CommMetadata, ActionIO system)
+- ✅ **Task 1.1.2**: Global protocol types (TChanSend, TChanRecv, TChanChoice, TChanPar, TChanEnd, TChanStart)  
+- ✅ **Task 1.1.3**: Local endpoint types (EpChanSend, EpChanRecv, EpChanChoice, EpChanOffer, EpChanPar, EpChanEnd, EpChanStart)
+- ✅ **Task 1.1.4**: IsDual predicate (comprehensive duality checking with type-level boolean logic)
+- ✅ **Task 1.1.5**: Project trait (role-based dispatch with foundation type migration)
+- ⏳ **Task 1.1.5f**: ProjectionError type and validation mechanisms (remaining subtask)
 
-**Current Priority**: Task 1.1.4 (IsDual predicate) and Task 1.1.5 (Project trait) to complete core protocol system.
+**Current Priority**: Task 1.1.5f (ProjectionError validation) to complete core protocol system, then Task 1.2 (label transformation logic).
 
 ## 1. Global Protocol Types Status
 

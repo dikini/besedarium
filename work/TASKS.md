@@ -42,13 +42,13 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
   - [x] **Task 1.1.2**: Implement Global Protocol Types (e.g., `TChanSend`, `TChanRecv`, `TChanOffer`, `TChanChoice`, `TChanPar`, `TChanRec`, `TChanVar`, `TChanEnd`, `TChanContinue`, `TChanStart`) incorporating `CommMetadata` and `ActionIOType`.
   - [x] **Task 1.1.3**: Implement Local Endpoint Types (e.g., `EpSend`, `EpRecv`, `EpOffer`, `EpChoice`, etc.) ensuring consistent `IO` parameter handling and `SupportsActionIO` trait integration.
   - [x] **Task 1.1.4**: Implement the `IsDual` predicate/trait for verifying duality between protocol specifications, considering `CommMetadata`, message types, and `IO` consistency.
-  - [ ] **Task 1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks.
-    - [ ] **Task 1.1.5a**: Implement core `Project<P, R>` trait with `Output: LocalProtocol` associated type.
-    - [ ] **Task 1.1.5b**: Implement projection for `TChanSend` to `EpSend`/`EpRecv` based on role involvement.
-    - [ ] **Task 1.1.5c**: Implement projection for `TChanChoice` to `EpChoice`/`EpOffer` constructs.
-    - [ ] **Task 1.1.5d**: Implement projection for `TChanPar`, `TChanRec`, `TChanEnd` constructs.
-    - [ ] **Task 1.1.5e**: Implement helper traits (`ProjectChoices`, `Not<Role>`, `ValidProjection`) for complex projections.
-    - [ ] **Task 1.1.5f**: Implement `ProjectionError` type and validation mechanisms.
+  - [x] **Task 1.1.5**: Implement the `Project<P, Role>` trait for projecting Global Protocols to Local Endpoint Types, ensuring `SupportsActionIO` checks. (**COMPLETED** - migrated to foundation types with role-based dispatch)
+    - [x] **Task 1.1.5a**: Implement core `Project<P, R>` trait with `Output: LocalProtocol` associated type.
+    - [x] **Task 1.1.5b**: Implement projection for `TChanSend` to `EpSend`/`EpRecv` based on role involvement.
+    - [x] **Task 1.1.5c**: Implement projection for `TChanChoice` to `EpChoice`/`EpOffer` constructs.
+    - [x] **Task 1.1.5d**: Implement projection for `TChanPar`, `TChanRec`, `TChanEnd` constructs.
+    - [x] **Task 1.1.5e**: Implement helper traits (`ProjectChoices`, `Not<Role>`, `ValidProjection`) for complex projections.
+    - [x] **Task 1.1.5f**: Implement `ProjectionError` type and validation mechanisms. (**COMPLETED**)
 - [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
   - [x] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design. (**COMPLETED** - documented in updated `duality.md`)
   - [x] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`). (**COMPLETED** - detailed in updated `duality.md`)

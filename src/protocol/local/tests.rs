@@ -1,7 +1,7 @@
 use super::*;
 use crate::protocol::foundation::{
-    BiDirectionalAction, DefaultChan, InputAction, Message, OutputAction,
-    RequestLbl, ResponseLbl, Role, SupportsActionIO, CommMetadata,
+    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, Message, OutputAction, RequestLbl,
+    ResponseLbl, Role, SupportsActionIO,
 };
 
 // Define test roles
@@ -137,12 +137,8 @@ fn test_ep_chan_end_creation() {
 #[test]
 fn test_ep_chan_start_creation() {
     type TestEnd = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    type TestStart = EpChanStart<
-        TestIO,
-        CommMetadata<DefaultChan, RequestLbl>,
-        TestEnd,
-        BiDirectionalAction,
-    >;
+    type TestStart =
+        EpChanStart<TestIO, CommMetadata<DefaultChan, RequestLbl>, TestEnd, BiDirectionalAction>;
 
     let _start: TestStart = EpChanStart::new();
     // Verify it compiles and type checks
