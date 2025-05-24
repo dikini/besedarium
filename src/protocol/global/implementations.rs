@@ -232,3 +232,93 @@ impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker>
         }
     }
 }
+
+// ============================================================================
+// Default Implementations
+// ============================================================================
+
+impl<
+        S: Role,
+        R: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > Default for TChanSend<S, R, C, L, Msg, P, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<
+        R: Role,
+        S: Role,
+        C: ChanId,
+        L: MsgLbl,
+        Msg: Message,
+        P: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > Default for TChanRecv<R, S, C, L, Msg, P, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > Default for TChanChoice<R, C, Lbl, Left, Right, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<
+        R: Role,
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        AIO: ActionIOTMarker,
+    > Default for TChanOffer<R, C, Lbl, Left, Right, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<
+        C: ChanId,
+        Lbl: MsgLbl,
+        Left: GlobalProtocol,
+        Right: GlobalProtocol,
+        IsDisjoint: Send + Sync + 'static + Debug,
+        AIO: ActionIOTMarker,
+    > Default for TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<C: ChanId, L: MsgLbl, AIO: ActionIOTMarker> Default for TChanEnd<C, L, AIO> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<C: ChanId, L: MsgLbl, Start: GlobalProtocol, AIO: ActionIOTMarker> Default
+    for TChanStart<C, L, Start, AIO>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}

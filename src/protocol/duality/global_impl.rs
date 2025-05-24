@@ -5,9 +5,7 @@
 //! TChanPar, and TChanStart.
 
 use super::{EqualsTrue, IsDual};
-use crate::protocol::foundation::{
-    ActionIOTMarker, ChanId, GlobalProtocol, Message, MsgLbl, Role,
-};
+use crate::protocol::foundation::{ActionIOTMarker, ChanId, GlobalProtocol, Message, MsgLbl, Role};
 use crate::protocol::global::{
     TChanChoice, TChanEnd, TChanOffer, TChanPar, TChanRecv, TChanSend, TChanStart,
 };

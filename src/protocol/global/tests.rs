@@ -1,7 +1,5 @@
 use super::*;
-use crate::protocol::foundation::{
-    GlobalProtocol, Message, Role, CommMetadata,
-};
+use crate::protocol::foundation::{CommMetadata, GlobalProtocol, Message, Role};
 
 // Define test roles
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

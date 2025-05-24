@@ -1,6 +1,6 @@
 use super::*;
 use crate::protocol::foundation::{
-    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, OutputAction, Message, RequestLbl,
+    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, Message, OutputAction, RequestLbl,
     Role, SupportsActionIO,
 };
 use crate::protocol::global::{TChanChoice, TChanEnd, TChanOffer, TChanRecv, TChanSend};

@@ -233,3 +233,96 @@ where
         }
     }
 }
+
+// ============================================================================
+// Default Implementations
+// ============================================================================
+
+impl<IO, M, Msg, P, AIO> Default for EpChanSend<IO, M, Msg, P, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Msg: Message,
+    P: LocalProtocol,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, Msg, P, AIO> Default for EpChanRecv<IO, M, Msg, P, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Msg: Message,
+    P: LocalProtocol,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, Left, Right, AIO> Default for EpChanOffer<IO, M, Left, Right, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Left: LocalProtocol,
+    Right: LocalProtocol,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, Left, Right, AIO> Default for EpChanChoice<IO, M, Left, Right, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Left: LocalProtocol,
+    Right: LocalProtocol,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, Left, Right, IsDisjoint, AIO> Default for EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Left: LocalProtocol,
+    Right: LocalProtocol,
+    IsDisjoint: Send + Sync + 'static + Debug,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, AIO> Default for EpChanEnd<IO, M, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<IO, M, Start, AIO> Default for EpChanStart<IO, M, Start, AIO>
+where
+    IO: SupportsActionIO<AIO>,
+    M: CommMetadataTrait,
+    Start: LocalProtocol,
+    AIO: ActionIOTMarker,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}

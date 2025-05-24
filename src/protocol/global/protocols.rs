@@ -1,12 +1,10 @@
 //! # Global Protocol Type Definitions
 //!
 //! This module contains the struct definitions for all global protocol types
-//! used in the enhanced MPST system. These represent the choreography of 
+//! used in the enhanced MPST system. These represent the choreography of
 //! multi-party protocols with explicit channel management.
 
-use crate::protocol::foundation::{
-    ActionIOTMarker, ChanId, GlobalProtocol, Message, MsgLbl, Role,
-};
+use crate::protocol::foundation::{ActionIOTMarker, ChanId, GlobalProtocol, Message, MsgLbl, Role};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 

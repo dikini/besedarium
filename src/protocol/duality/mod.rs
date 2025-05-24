@@ -26,7 +26,7 @@
 //! | Offer {l_i: P_i}        | Choice {l_i: Dual(P_i)}                         |
 //! | Par(P, Q)               | Par(Dual(P), Dual(Q))                           |
 
-use crate::types::{Bool, False};
+use crate::types::Bool;
 
 // Re-export helper traits for external use
 pub use helpers::{DualityCheck, EqualsFalse, EqualsTrue};

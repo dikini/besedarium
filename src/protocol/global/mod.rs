@@ -13,19 +13,16 @@
 //! - **Type Aliases**: Convenience types for common patterns
 //! - **Builder Functions**: Easy construction of complex protocols
 
-mod protocols;
 mod implementations;
+mod protocols;
 
 // Re-export all protocol types and make implementations available
 pub use protocols::{
-    TChanSend, TChanRecv, TChanChoice, TChanOffer, 
-    TChanPar, TChanEnd, TChanStart
+    TChanChoice, TChanEnd, TChanOffer, TChanPar, TChanRecv, TChanSend, TChanStart,
 };
 // Implementations are included through module system (impl blocks can't be re-exported)
 
-use crate::protocol::foundation::{
-    BiDirectionalAction, DefaultChan, RequestLbl, ResponseLbl,
-};
+use crate::protocol::foundation::{BiDirectionalAction, DefaultChan, RequestLbl, ResponseLbl};
 
 // ============================================================================
 // Type Aliases for Common Patterns

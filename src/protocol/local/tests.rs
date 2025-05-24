@@ -1,7 +1,7 @@
 use super::*;
 use crate::protocol::foundation::{
-    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, LocalProtocol, Message, OutputAction, RequestLbl,
-    ResponseLbl, Role, SupportsActionIO,
+    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, LocalProtocol, Message,
+    OutputAction, RequestLbl, ResponseLbl, Role, SupportsActionIO,
 };
 
 // Define test roles

@@ -25,8 +25,7 @@ mod implementations;
 
 // Re-export all endpoint types and make implementations available
 pub use endpoints::{
-    EpChanSend, EpChanRecv, EpChanOffer, EpChanChoice, 
-    EpChanPar, EpChanEnd, EpChanStart
+    EpChanChoice, EpChanEnd, EpChanOffer, EpChanPar, EpChanRecv, EpChanSend, EpChanStart,
 };
 // Implementations are included through module system (impl blocks can't be re-exported)
 

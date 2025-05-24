@@ -51,12 +51,12 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
     - [x] **Task 1.1.5f**: Implement `ProjectionError` type and validation mechanisms. (**COMPLETED**)
   - [ ] **Task 1.1.6**: Code Quality Improvements
     - [x] **Task 1.1.6a**: Fix critical clippy warnings (empty line after doc comment, unused Sealed trait). (**COMPLETED** - 2025-05-24)
-    - [ ] **Task 1.1.6b**: Implement `Default` trait for all protocol types with `new()` methods to improve API ergonomics and satisfy clippy suggestions.
-      - [ ] Global Protocol Types (8): TChanSend, TChanRecv, TChanChoice, TChanOffer, TChanPar, TChanEnd, TChanStart  
-      - [ ] Local Protocol Types (6): EpChanSend, EpChanRecv, EpChanOffer, EpChanChoice, EpChanPar, EpChanEnd, EpChanStart
-      - **Benefit**: Allows `Default::default()` usage for cleaner API and better integration with generic code
-      - **Status**: 14 clippy suggestions available, auto-generated implementations look correct
-    - [ ] **Task 1.1.6c**: Module Structure Compliance (High Priority - guideline violations identified)
+    - [x] **Task 1.1.6b**: Implement `Default` trait for all protocol types with `new()` methods to improve API ergonomics and satisfy clippy suggestions. (**COMPLETED** - 2025-05-24)
+      - [x] Global Protocol Types (7): TChanSend, TChanRecv, TChanChoice, TChanOffer, TChanPar, TChanEnd, TChanStart ✅
+      - [x] Local Protocol Types (7): EpChanSend, EpChanRecv, EpChanOffer, EpChanChoice, EpChanPar, EpChanEnd, EpChanStart ✅
+      - **Benefit**: Allows `Default::default()` usage for cleaner API and better integration with generic code ✅
+      - **Status**: All 14 clippy suggestions resolved, auto-generated implementations working correctly ✅
+    - [x] **Task 1.1.6c**: Module Structure Compliance (High Priority - guideline violations identified) (**COMPLETED** - 2025-05-24)
       - [x] **Task 1.1.6c.1**: Extract embedded tests from duality and projection modules (immediate) ✅ COMPLETED
         - [x] Extract 94-line test module from `duality/mod.rs` (lines 476-569) to `duality/tests.rs` ✅
         - [x] Extract 69-line test module from `projection/mod.rs` (lines 460-528) to `projection/tests.rs` ✅
