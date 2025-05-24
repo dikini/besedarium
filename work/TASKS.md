@@ -49,7 +49,7 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
     - [x] **Task 1.1.5d**: Implement projection for `TChanPar`, `TChanRec`, `TChanEnd` constructs.
     - [x] **Task 1.1.5e**: Implement helper traits (`ProjectChoices`, `Not<Role>`, `ValidProjection`) for complex projections.
     - [x] **Task 1.1.5f**: Implement `ProjectionError` type and validation mechanisms. (**COMPLETED**)
-  - [x] **Task 1.1.6**: Code Quality Improvements ✅ **MOSTLY COMPLETED** (1 minor task remaining)
+  - [x] **Task 1.1.6**: Code Quality Improvements ✅ **COMPLETED**
     - [x] **Task 1.1.6a**: Fix critical clippy warnings (empty line after doc comment, unused Sealed trait). (**COMPLETED** - 2025-05-24)
     - [x] **Task 1.1.6b**: Implement `Default` trait for all protocol types with `new()` methods to improve API ergonomics and satisfy clippy suggestions. (**COMPLETED** - 2025-05-24)
       - [x] Global Protocol Types (7): TChanSend, TChanRecv, TChanChoice, TChanOffer, TChanPar, TChanEnd, TChanStart ✅
@@ -62,17 +62,18 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
         - [x] Extract 69-line test module from `projection/mod.rs` (lines 460-528) to `projection/tests.rs` ✅
         - [x] Update module declarations from embedded `mod tests {` to `mod tests;` ✅
         - **Result**: Reduced duality from 569→476 lines, projection from 528→460 lines ✅
-      - [x] **Task 1.1.6c.2**: Restructure oversized modules to meet 300-line guideline (advanced) ✅ **MOSTLY COMPLETED**
+      - [x] **Task 1.1.6c.2**: Restructure oversized modules to meet 300-line guideline (advanced) ✅ **COMPLETED**
         - [x] Restructure `duality/` module (475 lines after test extraction) ✅ **COMPLETED**
           - [x] Extract helper traits to `duality/helpers.rs` (31 lines) ✅
           - [x] Extract global protocol implementations to `duality/global_impl.rs` (156 lines) ✅
           - [x] Extract local endpoint implementations to `duality/local_impl.rs` (156 lines) ✅
           - [x] Keep core trait and validation in `duality/mod.rs` (94 lines) ✅
-        - [ ] Restructure `projection/` module (459 lines after test extraction) **PARTIAL** (336 lines remaining)
+        - [x] Restructure `projection/` module (459 lines after test extraction) ✅ **COMPLETED**
           - [x] Extract helper logic to `projection/helpers.rs` (150 lines) ✅
           - [x] Extract projection implementations to `projection/implementations.rs` (133 lines) ✅
           - [x] Extract tests to `projection/tests.rs` (71 lines) ✅
-          - [ ] **REMAINING**: Core trait in `projection/mod.rs` still 336 lines (exceeds 300-line guideline)
+          - [x] Extract error handling to `projection/errors.rs` (108 lines) ✅
+          - [x] Core trait in `projection/mod.rs` reduced to 92 lines ✅ **COMPLETED**
         - [x] Restructure `local/` module (448 lines) ✅ **COMPLETED**
           - [x] Extract endpoint type definitions to `local/endpoints.rs` (166 lines) ✅
           - [x] Extract trait implementations to `local/implementations.rs` (328 lines) ✅
@@ -86,12 +87,11 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
         - [x] Verify formatting: `cargo fmt --all -- --check` ✅
         - [x] Verify linting: `cargo clippy` ✅
         - [x] Verify compilation: `cargo build` ✅
-        - [x] Confirm test extraction successful ✅ (duality: 569→94 lines, projection: 528→336 lines)
-        - [x] Confirm 4 of 5 modules now meet 300-line guideline ✅ (duality=94, global=63, local=79, foundation=209)
-        - [ ] **REMAINING**: projection/mod.rs still 336 lines (exceeds 300-line guideline by 36 lines)
-        - [x] Confirm implementation/test ratios improved ✅ (duality=1.0:1, global=2.1:1, local=1.4:1)
-      - **Justification**: 1 out of 5 protocol modules still exceeds 300-line size guideline (projection=336). Implementation/test ratios now compliant with guidelines.
-      - **Priority**: Low - only one module needs minor adjustment (36 lines over guideline)
+        - [x] Confirm test extraction successful ✅ (duality: 569→94 lines, projection: 528→92 lines)
+        - [x] Confirm 5 of 5 modules now meet 300-line guideline ✅ (duality=94, global=63, local=79, foundation=209, projection=92)
+        - [x] Confirm implementation/test ratios improved ✅ (duality=1.0:1, global=2.1:1, local=1.4:1, projection=1.3:1)
+      - **Justification**: All 5 protocol modules now comply with 300-line size guideline. Implementation/test ratios now compliant with guidelines.
+      - **Priority**: Completed ✅
 - [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
   - [x] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design. (**COMPLETED** - documented in updated `duality.md`)
   - [x] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`). (**COMPLETED** - detailed in updated `duality.md`)

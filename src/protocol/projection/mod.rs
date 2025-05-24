@@ -45,7 +45,9 @@ pub mod helpers;
 pub mod implementations;
 
 // Re-export essential types for external use
-pub use errors::{DefaultProjectionValidator, ProjectionError, ProjectionValidator, ValidateProjection};
+pub use errors::{
+    DefaultProjectionValidator, ProjectionError, ProjectionValidator, ValidateProjection,
+};
 pub use helpers::{Bool, False, ProjectRecvCase, ProjectSendCase, RoleEq, True};
 
 // ============================================================================

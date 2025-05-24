@@ -3,15 +3,13 @@
 //! This module contains the core implementations of the Project trait
 //! for projecting global protocols to local endpoint types based on roles.
 
-use super::{Project, ProjectOutput};
+use super::Project;
 use crate::protocol::foundation::{
     ActionIOTMarker, ChanId, CommMetadata, GlobalProtocol, LocalProtocol, Message, MsgLbl, Role,
     SupportsActionIO,
 };
 use crate::protocol::global::{TChanChoice, TChanEnd, TChanPar, TChanRecv, TChanSend, TChanStart};
-use crate::protocol::local::{
-    EpChanChoice, EpChanEnd, EpChanPar, EpChanRecv, EpChanSend, EpChanStart,
-};
+use crate::protocol::local::{EpChanChoice, EpChanEnd, EpChanPar, EpChanStart};
 use crate::protocol::projection::helpers::{Bool, ProjectRecvCase, ProjectSendCase, RoleEq};
 use std::fmt::Debug;
 
