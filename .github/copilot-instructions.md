@@ -198,7 +198,7 @@ When refactoring large files:
 - Always indicate the refactoring pattern being applied
 
 
-Size and Module Structure Guidelines
+### Size and Module Structure Guidelines
 
 **Keep Files Compact and Focused:**
 

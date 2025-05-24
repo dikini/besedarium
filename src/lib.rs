@@ -34,6 +34,7 @@ pub mod protocol;
 pub mod types;
 
 pub(crate) mod sealed {
+    #[allow(dead_code)]
     pub trait Sealed {}
 }
 

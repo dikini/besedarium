@@ -39,11 +39,18 @@ use crate::protocol::foundation::{
     SupportsActionIO,
 };
 use crate::protocol::global::{TChanChoice, TChanEnd, TChanPar, TChanRecv, TChanSend, TChanStart};
-use crate::protocol::local::{
-    EpChanChoice, EpChanEnd, EpChanPar, EpChanRecv, EpChanSend, EpChanStart,
-};
+use crate::protocol::local::{EpChanChoice, EpChanEnd, EpChanPar, EpChanStart};
 use std::fmt;
 use std::fmt::Debug;
+
+// ============================================================================
+// Module Structure
+// ============================================================================
+
+pub mod helpers;
+
+// Re-export essential helper types for external use
+pub use helpers::{Bool, False, ProjectRecvCase, ProjectSendCase, RoleEq, True};
 
 // ============================================================================
 // Projection Error Types and Validation
@@ -193,137 +200,6 @@ where
 pub type ProjectOutput<P, R> = <() as Project<P, R>>::Output;
 
 // ============================================================================
-// Helper Traits for Role-Based Dispatch
-// ============================================================================
-
-/// Type-level boolean trait for case selection
-pub trait Bool: Send + Sync + 'static {}
-
-/// Type-level True
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct True;
-impl Bool for True {}
-
-/// Type-level False  
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct False;
-impl Bool for False {}
-
-/// Check if two roles are equal at the type level
-pub trait RoleEq<Other: Role>: Role {
-    type Output: Bool;
-}
-
-/// Reflexive case: a role equals itself
-impl<R> RoleEq<R> for R
-where
-    R: Role,
-{
-    type Output = True;
-}
-
-/// Helper trait for projecting TSend operations based on role equality
-pub trait ProjectSendCase<Me, S, R, C, L, Msg, P, AIO, IsEqual>
-where
-    Me: Role,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    IsEqual: Bool,
-{
-    type Output: LocalProtocol;
-}
-
-/// Case when Me == Sender: Project as EpChanSend
-impl<Me, S, R, C, L, Msg, P, AIO> ProjectSendCase<Me, S, R, C, L, Msg, P, AIO, True> for ()
-where
-    Me: Role + SupportsActionIO<AIO>,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    (): Project<P, Me>,
-    <() as Project<P, Me>>::Output: LocalProtocol,
-{
-    type Output = EpChanSend<Me, CommMetadata<C, L>, Msg, <() as Project<P, Me>>::Output, AIO>;
-}
-
-/// Case when Me != Sender: Check if Me == Receiver for TRecv behavior  
-impl<Me, S, R, C, L, Msg, P, AIO> ProjectSendCase<Me, S, R, C, L, Msg, P, AIO, False> for ()
-where
-    Me: Role,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    Me: RoleEq<R>,
-    <Me as RoleEq<R>>::Output: Bool,
-    (): ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, <Me as RoleEq<R>>::Output>,
-{
-    type Output =
-        <() as ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, <Me as RoleEq<R>>::Output>>::Output;
-}
-
-/// Helper trait for projecting TRecv operations based on role equality
-pub trait ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, IsEqual>
-where
-    Me: Role,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    IsEqual: Bool,
-{
-    type Output: LocalProtocol;
-}
-
-/// Case when Me == Receiver: Project as EpChanRecv
-impl<Me, S, R, C, L, Msg, P, AIO> ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, True> for ()
-where
-    Me: Role + SupportsActionIO<AIO>,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    (): Project<P, Me>,
-    <() as Project<P, Me>>::Output: LocalProtocol,
-{
-    type Output = EpChanRecv<Me, CommMetadata<C, L>, Msg, <() as Project<P, Me>>::Output, AIO>;
-}
-
-/// Case when Me != Receiver: Just project the continuation
-impl<Me, S, R, C, L, Msg, P, AIO> ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, False> for ()
-where
-    Me: Role,
-    S: Role,
-    R: Role,
-    C: ChanId,
-    L: MsgLbl,
-    Msg: Message,
-    P: GlobalProtocol,
-    AIO: ActionIOTMarker,
-    (): Project<P, Me>,
-{
-    type Output = <() as Project<P, Me>>::Output;
-}
-
-// ============================================================================
 // Project Trait Implementations
 // ============================================================================
 
@@ -457,72 +333,4 @@ where
 // ============================================================================
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::protocol::foundation::{BiDirectionalAction, DefaultChan, RequestLbl};
-
-    // Define test roles
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    struct Alice;
-    impl Role for Alice {}
-    impl SupportsActionIO<BiDirectionalAction> for Alice {}
-
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    struct Bob;
-    impl Role for Bob {}
-    impl SupportsActionIO<BiDirectionalAction> for Bob {}
-
-    // Define test message
-    #[derive(Debug, Clone)]
-    struct TestMsg;
-    impl Message for TestMsg {}
-
-    // Define test IO type that supports BiDirectionalAction and ChanId
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    struct TestIO;
-    impl SupportsActionIO<BiDirectionalAction> for TestIO {}
-    impl ChanId for TestIO {}
-
-    #[test]
-    fn test_project_tsend_sender_role() {
-        // Test that TChanSend projects to EpChanSend when role is the sender
-        type SendProto = TChanSend<
-            Alice,
-            Bob,
-            DefaultChan,
-            RequestLbl,
-            TestMsg,
-            TChanEnd<TestIO, RequestLbl, BiDirectionalAction>,
-            BiDirectionalAction,
-        >;
-        type AliceProjection = <() as Project<SendProto, Alice>>::Output;
-
-        // Should be EpChanSend
-        let _: AliceProjection = EpChanSend::new();
-    }
-
-    #[test]
-    fn test_project_tend() {
-        // Test that TChanEnd projects to EpChanEnd
-        type EndProto = TChanEnd<TestIO, RequestLbl, BiDirectionalAction>;
-        type AliceProjection = <() as Project<EndProto, Alice>>::Output;
-
-        // Should be EpChanEnd
-        let _: AliceProjection = EpChanEnd::new();
-    }
-
-    #[test]
-    fn test_project_tstart() {
-        // Test that TChanStart projects to EpChanStart
-        type StartProto = TChanStart<
-            TestIO,
-            RequestLbl,
-            TChanEnd<TestIO, RequestLbl, BiDirectionalAction>,
-            BiDirectionalAction,
-        >;
-        type AliceProjection = <() as Project<StartProto, Alice>>::Output;
-
-        // Should be EpChanStart
-        let _: AliceProjection = EpChanStart::new();
-    }
-}
+mod tests;
