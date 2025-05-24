@@ -7,3 +7,11 @@
 #OS files
 .DS_Store
 node_modules/
+
+#backup
+*backup
+*backup*
+
+#disabled files
+*disabled
+

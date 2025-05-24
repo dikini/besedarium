@@ -1,6 +1,6 @@
 use super::*;
 use crate::protocol::foundation::{
-    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, Message, OutputAction, RequestLbl,
+    BiDirectionalAction, CommMetadata, DefaultChan, InputAction, LocalProtocol, Message, OutputAction, RequestLbl,
     ResponseLbl, Role, SupportsActionIO,
 };
 
