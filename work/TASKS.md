@@ -95,12 +95,12 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
 - [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
   - [x] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design. (**COMPLETED** - documented in updated `duality.md`)
   - [x] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`). (**COMPLETED** - detailed in updated `duality.md`)
-  - [ ] **Task 1.2.3**: Implement the designed label transformation traits and integrate them with protocol types.
-    - [ ] **Task 1.2.3a**: Implement core `Label` trait and `LabelList` operations.
-    - [ ] **Task 1.2.3b**: Implement `TMap`, `TCollect`, `TFilter` traits for label transformations.
-    - [ ] **Task 1.2.3c**: Implement `LabelPreservation` and `LabelComposition` traits.
-    - [ ] **Task 1.2.3d**: Implement label validation traits (`ValidateChoiceLabels`, `LabelValidation`).
-    - [ ] **Task 1.2.3e**: Integrate label handling with `Choice`, `Offer`, `Parallel`, and `Recursion` constructs.
+  - [x] **Task 1.2.3**: Implement the designed label transformation traits and integrate them with protocol types. ✅ **COMPLETED**
+    - [x] **Task 1.2.3a**: Implement core `Label` trait and `LabelList` operations.
+    - [x] **Task 1.2.3b**: Implement `TMap`, `TCollect`, `TFilter` traits for label transformations.
+    - [x] **Task 1.2.3c**: Implement `LabelPreservation` and `LabelComposition` traits.
+    - [x] **Task 1.2.3d**: Implement label validation traits (`ValidateChoiceLabels`, `LabelValidation`).
+    - [x] **Task 1.2.3e**: Integrate label handling with `Choice`, `Offer`, `Parallel`, and `Recursion` constructs.
 - [ ] **Task 1.3**: Implement Basic Runtime Components
   - [ ] **Task 1.3.1**: Design a foundational runtime state machine for protocol execution.
   - [ ] **Task 1.3.2**: Implement basic channel communication logic for sending/receiving typed messages according to protocol specifications.
