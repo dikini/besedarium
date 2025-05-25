@@ -127,9 +127,9 @@ Phase 1 tasks.
 
 - [ ] **Task 2.1**: Develop Unit Tests for Core Types and Duality Logic
   - [x] **Task 2.1.1**: Write unit tests for `CommMetadata`, Global Types, and Local Endpoint Types. ✅ **COMPLETED** (46 tests passing)
-  - [ ] **Task 2.1.2**: Write unit tests for the `IsDual` predicate/trait, covering various protocol constructs.
-  - [ ] **Task 2.1.3**: Write unit tests for the `Project<P, Role>` trait.
-  - [ ] **Task 2.1.4**: Write unit tests for `SupportsActionIO` and `ActionIOType` integration.
+  - [x] **Task 2.1.2**: Write unit tests for the `IsDual` predicate/trait, covering various protocol constructs. ✅ **COMPLETED** (24 comprehensive tests passing)
+  - [x] **Task 2.1.3**: Write unit tests for the `Project<P, Role>` trait. ✅ **COMPLETED** (23 comprehensive tests passing)
+  - [x] **Task 2.1.4**: Write unit tests for `SupportsActionIO` and `ActionIOType` integration. ✅ **COMPLETED** (25 comprehensive tests passing)
 - [ ] **Task 2.2**: Develop Unit Tests for Label Logic
   - [x] **Task 2.2.1**: Write unit tests for label transformation traits (`TMap`, `TCollect`, `TFilter`). ✅ **COMPLETED**
 - [ ] **Task 2.3**: Develop Unit Tests for Basic Runtime Components

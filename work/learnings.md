@@ -3,6 +3,20 @@
 This document distills essential patterns for implementing type-level session types in Rust
 without relying on unstable features.
 
+## Task 2.1.3 Completed: Project<P, Role> Trait Testing (2025-05-25)
+
+**Achievement**: Successfully implemented comprehensive unit test suite for Project<P, Role> trait with 23 passing tests, fixing critical projection semantics bugs.
+
+**Critical Bug Fixes:**
+
+1. **ProjectSendCase Semantics**: Fixed ProjectSendCase<..., False> to return continuation directly instead of delegating to ProjectRecvCase
+2. **TChanRecv Parameter Order**: Corrected projection implementation parameter order from <S, R, ...> to <R, S, ...> to match definition
+3. **Test Expectations**: Updated test expectations to match corrected projection semantics
+
+**Test Coverage**: 23 comprehensive tests covering basic protocols (7), choice/offer constructs (4), parallel constructs (3), complex scenarios (4), action I/O integration (2), and role validation (3).
+
+**Key Pattern**: Role-based dispatch system using helper traits with compile-time role checking for proper endpoint type projection.
+
 ## Recent Achievements (2025-05-25)
 
 ### Task 2.1.1 Successfully Completed: Comprehensive Foundation Testing ✅ FULLY COMPLETED
@@ -543,195 +557,6 @@ impl LabelEq<TestLabel2> for TestLabel1 { type Equal = False; }
 impl LabelEq<TestLabel3> for TestLabel1 { type Equal = False; }
 ```
 
-**Key Pattern**: Test labels must implement complete `LabelEq` matrix for all
-combinations to support `NotContains` trait functionality.
-
-**2. Type-Level Assertion Testing ✅**
-
-**Compile-Time Verification Patterns:**
-
-```rust
-// Length verification for type-level list operations
-assert_eq!(EmptyList::LENGTH, 0);
-assert_eq!(FilteredList::LENGTH, 2);
-
-// Type-level boolean logic verification
-type TrueResult = <True as AndBool<True>>::Result;
-assert_eq!(TrueResult::VALUE, true);
-
-// ID extraction and uniqueness verification
-let ids = MixedList::extract_ids();
-assert_eq!(ids, vec![1, 2, 3]);
-```
-
-**Key Pattern**: Use associated constants and type aliases to verify compile-time
-computations at runtime.
-
-**3. Recursive Trait Implementation Testing ✅**
-
-**TMap Transformation Testing:**
-
-```rust
-// Empty list mapping (base case)
-type EmptyMapped = <LabelNil as TMap<TestTransform>>::Result;
-assert_eq!(EmptyMapped::LENGTH, 0);
-
-// Single element transformation
-type SingleMapped = <LabelCons<TestLabel1, LabelNil> as TMap<TestTransform>>::Result;
-type ExpectedSingle = LabelCons<TestLabel2, LabelNil>;
-assert_eq!(SingleMapped::LENGTH, ExpectedSingle::LENGTH);
-
-// Multiple element recursive transformation
-type MultipleMapped = <LabelCons<TestLabel1, LabelCons<TestLabel3, LabelNil>> as TMap<TestTransform>>::Result;
-type ExpectedMultiple = LabelCons<TestLabel2, LabelCons<TestLabel3, LabelNil>>;
-assert_eq!(MultipleMapped::LENGTH, ExpectedMultiple::LENGTH);
-```
-
-**Key Pattern**: Test base cases, single element cases, and multi-element recursive
-cases separately.
-
-**4. Complex Type-Level Filtering Testing ✅**
-
-**TFilter with Type-Level Dispatch:**
-
-```rust
-// Mixed element filtering with proper type-level predicate dispatch
-type MixedList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelCons<TestLabel1, LabelNil>>>;
-type FilteredList = <MixedList as TFilter<IsTestLabel1>>::Result;
-
-// Verify filtering extracts only matching elements
-assert_eq!(FilteredList::LENGTH, 2); // Two TestLabel1 instances
-let filtered_ids = FilteredList::extract_ids();
-assert_eq!(filtered_ids, vec![1, 1]);
-```
-
-**Key Pattern**: Use predicate traits with proper `LabelEq` implementations for
-type-level conditional logic.
-
-**5. Edge Case and Composition Testing ✅**
-
-**Complex Nested Transformations:**
-
-```rust
-// Test filter-then-map composition
-let complex = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelCons<TestLabel1, LabelNil>>>;
-let filtered = complex.filter(IsTestLabel1);
-let _mapped = filtered.map(TestTransform);
-
-// Verify composition maintains type safety
-type ExpectedResult = LabelCons<TestLabel2, LabelCons<TestLabel2, LabelNil>>;
-assert_eq!(ExpectedResult::LENGTH, 2);
-```
-
-**Key Pattern**: Test complex compositions to verify type-level operations compose
-correctly.
-
-### Testing Anti-Patterns Identified and Resolved
-
-**1. Missing Cross-Label Equality Implementations**
-
-- **Problem**: `NotContains` trait requires complete `LabelEq` implementation matrix
-- **Solution**: Implement all label pair combinations within test module scope
-- **Pattern**: Use scoped implementations to avoid polluting global namespace
-
-**2. Overly Complex TCollect Testing**
-
-- **Problem**: Initial attempts to test complex trait implementations caused conflicts
-- **Solution**: Focus on trait availability verification rather than complex behavior testing
-- **Pattern**: For complex type-level traits, test basic functionality rather than edge cases
-
-**3. Unused Variable Warnings in Type-Level Tests**
-
-- **Problem**: Type-level computations assigned to variables but not used at runtime
-- **Solution**: Prefix variables with underscore (`_mapped`) to indicate intentional non-use
-- **Pattern**: Type-level tests often compute types without runtime usage
-
-### Test Coverage Architecture Achieved
-
-**32 Comprehensive Tests Covering:**
-
-1. **Core Label Trait Tests (5 tests)**
-   - Trait implementation verification
-   - ID uniqueness and consistency
-   - Clone and equality behavior
-
-2. **LabelList Operation Tests (7 tests)**
-   - Empty list (`LabelNil`) properties
-   - Single and multiple element lists (`LabelCons`)
-   - Length calculation and type aliases
-   - ID extraction functionality
-
-3. **Label Transformation Tests (6 tests)**
-   - TMap: empty, single, multiple element mapping
-   - TCollect: basic trait availability
-   - TFilter: empty, matching, non-matching, mixed element filtering
-
-4. **Label Preservation and Composition Tests (4 tests)**
-   - Trivial self-preservation cases
-   - Nil composition edge cases
-   - Two-list composition verification
-
-5. **Label Validation Tests (4 tests)**
-   - Uniqueness checking for various list configurations
-   - Containment verification with `NotContains`
-
-6. **Type-Level Boolean Logic Tests (3 tests)**
-   - AND operations (True/True, True/False, False/True, False/False)
-   - NOT operations (True→False, False→True)
-
-7. **Error Handling Tests (3 tests)**
-   - Display formatting verification
-   - Equality comparison testing
-   - Debug output validation
-
-### Key Implementation Insights
-
-**Type-Level Testing Requires Different Patterns:**
-
-- **Compile-time verification** through associated constants and type aliases
-- **Complete trait implementation matrices** for type-level equality operations
-- **Scoped test implementations** to avoid namespace pollution
-- **Base case and recursive case separation** for thorough coverage
-- **Composition testing** to verify type-level operations work together
-
-**Test Organization for Type-Level Code:**
-
-- **Group by functionality** rather than implementation details
-- **Test edge cases separately** from common cases
-- **Use descriptive test names** that indicate both input and expected behavior
-- **Leverage type system** to catch errors at compile time
-- **Verify runtime properties** of compile-time computations
-
-This comprehensive test implementation provides a solid foundation for verifying
-label transformation functionality and serves as a reference for implementing
-similar type-level testing in other protocol components.
-
-## Task 2.2.1 Successfully Completed: Comprehensive Label Tests ✅ (2025-05-25)
-
-**Implementation Success:** Successfully implemented comprehensive unit test suite for
-label transformation system with 32 tests covering all label functionality components.
-All tests pass successfully.
-
-### Critical Testing Patterns for Type-Level Programming
-
-**1. Type-Level Test Infrastructure Design ✅**
-
-**Test Label Type System:**
-
-```rust
-// Test labels with unique ID system for type-level verification
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TestLabel1;
-impl Label for TestLabel1 {
-    type Id = u8;
-    const ID: Self::Id = 1;
-}
-
-// Cross-label equality implementations within test module scope
-impl LabelEq<TestLabel2> for TestLabel1 { type Equal = False; }
-impl LabelEq<TestLabel3> for TestLabel1 { type Equal = False; }
-```
-
 **Key Pattern**: Test labels must implement complete `LabelEq` matrix for all combinations to 
 support `NotContains` trait functionality.
 
@@ -868,6 +693,7 @@ assert_eq!(ExpectedResult::LENGTH, 2);
 ### Key Implementation Insights
 
 **Type-Level Testing Requires Different Patterns:**
+
 - **Compile-time verification** through associated constants and type aliases
 - **Complete trait implementation matrices** for type-level equality operations
 - **Scoped test implementations** to avoid namespace pollution
@@ -875,6 +701,7 @@ assert_eq!(ExpectedResult::LENGTH, 2);
 - **Composition testing** to verify type-level operations work together
 
 **Test Organization for Type-Level Code:**
+
 - **Group by functionality** rather than implementation details
 - **Test edge cases separately** from common cases
 - **Use descriptive test names** that indicate both input and expected behavior
@@ -884,3 +711,67 @@ assert_eq!(ExpectedResult::LENGTH, 2);
 This comprehensive test implementation provides a solid foundation for verifying label 
 transformation functionality and serves as a reference for implementing similar type-level testing 
 in other protocol components.
+
+## Task 2.1.4 Completed: SupportsActionIO Integration Testing (2025-05-25)
+
+**Achievement**: Successfully implemented comprehensive unit test suite for `SupportsActionIO` and `ActionIOType` integration with 25 passing tests, completing Phase 2 testing tasks.
+
+**Implementation Details:**
+
+**Test Suite Created:** `/home/dikini/Projects/besedarium/src/protocol/foundation/action_io_tests.rs`
+- **25 comprehensive test functions** covering all aspects of action I/O capability system
+- **Custom I/O Types**: Created MqttPublisherIO, MqttSubscriberIO, WebSocketIO, UdpSenderIO, UdpReceiverIO, RestApiClientIO for realistic testing scenarios
+- **Multi-dimensional Coverage**: ActionIOTMarker traits, capability verification, protocol integration, complex scenarios, and custom I/O implementations
+
+**Test Categories Covered:**
+
+1. **ActionIOTMarker Trait Tests (3 tests)**:
+   - Trait bound verification for all action types
+   - Type equality within same types (cross-type comparisons prevented by type system)
+   - Clone functionality for all ActionIOTMarker types
+
+2. **SupportsActionIO Implementation Tests (7 tests)**:
+   - TcpOnlySessionIO capabilities (supports all actions)
+   - HttpOnlySessionIO capabilities (output + bidirectional only)
+   - Custom I/O type capabilities (MQTT, WebSocket, UDP, REST API)
+   - Capability constraint verification at compile time
+
+3. **Compile-Time Constraint Tests (2 tests)**:
+   - Single capability requirements verification
+   - Multiple capability constraints (input+output, all capabilities)
+   - Negative testing through commented code that would fail to compile
+
+4. **Protocol Integration Tests (5 tests)**:
+   - Endpoint action I/O integration with different capability types
+   - Send/Recv endpoint integration with various I/O types
+   - Choice/Parallel construct integration with action I/O
+   - Mixed protocol capability testing with realistic I/O scenarios
+   - Nested protocol capability inheritance testing
+
+5. **Advanced Testing Scenarios (8 tests)**:
+   - Custom I/O capability patterns
+   - Different metadata type integration
+   - Default implementation behavior
+   - Debug formatting verification
+   - Comprehensive capability matrix testing
+
+**Critical Implementation Fixes:**
+
+1. **Type Comparison Issue**: Removed invalid cross-type comparisons (`assert_ne!(InputAction, OutputAction)`) that violated Rust's type system
+2. **Test Configuration**: Added missing `#[cfg(test)]` attributes to all 25 test functions to ensure proper test execution
+3. **Import Resolution**: Used `use crate::protocol::local::*;` for proper access to endpoint types in test context
+
+**Validation Results:**
+- **All 25 tests passing** ✅
+- **Compilation successful** with only harmless warnings about unused test structs
+- **Integration verified** between SupportsActionIO traits and protocol system
+- **Type safety confirmed** at compile time through constraint verification
+
+**Pattern Insights:**
+
+1. **Capability-Based I/O Design**: The `SupportsActionIO<AIO>` trait provides excellent compile-time verification of I/O capability compatibility
+2. **Test-Driven Type Safety**: Using trait bounds in test functions effectively verifies compile-time constraints
+3. **Custom I/O Integration**: The system successfully supports custom I/O implementations with different capability profiles
+4. **Protocol Flexibility**: Action I/O types integrate seamlessly with all protocol constructs (Send, Recv, Choice, Parallel, etc.)
+
+This completes Task 2.1.4 and provides a robust foundation for action I/O capability testing in the protocol system.
