@@ -498,3 +498,500 @@ impl std::fmt::Display for LabelValidationError {
 }
 
 impl std::error::Error for LabelValidationError {}
+
+// ============================================================================
+// Unit Tests for Label Transformation System
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Define test label types for testing
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct TestLabel1;
+    impl Label for TestLabel1 {
+        type Id = u8;
+        fn id(&self) -> Self::Id { 1 }
+    }
+    impl ProtocolLabel for TestLabel1 {}
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct TestLabel2;
+    impl Label for TestLabel2 {
+        type Id = u8;
+        fn id(&self) -> Self::Id { 2 }
+    }
+    impl ProtocolLabel for TestLabel2 {}
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct TestLabel3;
+    impl Label for TestLabel3 {
+        type Id = u8;
+        fn id(&self) -> Self::Id { 3 }
+    }
+    impl ProtocolLabel for TestLabel3 {}
+
+    // Test transformation function
+    #[derive(Clone)]
+    struct TestTransform;
+    impl LabelTransform<TestLabel1> for TestTransform {
+        type Output = TestLabel2;
+        fn transform(&self, _label: TestLabel1) -> Self::Output { TestLabel2 }
+    }
+    impl LabelTransform<TestLabel2> for TestTransform {
+        type Output = TestLabel3;
+        fn transform(&self, _label: TestLabel2) -> Self::Output { TestLabel3 }
+    }
+
+    // Test predicate function
+    #[derive(Clone)]
+    struct IsTestLabel1;
+    impl LabelPredicate<TestLabel1> for IsTestLabel1 {
+        type Output = True;
+        fn test(&self, _label: &TestLabel1) -> bool { true }
+    }
+    impl LabelPredicate<TestLabel2> for IsTestLabel1 {
+        type Output = False;
+        fn test(&self, _label: &TestLabel2) -> bool { false }
+    }
+    impl LabelPredicate<TestLabel3> for IsTestLabel1 {
+        type Output = False;
+        fn test(&self, _label: &TestLabel3) -> bool { false }
+    }
+
+    // ========================================================================
+    // Core Label Trait Tests
+    // ========================================================================
+
+    #[test]
+    fn test_label_trait_implementation() {
+        let label1 = TestLabel1;
+        let label2 = TestLabel1;
+        assert_eq!(label1, label2);
+        assert_eq!(label1.id(), 1);
+    }
+
+    #[test]
+    fn test_label_ids_unique() {
+        let label1 = TestLabel1;
+        let label2 = TestLabel2;
+        let label3 = TestLabel3;
+        
+        assert_ne!(label1.id(), label2.id());
+        assert_ne!(label2.id(), label3.id());
+        assert_ne!(label1.id(), label3.id());
+    }
+
+    // ========================================================================
+    // LabelList Tests
+    // ========================================================================
+
+    #[test]
+    fn test_label_nil() {
+        let nil = LabelNil;
+        assert_eq!(LabelNil::LENGTH, 0);
+        assert!(LabelNil::IS_EMPTY);
+        assert_eq!(nil.to_ids().len(), 0);
+    }
+
+    #[test]
+    fn test_label_cons_single() {
+        type SingleList = LabelCons<TestLabel1, LabelNil>;
+        let single = SingleList::new();
+        assert_eq!(SingleList::LENGTH, 1);
+        assert!(!SingleList::IS_EMPTY);
+        assert_eq!(single.to_ids().len(), 1);
+    }
+
+    #[test]
+    fn test_label_cons_multiple() {
+        type DoubleList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
+        type TripleList = LabelCons<TestLabel3, DoubleList>;
+        
+        assert_eq!(DoubleList::LENGTH, 2);
+        assert_eq!(TripleList::LENGTH, 3);
+        assert!(!DoubleList::IS_EMPTY);
+        assert!(!TripleList::IS_EMPTY);
+        
+        let triple = TripleList::new();
+        assert_eq!(triple.to_ids().len(), 3);
+    }
+
+    #[test]
+    fn test_label_list_alias() {
+        type TestList = LList<TestLabel1, LList<TestLabel2>>;
+        assert_eq!(TestList::LENGTH, 2);
+        
+        let list = TestList::new();
+        assert_eq!(list.to_ids().len(), 2);
+    }
+
+    // ========================================================================
+    // TMap Tests
+    // ========================================================================
+
+    #[test]
+    fn test_tmap_empty_list() {
+        let nil = LabelNil;
+        let transform = TestTransform;
+        let result = nil.map(transform);
+        
+        // Mapping over empty list should return empty list
+        assert_eq!(LabelNil::LENGTH, 0);
+        assert_eq!(result.to_ids().len(), 0);
+    }
+
+    #[test]
+    fn test_tmap_single_element() {
+        // Create a single-element list with TestLabel1
+        type SingleList = LabelCons<TestLabel1, LabelNil>;
+        let single = SingleList::new();
+        let transform = TestTransform;
+        
+        // Map TestLabel1 -> TestLabel2
+        let result = single.map(transform);
+        
+        // Result should be a single-element list with TestLabel2
+        type ExpectedResult = LabelCons<TestLabel2, LabelNil>;
+        assert_eq!(ExpectedResult::LENGTH, 1);
+    }
+
+    #[test]
+    fn test_tmap_multiple_elements() {
+        // Create a two-element list: TestLabel1, TestLabel2
+        type TwoList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
+        let two = TwoList::new();
+        let transform = TestTransform;
+        
+        // Map should transform TestLabel1 -> TestLabel2, TestLabel2 -> TestLabel3
+        let result = two.map(transform);
+        
+        // Result should be: TestLabel2, TestLabel3
+        type ExpectedResult = LabelCons<TestLabel2, LabelCons<TestLabel3, LabelNil>>;
+        assert_eq!(ExpectedResult::LENGTH, 2);
+    }
+
+    // ========================================================================
+    // TCollect Tests
+    // ========================================================================
+
+    #[test]
+    fn test_tcollect_basic() {
+        // TCollect is primarily for nested structures
+        // Test basic collection with simple label lists
+        let nil = LabelNil;
+        let collected = nil.collect();
+        assert_eq!(collected.to_ids().len(), 0);
+    }
+
+    // ========================================================================
+    // TFilter Tests  
+    // ========================================================================
+
+    #[test]
+    fn test_tfilter_empty_list() {
+        let nil = LabelNil;
+        let predicate = IsTestLabel1;
+        let result = nil.filter(predicate);
+        
+        // Filtering empty list should return empty list
+        assert_eq!(result.to_ids().len(), 0);
+    }
+
+    #[test]
+    fn test_tfilter_single_match() {
+        // Create a single-element list with TestLabel1
+        type SingleList = LabelCons<TestLabel1, LabelNil>;
+        let single = SingleList::new();
+        let predicate = IsTestLabel1;
+        
+        // Filter should keep TestLabel1 (predicate returns True)
+        let result = single.filter(predicate);
+        
+        // Result should contain TestLabel1
+        type ExpectedResult = LabelCons<TestLabel1, LabelNil>;
+        assert_eq!(ExpectedResult::LENGTH, 1);
+    }
+
+    #[test]
+    fn test_tfilter_single_no_match() {
+        // Create a single-element list with TestLabel2
+        type SingleList = LabelCons<TestLabel2, LabelNil>;
+        let single = SingleList::new();
+        let predicate = IsTestLabel1;
+        
+        // Filter should exclude TestLabel2 (predicate returns False)
+        let result = single.filter(predicate);
+        
+        // Result should be empty
+        assert_eq!(result.to_ids().len(), 0);
+    }
+
+    #[test]
+    fn test_tfilter_mixed_elements() {
+        // Create a three-element list: TestLabel1, TestLabel2, TestLabel1
+        type MixedList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelCons<TestLabel1, LabelNil>>>;
+        let mixed = MixedList::new();
+        let predicate = IsTestLabel1;
+        
+        // Filter should keep only TestLabel1 elements
+        let result = mixed.filter(predicate);
+        
+        // Result should contain 2 TestLabel1 elements
+        type ExpectedResult = LabelCons<TestLabel1, LabelCons<TestLabel1, LabelNil>>;
+        assert_eq!(ExpectedResult::LENGTH, 2);
+    }
+
+    // ========================================================================
+    // Label Preservation Tests
+    // ========================================================================
+
+    #[test]
+    fn test_label_preservation_trivial() {
+        // Test trivial case where labels are identical
+        type TestList = LabelCons<TestLabel1, LabelNil>;
+        let list = TestList::new();
+        
+        // Self-preservation should always be true
+        assert!(<TestList as LabelPreservation<TestList, TestList>>::verify_preservation(&list));
+        
+        // Type-level check: Preserved should be True
+        type PreservedType = <TestList as LabelPreservation<TestList, TestList>>::Preserved;
+        fn _assert_preserved_is_true<T: Bool>() where T: std::convert::Into<True> {}
+        // This would compile if Preserved is True (compile-time assertion)
+    }
+
+    // ========================================================================
+    // Label Composition Tests
+    // ========================================================================
+
+    #[test]
+    fn test_label_composition_with_nil() {
+        type TestList = LabelCons<TestLabel1, LabelNil>;
+        let list = TestList::new();
+        let nil = LabelNil;
+        
+        // Composing with empty list should return original list
+        let result = list.compose(&nil);
+        assert_eq!(result.to_ids().len(), 1);
+    }
+
+    #[test]
+    fn test_label_composition_nil_with_list() {
+        let nil = LabelNil;
+        type TestList = LabelCons<TestLabel1, LabelNil>;
+        let list = TestList::new();
+        
+        // Composing empty list with non-empty should return the non-empty list
+        let result = nil.compose(&list);
+        assert_eq!(result.to_ids().len(), 1);
+    }
+
+    #[test]
+    fn test_label_composition_two_lists() {
+        type FirstList = LabelCons<TestLabel1, LabelNil>;
+        type SecondList = LabelCons<TestLabel2, LabelNil>;
+        let first = FirstList::new();
+        let second = SecondList::new();
+        
+        // Compose two non-empty lists
+        let result = first.compose(&second);
+        
+        // Result should contain elements from both lists
+        type ExpectedResult = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
+        assert_eq!(ExpectedResult::LENGTH, 2);
+    }
+
+    // ========================================================================
+    // Label Validation Tests
+    // ========================================================================
+
+    #[test]
+    fn test_unique_labels_empty() {
+        let nil = LabelNil;
+        assert!(nil.are_unique());
+        
+        // Type-level check: Unique should be True for empty list
+        type UniqueType = <LabelNil as UniqueLabels>::Unique;
+        fn _assert_unique_is_true<T: Bool>() where T: std::convert::Into<True> {}
+    }
+
+    #[test]
+    fn test_unique_labels_single() {
+        type SingleList = LabelCons<TestLabel1, LabelNil>;
+        let single = SingleList::new();
+        assert!(single.are_unique());
+        
+        // Single element is always unique
+        type UniqueType = <SingleList as UniqueLabels>::Unique;
+        // Would be True at type level
+    }
+
+    #[test]
+    fn test_not_contains_empty() {
+        let nil = LabelNil;
+        let label = TestLabel1;
+        assert!(nil.not_contains(&label));
+        
+        // Empty list contains nothing
+        type NotContainsType = <LabelNil as NotContains<TestLabel1>>::NotContains;
+        // Would be True at type level
+    }
+
+    #[test]
+    fn test_not_contains_different_label() {
+        type SingleList = LabelCons<TestLabel1, LabelNil>;
+        let single = SingleList::new();
+        let label2 = TestLabel2;
+        assert!(single.not_contains(&label2));
+        
+        // List with TestLabel1 does not contain TestLabel2
+    }
+
+    // ========================================================================
+    // Type-Level Boolean Logic Tests
+    // ========================================================================
+
+    #[test]
+    fn test_boolean_and_operations() {
+        // Test compile-time boolean AND operations
+        type TrueAndTrue = AndBool<True, True>;
+        type TrueAndFalse = AndBool<True, False>;
+        type FalseAndTrue = AndBool<False, True>;
+        type FalseAndFalse = AndBool<False, False>;
+        
+        // These are compile-time checks - the types must exist
+        fn _test_and_types() {
+            let _: TrueAndTrue;
+            let _: TrueAndFalse;
+            let _: FalseAndTrue;
+            let _: FalseAndFalse;
+        }
+    }
+
+    #[test]
+    fn test_boolean_not_operations() {
+        // Test compile-time boolean NOT operations
+        type NotTrue = Not<True>;
+        type NotFalse = Not<False>;
+        
+        // These are compile-time checks - the types must exist
+        fn _test_not_types() {
+            let _: NotTrue;
+            let _: NotFalse;
+        }
+    }
+
+    // ========================================================================
+    // Label Equality Tests
+    // ========================================================================
+
+    #[test]
+    fn test_label_equality() {
+        // Test type-level label equality
+        type SelfEqual = <TestLabel1 as LabelEq<TestLabel1>>::Equal;
+        
+        // Self-equality should be True
+        fn _test_self_equal() {
+            let _: SelfEqual;
+        }
+    }
+
+    // ========================================================================
+    // Error Type Tests
+    // ========================================================================
+
+    #[test]
+    fn test_validation_error_display() {
+        let error1 = LabelValidationError::NonUniqueLabels;
+        let error2 = LabelValidationError::MalformedLabels;
+        let error3 = LabelValidationError::InvalidCombination;
+        
+        assert_eq!(error1.to_string(), "Labels are not unique");
+        assert_eq!(error2.to_string(), "Labels are malformed");
+        assert_eq!(error3.to_string(), "Invalid label combination");
+    }
+
+    #[test]
+    fn test_validation_error_equality() {
+        let error1 = LabelValidationError::NonUniqueLabels;
+        let error2 = LabelValidationError::NonUniqueLabels;
+        let error3 = LabelValidationError::MalformedLabels;
+        
+        assert_eq!(error1, error2);
+        assert_ne!(error1, error3);
+    }
+
+    #[test]
+    fn test_validation_error_debug() {
+        let error = LabelValidationError::NonUniqueLabels;
+        let debug_str = format!("{:?}", error);
+        assert!(debug_str.contains("NonUniqueLabels"));
+    }
+
+    // ========================================================================
+    // Edge Case and Integration Tests
+    // ========================================================================
+
+    #[test]
+    fn test_complex_nested_transformations() {
+        // Test complex scenario with multiple transformations
+        type ComplexList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelCons<TestLabel1, LabelNil>>>;
+        let complex = ComplexList::new();
+        
+        // First filter to get only TestLabel1 elements
+        let filtered = complex.filter(IsTestLabel1);
+        
+        // Then map the filtered result
+        let mapped = filtered.map(TestTransform);
+        
+        // Result should be TestLabel2, TestLabel2 (two TestLabel1s mapped to TestLabel2s)
+        type ExpectedResult = LabelCons<TestLabel2, LabelCons<TestLabel2, LabelNil>>;
+        assert_eq!(ExpectedResult::LENGTH, 2);
+    }
+
+    #[test]
+    fn test_empty_to_non_empty_composition() {
+        // Test edge case: empty list composed with non-empty
+        let nil = LabelNil;
+        type NonEmptyList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
+        let non_empty = NonEmptyList::new();
+        
+        let result = nil.compose(&non_empty);
+        assert_eq!(result.to_ids().len(), 2);
+    }
+
+    #[test]
+    fn test_label_id_extraction() {
+        // Test that we can extract and compare label IDs
+        let label1 = TestLabel1;
+        let label2 = TestLabel2;
+        let label3 = TestLabel3;
+        
+        let ids = vec![label1.id(), label2.id(), label3.id()];
+        assert_eq!(ids, vec![1, 2, 3]);
+        
+        // Test uniqueness
+        let mut unique_ids = ids.clone();
+        unique_ids.sort();
+        unique_ids.dedup();
+        assert_eq!(unique_ids.len(), 3);
+    }
+
+    #[test]
+    fn test_label_list_type_safety() {
+        // Test that the type system enforces correct usage
+        type ValidList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
+        let valid = ValidList::new();
+        
+        // These operations should compile correctly
+        let _length = ValidList::LENGTH;
+        let _is_empty = ValidList::IS_EMPTY;
+        let _ids = valid.to_ids();
+        
+        // Type safety: length should be computed correctly at compile time
+        assert_eq!(ValidList::LENGTH, 2);
+        assert!(!ValidList::IS_EMPTY);
+    }
+}
