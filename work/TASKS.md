@@ -131,7 +131,7 @@ Phase 1 tasks.
   - [ ] **Task 2.1.3**: Write unit tests for the `Project<P, Role>` trait.
   - [ ] **Task 2.1.4**: Write unit tests for `SupportsActionIO` and `ActionIOType` integration.
 - [ ] **Task 2.2**: Develop Unit Tests for Label Logic
-  - [ ] **Task 2.2.1**: Write unit tests for label transformation traits (`TMap`, `TCollect`, `TFilter`).
+  - [x] **Task 2.2.1**: Write unit tests for label transformation traits (`TMap`, `TCollect`, `TFilter`). ✅ **COMPLETED**
 - [ ] **Task 2.3**: Develop Unit Tests for Basic Runtime Components
   - [ ] **Task 2.3.1**: Write unit tests for the runtime state machine.
   - [ ] **Task 2.3.2**: Write unit tests for channel communication logic.
