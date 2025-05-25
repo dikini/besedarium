@@ -208,6 +208,9 @@ impl<C: ChanId, L: MsgLbl> CommMetadataTrait for CommMetadata<C, L> {
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod action_io_tests;
+
 /// Label transformation and preservation logic for session types
 pub mod labels;
 
