@@ -126,7 +126,7 @@ features implemented in Phase 1. Unit tests should be developed in parallel with
 Phase 1 tasks.
 
 - [ ] **Task 2.1**: Develop Unit Tests for Core Types and Duality Logic
-  - [ ] **Task 2.1.1**: Write unit tests for `CommMetadata`, Global Types, and Local Endpoint Types.
+  - [x] **Task 2.1.1**: Write unit tests for `CommMetadata`, Global Types, and Local Endpoint Types. ✅ **COMPLETED** (46 tests passing)
   - [ ] **Task 2.1.2**: Write unit tests for the `IsDual` predicate/trait, covering various protocol constructs.
   - [ ] **Task 2.1.3**: Write unit tests for the `Project<P, Role>` trait.
   - [ ] **Task 2.1.4**: Write unit tests for `SupportsActionIO` and `ActionIOType` integration.
