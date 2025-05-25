@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 2025-05-24 - Documentation Enhancement
+
+- **Enhanced docs/duality.md**: Major update with implementation-ready content
+  - Added Foundation Types section with concrete Rust trait definitions
+  - Added Projection Implementation Details with complete `Project<P, Role>` trait patterns
+  - Added Label Transformation Logic with type-level operations and validation
+  - Added practical implementation examples for all core concepts
+- **Updated work/TASKS.md**: Restructured tasks based on enhanced documentation guidance
+- **Updated work/learnings.md**: Added patterns and insights from documentation enhancement
+- **Updated work/Status.md**: Reflected current documentation and implementation readiness
+
+#### Earlier Entries
+
 - Implemented `TStart` combinator as a clear protocol entry point, enhancing protocol structure clarity and consistency
 - Added projection logic for `TStart` to `EpStart` in endpoint protocols
 - Created comprehensive tests for `TStart` functionality
@@ -61,7 +74,17 @@ protocol examples.
   - Detailed explanation of the Projection function (`Project(G, R_target)`), its semantics, and integration with IO/AIO types.
   - Comprehensive section on the Type-Level Implementation in Rust, covering `IsDual`, `Project`, and `WellFormed` traits, including their structure, implementation strategies, and compile-time verification benefits.
   - Conclusion summarizing the document and outlining future work.
-- Updated `work/learnings.md` with key learnings and patterns from the new documentation, including Rust type-level programming, trait design, and protocol verification strategies.
+- Updated `work/learnings.md` with key learnings and patterns from the new documentation, including Rust type-level programming, trait design, and protocol verification strategies
+
+#### 2025-05-24 - Documentation Enhancement
+- **Enhanced docs/duality.md**: Major update with implementation-ready content
+  - Added Foundation Types section with concrete Rust trait definitions
+  - Added Projection Implementation Details with complete `Project<P, Role>` trait patterns
+  - Added Label Transformation Logic with type-level operations and validation
+  - Added practical implementation examples for all core concepts
+- **Updated work/TASKS.md**: Restructured tasks based on enhanced documentation guidance
+- **Updated work/learnings.md**: Added patterns and insights from documentation enhancement
+- **Updated work/Status.md**: Reflected current documentation and implementation readiness
 
 ### Fixed
 

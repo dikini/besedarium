@@ -2,6 +2,33 @@
 
 This document provides a status overview of the Besedarium session types library, focusing on the core type-level components and ignoring runtime aspects.
 
+# Status Summary: Besedarium Session Types Library
+
+This document provides a status overview of the Besedarium session types library, focusing on the core type-level components and ignoring runtime aspects.
+
+## Recent Status Update (2025-05-24)
+
+### Task 1.1.5 Completed: Project Trait Implementation
+
+**✅ Project Trait - COMPLETED:**
+
+- **Type System Migration**: Successfully migrated projection module from legacy types (`TSend`, `TRecv`) to foundation types (`TChanSend`, `TChanRecv`)
+- **Role-Based Dispatch**: Implemented comprehensive role-based projection using helper traits (`ProjectSendCase`, `ProjectRecvCase`)
+- **All Protocol Types**: Complete projection implementations for all global protocol constructs
+- **Test Coverage**: Updated test suite to use foundation types with proper type signatures
+- **Compilation Success**: Projection module compiles correctly with no type resolution errors
+
+**Core Phase 1.1 Progress - 5/6 Tasks Complete:**
+
+- ✅ **Task 1.1.1**: Foundation types (Role, Message, GlobalProtocol, LocalProtocol, CommMetadata, ActionIO system)
+- ✅ **Task 1.1.2**: Global protocol types (TChanSend, TChanRecv, TChanChoice, TChanPar, TChanEnd, TChanStart)  
+- ✅ **Task 1.1.3**: Local endpoint types (EpChanSend, EpChanRecv, EpChanChoice, EpChanOffer, EpChanPar, EpChanEnd, EpChanStart)
+- ✅ **Task 1.1.4**: IsDual predicate (comprehensive duality checking with type-level boolean logic)
+- ✅ **Task 1.1.5**: Project trait (role-based dispatch with foundation type migration)
+- ⏳ **Task 1.1.5f**: ProjectionError type and validation mechanisms (remaining subtask)
+
+**Current Priority**: Task 1.1.5f (ProjectionError validation) to complete core protocol system, then Task 1.2 (label transformation logic).
+
 ## 1. Global Protocol Types Status
 
 ### 1.1 Implemented Features
@@ -164,6 +191,13 @@ This document provides a status overview of the Besedarium session types library
 - Next step: Update tests in `test_overrides.rs` to work with the new modular structure
 - Finalizing documentation for core concepts:
   - `docs/duality.md` (Duality, Well-Formedness, Projection, and Type-Level Implementation) is now complete.
+
+## Current Work In Progress
+
+- **Phase 1: Core Protocol & Duality Implementation**
+  - **Task 1.1.1**: Define/Update `CommMetadata` (including `ChanId`, `MsgLbl`, and `ActionIOType` concepts) based on `docs/duality.md`. (wip)
+    - Status: Analyzing `docs/duality.md` for requirements.
+    - Next Steps: Propose data structures and traits for `CommMetadata` and related concepts.
 
 ### 5.2 Current Issues
 

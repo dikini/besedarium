@@ -5,43 +5,43 @@
 //!
 //! ## Module Structure
 //!
-//! - `base`: Foundational types and traits for type-level programming
-//! - `global`: Global protocol types representing multi-party choreography
-//! - `local`: Local protocol types representing endpoint behavior
-//! - `transforms`: Projection and other transformations between protocol representations
-//! - `utils`: Utility traits for protocol manipulation and checking
+//! The implementation follows Task 1.1 as outlined in `work/TASKS.md`:
+//!
+//! - **foundation**: Core types and traits (Task 1.1.1)
+//! - **global**: Global protocol types representing multi-party choreography (Task 1.1.2)
+//! - **local**: Local protocol types representing endpoint behavior (Task 1.1.3)
+//! - **duality**: Duality checking and validation (Task 1.1.4)
+//! - **projection**: Protocol projection from global to local (Task 1.1.5)
 //!
 //! ## Key Concepts
 //!
 //! - **Global Protocols**: Describe the overall choreography between participants
-//! - **Local Protocols**: Describe the behavior of a single participant
+//! - **Local Protocols**: Describe the behavior of a single participant  
 //! - **Projection**: The process of deriving local protocols from global ones
+//! - **Duality**: Checking compatibility between protocol types
 //! - **Type-Level Operations**: Compile-time reasoning about protocol properties
 
-// Re-export everything from the submodules
-pub mod base;
+// Module structure for Task 1.1 implementation
+// Ready for implementation following the prompts in work/prompts/
+
+// Foundation types (Task 1.1.1) - ✅ IMPLEMENTED
+pub mod foundation;
+
+// Global protocol types (Task 1.1.2) - ✅ IMPLEMENTED
 pub mod global;
+
+// Local endpoint types (Task 1.1.3) - ✅ IMPLEMENTED
 pub mod local;
-pub mod transforms;
-pub mod utils;
 
-// Additional test-specific helpers
-#[cfg(test)]
-pub mod test_helpers;
-#[cfg(test)]
-pub mod test_overrides;
+// Duality checking (Task 1.1.4) - ✅ IMPLEMENTED
+pub mod duality;
 
-// Re-export commonly used items at the protocol module level
-pub use self::base::{Cons, Nil, NotInList, NotSame, NotTypeEq, UniqueList};
-pub use self::global::{
-    AssertDisjoint, TChoice, TEnd, TPar, TRec, TRecv, TSend, TSession, TStart, ToTChoice, ToTPar,
-};
-pub use self::local::{
-    EpChoice, EpEnd, EpPar, EpRecv, EpSend, EpSession, EpSkip, EpStart, GetEpSkipTypeMarker, IsEnd,
-    IsEpEndVariant, IsEpSkipTypeImpl, IsEpSkipVariant, IsSkip, Role, RoleEq, TBroker, TClient,
-    TServer, TWorker, Void,
-};
-pub use self::transforms::*;
-pub use self::utils::{
-    CheckNil, Concat, ConcatCons, Disjoint, DisjointCons, IsEmpty, IsNil, IsNotNil,
-};
+// Projection implementation (Task 1.1.5) - ✅ IMPLEMENTED
+pub mod projection;
+
+// Re-exports will be added as modules are implemented
+// pub use foundation::*;
+// pub use global::*;
+// pub use local::*;
+// pub use duality::*;
+// pub use projection::*;

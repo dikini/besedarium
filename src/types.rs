@@ -1,56 +1,42 @@
-//! # Protocol Marker Types and Message Primitives
+//! # Type-Level Programming Types and Utilities
 //!
-//! This module defines marker types for protocol IO (e.g., Http, Mqtt) and
-//! message primitives (e.g., Message, Response, Publish). These are used as
-//! type parameters in protocol combinators and endpoint types.
+//! This module provides the foundational types and traits for type-level programming
+//! used throughout the protocol system, including:
 //!
-//! - See `protocol.rs` for how these types are used in session combinators.
-//! - See crate-level docs for protocol examples and macro usage.
+//! - Type-level booleans (`True`, `False`, `Bool`)
+//! - Boolean operations and logic
+//! - Protocol labels and markers
+//! - IO and session type markers
+//! - Type equality and comparison traits
+//!
+//! These types enable compile-time reasoning about protocol properties and ensure
+//! type safety in the session types system.
 
-use crate::sealed;
-use crate::EpSession;
 use core::marker::PhantomData;
 
-/// Marker type for a generic protocol message.
-pub struct Message;
-/// Marker type for a generic protocol response.
-pub struct Response;
-/// Marker type for a publish event (e.g., in pub/sub protocols).
-pub struct Publish;
-/// Marker type for a notification event.
-pub struct Notify;
-/// Marker type for a subscribe event.
-pub struct Subscribe;
-
-/// Marker type for HTTP protocol.
-pub struct Http;
-/// Marker type for a database protocol.
-pub struct Db;
-/// Marker type for MQTT protocol.
-pub struct Mqtt;
-/// Marker type for a cache protocol.
-pub struct Cache;
-/// Marker type for a mixed/multi-protocol session.
-pub struct Mixed;
+// Type-level boolean types and operations
 
 /// Type-level boolean: True
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct True;
-/// Type-level boolean: False
+
+/// Type-level boolean: False  
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct False;
+
 /// Marker trait for type-level booleans.
 pub trait Bool {}
+
 impl Bool for True {}
 impl Bool for False {}
 
 /// Alias for type-level boolean True (for legacy naming in tests).
-/// Alias for the type-level boolean `True`, used by legacy tests and macros.
 pub type TrueB = True;
+
 /// Alias for type-level boolean False (for legacy naming in tests).
-/// Alias for the type-level boolean `False`, used by legacy tests and macros.
 pub type FalseB = False;
 
 /// Trait for compile-time type equality assertions.
-/// Implemented only for identical types.
 /// Implemented only when two types are identical.
 pub trait TypeEq<A> {}
 
@@ -102,6 +88,8 @@ pub trait IsEq<T> {}
 impl IsEq<True> for True {}
 impl IsEq<False> for False {}
 
+// Protocol and session type markers
+
 /// Marker trait for user-definable protocol labels.
 ///
 /// Implement this trait for any type you want to use as a protocol label.
@@ -109,23 +97,39 @@ impl IsEq<False> for False {}
 pub trait ProtocolLabel {}
 
 /// Empty label type for protocol ends or unlabeled combinators.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct EmptyLabel;
+
 impl ProtocolLabel for EmptyLabel {}
 
-/// Silent/no-op endpoint type for roles not present in any protocol branch.
-///
-/// Used in endpoint projection to represent a role that is uninvolved in a parallel composition.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct EpSilent<IO, R>(PhantomData<(IO, R)>);
-impl<IO, R> EpSession<IO, R> for EpSilent<IO, R> {}
-impl<IO, R> sealed::Sealed for EpSilent<IO, R> {}
+// IO and session type markers
 
-/// A marker trait for all session types (e.g., In, Out, InOut).
+/// Marker type for HTTP session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Http;
+
+/// Marker type for database session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Db;
+
+/// Marker type for MQTT session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Mqtt;
+
+/// Marker type for cache session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Cache;
+
+/// Marker type for mixed/multi-protocol session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Mixed;
+
+/// A marker trait for all session types (e.g., Http, Db, Mqtt, etc.).
 /// This helps in constraining generic parameters to valid session type markers.
 pub trait SessionType {}
 
 /// A trait indicating that a session type has a dual.
-/// For example, the dual of an `Out` session is an `In` session.
+/// For bidirectional session types, the dual is typically itself.
 pub trait HasDual {
     /// The dual session type.
     type Dual: SessionType;
@@ -157,17 +161,21 @@ impl HasDual for Mixed {
     type Dual = Mixed;
 }
 
-// Implementations for basic session type markers if they exist (e.g., In, Out)
-// Assuming In, Out, InOut might be defined elsewhere or will be defined.
-// If not, these are conceptual placeholders.
+// Additional endpoint types
 
-// Example (if In and Out types exist and implement SessionType):
-// impl HasDual for In {
-//     type Dual = Out;
-// }
-// impl HasDual for Out {
-//     type Dual = In;
-// }
-// impl HasDual for InOut { // Or however InOut is defined
-//     type Dual = InOut; // Or its specific dual
-// }
+/// Silent/no-op endpoint type for roles not present in any protocol branch.
+///
+/// Used in endpoint projection to represent a role that is uninvolved in a parallel composition.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EpSilent<IO, R>(PhantomData<(IO, R)>);
+
+// Sealed trait for controlled trait implementations
+pub(crate) mod sealed {
+    pub trait Sealed {}
+}
+
+/// Marker trait for endpoint session types.
+pub trait EpSession<IO, R>: sealed::Sealed {}
+
+impl<IO, R> EpSession<IO, R> for EpSilent<IO, R> {}
+impl<IO, R> sealed::Sealed for EpSilent<IO, R> {}
