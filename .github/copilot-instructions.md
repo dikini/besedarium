@@ -265,6 +265,110 @@ This pattern ensures predictable, scalable organization as the codebase grows wh
 - Prioritize changes that are logically complete units
 - Always provide clear stopping points
 
+## Task-Specific Prompts
+
+The `/work/prompts/` directory contains specialized prompt files for various project tasks. These prompts serve several important purposes:
+
+1. **Technical Documentation**: They capture technical details, requirements, and constraints for tasks
+2. **Continuity**: They enable seamless continuation of complex tasks across multiple sessions
+3. **Knowledge Transfer**: They preserve insights for team members working on related tasks
+4. **Guided Implementation**: They provide structured guidance for implementing features
+
+### Prompt File Organization
+
+Prompt files follow a consistent naming convention that aligns with the task structure in `work/TASKS.md`:
+
+```
+{task-number}-{task-description}.md
+```
+
+For example:
+- `1.1.1-foundation-types.md` - Prompt for Task 1.1.1
+- `3.1-enhance-runtime-checks.md` - Prompt for Task 3.1
+- `4.5.1-review-learnings-md.md` - Prompt for Task 4.5.1
+
+### Prompt Structure
+
+Each prompt file should follow this general structure:
+
+```markdown
+# Task X.Y.Z: Task Title
+
+## Objective
+Brief description of what the task aims to achieve.
+
+## Background
+Context and prerequisites for understanding the task.
+
+## Requirements
+Detailed breakdown of what needs to be implemented.
+
+## Implementation Guide
+Specific guidance on how to approach the implementation.
+
+## Verification and Testing
+Instructions for verifying correctness of the implementation.
+
+## Success Criteria
+Concrete measures for determining task completion.
+
+## Next Steps
+Follow-up tasks or extensions.
+```
+
+### Using Prompts with GitHub Copilot
+
+When working with GitHub Copilot on a specific task:
+
+1. **Load the Task Context**:
+   - Use the corresponding prompt file as context for GitHub Copilot
+   - Reference related code files and documentation
+
+2. **Guide the AI with Specificity**:
+   - Reference specific sections of the prompt in your questions
+   - Ask about implementation patterns mentioned in the prompt
+   - Request explanations for concepts outlined in the prompt
+
+3. **Refine the Approach**:
+   - Use the prompt as a starting point, not a rigid script
+   - Ask Copilot to suggest refinements or alternatives to the approaches
+   - Update prompt files with new insights gained during implementation
+
+### Maintaining Prompts
+
+As the project evolves, it's important to keep prompt files updated:
+
+1. **Create New Prompts**:
+   - Create new prompt files for major new tasks
+   - Follow the established naming convention and structure
+
+2. **Update Existing Prompts**:
+   - Update prompts when task requirements change
+   - Add new insights or approaches discovered during implementation
+   - Note limitations or challenges encountered
+
+3. **Archive Completed Prompts**:
+   - Keep completed task prompts as reference material
+   - Consider consolidating insights into `work/learnings.md`
+
+### Example Interactions
+
+#### Effective:
+```
+User: I'm working on Task 1.4.3 for automatic dual protocol generation. The prompt 
+file mentions using a trait-based approach for type-level dual computation. How 
+could I implement a `GenerateDual<P>` trait that works with our existing `IsDual` trait?
+
+Copilot: [Provides detailed implementation guidance specific to the mentioned approach]
+```
+
+#### Less Effective:
+```
+User: Help me with dual protocols.
+
+Copilot: [Provides generic information that might not align with project approach]
+```
+
 ## Feedback & Improvements
 
 - Explicitly suggest improvements to these instructions as the project evolves.
@@ -272,4 +376,4 @@ This pattern ensures predictable, scalable organization as the codebase grows wh
 
 ---
 
-Last updated: 2025-05-13
+Last updated: 2025-05-26

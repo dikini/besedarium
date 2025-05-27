@@ -7,10 +7,10 @@ use crate::protocol::global::{TChanChoice, TChanEnd, TChanPar, TChanRecv, TChanS
 use crate::protocol::local::{
     EpChanChoice, EpChanEnd, EpChanPar, EpChanRecv, EpChanSend, EpChanStart,
 };
-use crate::protocol::projection::helpers::{RoleEq, False};
+use crate::protocol::projection::helpers::{False, RoleEq};
 
 // ============================================================================
-// Test Infrastructure 
+// Test Infrastructure
 // ============================================================================
 
 // Define test roles
@@ -36,12 +36,24 @@ impl SupportsActionIO<InputAction> for Carol {}
 impl SupportsActionIO<OutputAction> for Carol {}
 
 // Non-reflexive role equality implementations
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Carol> for Alice { type Output = False; }
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Carol> for Bob { type Output = False; }
-impl RoleEq<Alice> for Carol { type Output = False; }
-impl RoleEq<Bob> for Carol { type Output = False; }
+impl RoleEq<Bob> for Alice {
+    type Output = False;
+}
+impl RoleEq<Carol> for Alice {
+    type Output = False;
+}
+impl RoleEq<Alice> for Bob {
+    type Output = False;
+}
+impl RoleEq<Carol> for Bob {
+    type Output = False;
+}
+impl RoleEq<Alice> for Carol {
+    type Output = False;
+}
+impl RoleEq<Bob> for Carol {
+    type Output = False;
+}
 
 // Define test messages
 #[derive(Debug, Clone)]
@@ -211,8 +223,8 @@ fn test_project_tchoice_simple() {
         TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
         BiDirectionalAction,
     >;
-    type ChoiceProto = TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-    
+    type ChoiceProto =
+        TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
     type AliceProjection = <() as Project<ChoiceProto, Alice>>::Output;
 
     // Alice should get EpChanChoice
@@ -240,8 +252,8 @@ fn test_project_tchoice_involved_role() {
         TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
         BiDirectionalAction,
     >;
-    type ChoiceProto = TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-    
+    type ChoiceProto =
+        TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
     type BobProjection = <() as Project<ChoiceProto, Bob>>::Output;
 
     // Bob should get EpChanChoice since involved in both branches
@@ -269,8 +281,8 @@ fn test_project_tchoice_uninvolved_role() {
         TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
         BiDirectionalAction,
     >;
-    type ChoiceProto = TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-    
+    type ChoiceProto =
+        TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
     type CarolProjection = <() as Project<ChoiceProto, Carol>>::Output;
 
     // Carol should get EpChanChoice (simplified - all get same structure)
@@ -303,7 +315,7 @@ fn test_project_tpar_involved_role() {
         BiDirectionalAction,
     >;
     type ParProto = TChanPar<TestIO, DataLbl, LeftBranch, RightBranch, (), BiDirectionalAction>;
-    
+
     type AliceProjection = <() as Project<ParProto, Alice>>::Output;
 
     // Alice should get EpChanPar since involved in both branches
@@ -332,7 +344,7 @@ fn test_project_tpar_single_branch_involvement() {
         BiDirectionalAction,
     >;
     type ParProto = TChanPar<TestIO, DataLbl, LeftBranch, RightBranch, (), BiDirectionalAction>;
-    
+
     type BobProjection = <() as Project<ParProto, Bob>>::Output;
 
     // Bob should get EpChanPar since involved in both branches
@@ -361,7 +373,7 @@ fn test_project_tpar_uninvolved_role() {
         BiDirectionalAction,
     >;
     type ParProto = TChanPar<TestIO, DataLbl, LeftBranch, RightBranch, (), BiDirectionalAction>;
-    
+
     type CarolProjection = <() as Project<ParProto, Carol>>::Output;
 
     // Carol should get EpChanPar (simplified - all get same structure)
@@ -386,7 +398,7 @@ fn test_project_tend() {
 fn test_project_tend_different_roles() {
     // Test that TChanEnd projects to EpChanEnd for any role
     type EndProto = TChanEnd<DefaultChan, DataLbl, BiDirectionalAction>;
-    
+
     type AliceProjection = <() as Project<EndProto, Alice>>::Output;
     type BobProjection = <() as Project<EndProto, Bob>>::Output;
     type CarolProjection = <() as Project<EndProto, Carol>>::Output;
@@ -433,7 +445,7 @@ fn test_project_tstart_with_complex_continuation() {
         BiDirectionalAction,
     >;
     type StartProto = TChanStart<TestIO, DataLbl, ComplexContinuation, BiDirectionalAction>;
-    
+
     type AliceProjection = <() as Project<StartProto, Alice>>::Output;
     type BobProjection = <() as Project<StartProto, Bob>>::Output;
 
@@ -453,8 +465,24 @@ fn test_project_nested_choice_in_parallel() {
         Alice,
         TestIO,
         DataLbl,
-        TChanSend<Alice, Bob, TestIO, DataLbl, HelloMsg, TChanEnd<TestIO, DataLbl, BiDirectionalAction>, BiDirectionalAction>,
-        TChanSend<Alice, Carol, TestIO, DataLbl, AckMsg, TChanEnd<TestIO, DataLbl, BiDirectionalAction>, BiDirectionalAction>,
+        TChanSend<
+            Alice,
+            Bob,
+            TestIO,
+            DataLbl,
+            HelloMsg,
+            TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
+            BiDirectionalAction,
+        >,
+        TChanSend<
+            Alice,
+            Carol,
+            TestIO,
+            DataLbl,
+            AckMsg,
+            TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
+            BiDirectionalAction,
+        >,
         BiDirectionalAction,
     >;
     type SimpleBranch = TChanSend<
@@ -466,8 +494,8 @@ fn test_project_nested_choice_in_parallel() {
         TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
         BiDirectionalAction,
     >;
-    type ComplexPar = TChanPar<TestIO, DataLbl, NestedChoice, SimpleBranch, (), BiDirectionalAction>;
-    
+    type ComplexPar =
+        TChanPar<TestIO, DataLbl, NestedChoice, SimpleBranch, (), BiDirectionalAction>;
     type AliceProjection = <() as Project<ComplexPar, Alice>>::Output;
     type BobProjection = <() as Project<ComplexPar, Bob>>::Output;
     type CarolProjection = <() as Project<ComplexPar, Carol>>::Output;
@@ -498,14 +526,13 @@ fn test_project_sequential_send_recv() {
         >,
         BiDirectionalAction,
     >;
-    
     type AliceProjection = <() as Project<SeqProto, Alice>>::Output;
     type BobProjection = <() as Project<SeqProto, Bob>>::Output;
     type CarolProjection = <() as Project<SeqProto, Carol>>::Output;
 
     // Alice: send then receive
     let _: AliceProjection = EpChanSend::new();
-    // Bob: continuation (receive then end)  
+    // Bob: continuation (receive then end)
     let _: BobProjection = EpChanRecv::new();
     // Carol: uninvolved, gets final end
     let _: CarolProjection = EpChanEnd::new();
@@ -532,8 +559,8 @@ fn test_project_choice_with_different_message_types() {
         TChanEnd<TestIO, DataLbl, BiDirectionalAction>,
         BiDirectionalAction,
     >;
-    type MixedChoice = TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-    
+    type MixedChoice =
+        TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
     type AliceProjection = <() as Project<MixedChoice, Alice>>::Output;
     type BobProjection = <() as Project<MixedChoice, Bob>>::Output;
     type CarolProjection = <() as Project<MixedChoice, Carol>>::Output;
@@ -551,20 +578,18 @@ fn test_project_choice_with_different_message_types() {
 #[test]
 fn test_role_equality_reflexive() {
     // Test that roles equal themselves
-    fn _assert_alice_equals_alice() 
+    fn _assert_alice_equals_alice()
     where
         <Alice as RoleEq<Alice>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-    
-    fn _assert_bob_equals_bob() 
+    fn _assert_bob_equals_bob()
     where
         <Bob as RoleEq<Bob>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-    
     _assert_alice_equals_alice();
     _assert_bob_equals_bob();
 }
@@ -572,26 +597,24 @@ fn test_role_equality_reflexive() {
 #[test]
 fn test_role_equality_non_reflexive() {
     // Test that different roles are not equal
-    fn _assert_alice_not_equals_bob() 
+    fn _assert_alice_not_equals_bob()
     where
         <Alice as RoleEq<Bob>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-    
-    fn _assert_bob_not_equals_alice() 
+    fn _assert_bob_not_equals_alice()
     where
         <Bob as RoleEq<Alice>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-    
     _assert_alice_not_equals_bob();
     _assert_bob_not_equals_alice();
 }
 
 // ============================================================================
-// Action I/O Integration Tests  
+// Action I/O Integration Tests
 // ============================================================================
 
 #[test]
@@ -606,9 +629,8 @@ fn test_project_with_input_action() {
         TChanEnd<TestIO, DataLbl, InputAction>,
         InputAction,
     >;
-    
+
     type AliceProjection = <() as Project<RecvOnlyProto, Alice>>::Output;
-    
     // Alice is the sender, so gets the continuation (EpChanEnd)
     let _: AliceProjection = EpChanEnd::new();
 }
@@ -625,9 +647,9 @@ fn test_project_with_output_action() {
         TChanEnd<TestIO, DataLbl, OutputAction>,
         OutputAction,
     >;
-    
+
     type AliceProjection = <() as Project<SendOnlyProto, Alice>>::Output;
-    
+
     // Should project to send operation
     let _: AliceProjection = EpChanSend::new();
 }
