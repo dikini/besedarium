@@ -28,14 +28,20 @@
 
 use crate::types::Bool;
 
-// Re-export helper traits for external use
-pub use helpers::{DualityCheck, EqualsFalse, EqualsTrue};
-
 // Module declarations
+pub mod generation;
 mod global_impl;
 mod helpers;
 mod local_impl;
 pub mod macros;
+
+// Re-export helper traits for external use
+pub use helpers::{DualityCheck, EqualsFalse, EqualsTrue};
+
+// Re-export dual generation functionality
+pub use generation::{
+    verify_local_dual_generation, verify_well_founded, GenerateLocalDual, LocalDual, WellFounded,
+};
 
 // ============================================================================
 // Core IsDual Trait

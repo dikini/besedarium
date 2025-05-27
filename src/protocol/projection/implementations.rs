@@ -37,11 +37,11 @@ where
 }
 
 /// Project TChanRecv: Similar to TChanSend but for receive operations
-impl<Me, S, R, C, L, Msg, P, AIO> Project<TChanRecv<S, R, C, L, Msg, P, AIO>, Me> for ()
+impl<Me, R, S, C, L, Msg, P, AIO> Project<TChanRecv<R, S, C, L, Msg, P, AIO>, Me> for ()
 where
     Me: Role,
-    S: Role,
     R: Role,
+    S: Role,
     C: ChanId,
     L: MsgLbl,
     Msg: Message,

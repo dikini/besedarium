@@ -7,16 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Project Status (as of May 20, 2025)
+### Added
+
+#### 2025-05-26 - Task-Specific Prompts
+
+- **Enhanced GitHub Copilot Integration**: Added guidelines for maintaining task-specific prompt files
+  - Added detailed prompt structure recommendations
+  - Added examples of effective Copilot interactions
+  - Documentation for prompt maintenance process
+
+- **Updated Task Prompts**: Created and improved task prompt files
+  - Created comprehensive prompt for Task 1.4.3 (dual protocol generation research)
+  - Created prompts for Phase 3 tasks (runtime checks, performance benchmarking)
+  - Created prompt for Task 4.1.1 (projections documentation)
+
+### Project Status (as of May 26, 2025)
 
 - **Documentation**: Comprehensive, with README.md, module-level docs, and detailed explanation files in docs/
 - **Codebase Structure**: Fully modularized architecture with separate files for each protocol transformation
 - **Test Coverage**: Extensive tests for type-level functionality, including compile-fail tests
 - **Tooling**: Markdown linting configured with markdownlint-cli2
 - **Next Steps**: 
-  1. Update test cases for the new modular structure
-  2. Implementing runtime support for protocols
-  3. Addressing known issues with TPar/EpPar
+  1. Research automatic dual protocol generation (Task 1.4.3 - in progress)
+  2. Update test cases for the new modular structure
+  3. Implementing runtime support for protocols
+  4. Addressing known issues with TPar/EpPar
 
 ### Added
 

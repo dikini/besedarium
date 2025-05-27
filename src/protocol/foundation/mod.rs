@@ -180,7 +180,7 @@ pub trait CommMetadataTrait: Send + Sync + 'static + Debug + Clone + PartialEq +
     fn msg_lbl(&self) -> &Self::MsgLbl;
 
     /// Create new metadata from channel and label
-    fn new(chan_id: Self::ChanId, msgLbl: Self::MsgLbl) -> Self;
+    fn new(chan_id: Self::ChanId, msg_lbl: Self::MsgLbl) -> Self;
 }
 
 /// Implementation of CommMetadataTrait for the standard CommMetadata type
@@ -207,6 +207,9 @@ impl<C: ChanId, L: MsgLbl> CommMetadataTrait for CommMetadata<C, L> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod action_io_tests;
 
 /// Label transformation and preservation logic for session types
 pub mod labels;

@@ -69,7 +69,7 @@ where
     type Output = EpChanSend<Me, CommMetadata<C, L>, Msg, <() as Project<P, Me>>::Output, AIO>;
 }
 
-/// Case when Me != Sender: Check if Me == Receiver for TRecv behavior  
+/// Case when Me != Sender: Just project the continuation
 impl<Me, S, R, C, L, Msg, P, AIO> ProjectSendCase<Me, S, R, C, L, Msg, P, AIO, False> for ()
 where
     Me: Role,
@@ -80,12 +80,9 @@ where
     Msg: Message,
     P: GlobalProtocol,
     AIO: ActionIOTMarker,
-    Me: RoleEq<R>,
-    <Me as RoleEq<R>>::Output: Bool,
-    (): ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, <Me as RoleEq<R>>::Output>,
+    (): Project<P, Me>,
 {
-    type Output =
-        <() as ProjectRecvCase<Me, S, R, C, L, Msg, P, AIO, <Me as RoleEq<R>>::Output>>::Output;
+    type Output = <() as Project<P, Me>>::Output;
 }
 
 /// Helper trait for projecting TRecv operations based on role equality
