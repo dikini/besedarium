@@ -109,7 +109,7 @@ fn test_action_io_marker_equality() {
     assert_eq!(OutputAction, OutputAction);
     assert_eq!(BiDirectionalAction, BiDirectionalAction);
 
-  // Note: Cross-type comparisons are prevented by the type system
+    // Note: Cross-type comparisons are prevented by the type system
     // This ensures type safety at compile time rather than runtime
 }
 
@@ -274,7 +274,6 @@ fn test_multiple_capability_constraints() {
 
     requires_all_capabilities::<TcpOnlySessionIO>();
     requires_all_capabilities::<WebSocketIO>();
-
 
     // These would fail to compile:
     // requires_input_and_output::<MqttPublisherIO>(); // No input support
@@ -643,10 +642,12 @@ fn test_comprehensive_capability_matrix() {
     // Verify the capability matrix matches our implementations
     const _: () = assert!(<() as HasCapability<TcpOnlySessionIO, InputAction>>::HAS_CAPABILITY);
     const _: () = assert!(<() as HasCapability<TcpOnlySessionIO, OutputAction>>::HAS_CAPABILITY);
-    const _: () = assert!(<() as HasCapability<TcpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
+    const _: () =
+        assert!(<() as HasCapability<TcpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
 
     const _: () = assert!(<() as HasCapability<HttpOnlySessionIO, OutputAction>>::HAS_CAPABILITY);
-    const _: () = assert!(<() as HasCapability<HttpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
+    const _: () =
+        assert!(<() as HasCapability<HttpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
 
     const _: () = assert!(<() as HasCapability<MqttPublisherIO, OutputAction>>::HAS_CAPABILITY);
     const _: () = assert!(<() as HasCapability<MqttSubscriberIO, InputAction>>::HAS_CAPABILITY);

@@ -801,8 +801,7 @@ mod tests {
 
         // Type-level check: Preserved should be True
         type PreservedType = <TestList as LabelPreservation<TestList, TestList>>::Preserved;
-        fn _assert_preserved_is_true<T: Bool + std::convert::Into<True>>() {
-        }
+        fn _assert_preserved_is_true<T: Bool + std::convert::Into<True>>() {}
         // This would compile if Preserved is True (compile-time assertion)
     }
 
@@ -858,8 +857,7 @@ mod tests {
 
         // Type-level check: Unique should be True for empty list
         type UniqueType = <LabelNil as UniqueLabels>::Unique;
-        fn _assert_unique_is_true<T: Bool + std::convert::Into<True>>() {
-        }
+        fn _assert_unique_is_true<T: Bool + std::convert::Into<True>>() {}
     }
 
     #[test]

@@ -92,7 +92,6 @@ fn test_comm_metadata_trait_implementations() {
     // Test Debug (just ensure it doesn't panic)
     let _ = format!("{:?}", meta1);
 
-
     // Test Hash (put in a hash set to verify)
     use std::collections::HashSet;
     let mut set = HashSet::new();
@@ -267,7 +266,7 @@ fn test_tchan_par_creation() {
 fn test_tchan_end_creation() {
     type TestEnd = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
-  // Verify it implements GlobalProtocol
+    // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestEnd>);
 }
@@ -478,7 +477,7 @@ fn test_epchan_par_creation() {
 fn test_epchan_end_creation() {
     type TestEnd = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
 
-  // Verify it implements LocalProtocol
+    // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestEnd>);
 }
@@ -579,7 +578,7 @@ fn test_local_metadata_integration() {
         // Type constraints verified at compile time
     }
 
-  check_integration(metadata, std::marker::PhantomData::<TestLocal>);
+    check_integration(metadata, std::marker::PhantomData::<TestLocal>);
 }
 
 #[test]
@@ -588,7 +587,7 @@ fn test_local_global_protocol_integration() {
     type TestGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type TestLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
 
-  fn check_protocol_bounds<G, L>()
+    fn check_protocol_bounds<G, L>()
     where
         G: GlobalProtocol,
         L: LocalProtocol,
@@ -596,7 +595,7 @@ fn test_local_global_protocol_integration() {
         // Type constraints verified at compile time
     }
 
-  check_protocol_bounds::<TestGlobal, TestLocal>();
+    check_protocol_bounds::<TestGlobal, TestLocal>();
 }
 
 // ============================================================================
@@ -618,8 +617,7 @@ fn test_action_io_markers() {
 
 #[test]
 fn test_supports_action_io_tcp() {
-
-  // Test TcpOnlySessionIO supports all action types
+    // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<
@@ -785,11 +783,12 @@ fn test_msglbl_trait_implementation() {
 
 #[test]
 fn test_legacy_action_io_support() {
-
     // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
 }
 
 // Test that example roles implement the Role trait
@@ -829,4 +828,3 @@ fn test_legacy_type_safety() {
 
     process_metadata(meta);
 }
-
