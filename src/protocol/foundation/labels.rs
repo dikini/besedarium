@@ -679,7 +679,7 @@ mod tests {
         let result = nil.map(transform);
 
         // Mapping over empty list should return empty list
-        assert_eq!(LabelNil::LENGTH, 0);
+        assert_eqShelly Plus 1!(LabelNil::LENGTH, 0);
         assert_eq!(result.to_ids().len(), 0);
     }
 
@@ -722,7 +722,6 @@ mod tests {
         // TCollect is primarily for nested structures
         // For now, we'll test the trait exists and can be called
         // Full implementation would require protocol type implementations
-
         // Basic test - verify the trait is available
         fn _test_tcollect_trait_exists<T: TCollect>() {}
         // This test just ensures the trait is properly defined
@@ -1011,7 +1010,6 @@ mod tests {
         let nil = LabelNil;
         type NonEmptyList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
         let non_empty = NonEmptyList::new();
-
         let result = nil.compose(&non_empty);
         assert_eq!(result.to_ids().len(), 2);
     }
@@ -1038,7 +1036,6 @@ mod tests {
         // Test that the type system enforces correct usage
         type ValidList = LabelCons<TestLabel1, LabelCons<TestLabel2, LabelNil>>;
         let valid = ValidList::new();
-
         // These operations should compile correctly
         let _length = ValidList::LENGTH;
         let _is_empty = ValidList::IS_EMPTY;

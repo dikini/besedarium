@@ -225,7 +225,6 @@ fn test_project_tchoice_simple() {
     >;
     type ChoiceProto =
         TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-
     type AliceProjection = <() as Project<ChoiceProto, Alice>>::Output;
 
     // Alice should get EpChanChoice
@@ -255,7 +254,6 @@ fn test_project_tchoice_involved_role() {
     >;
     type ChoiceProto =
         TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-
     type BobProjection = <() as Project<ChoiceProto, Bob>>::Output;
 
     // Bob should get EpChanChoice since involved in both branches
@@ -285,7 +283,6 @@ fn test_project_tchoice_uninvolved_role() {
     >;
     type ChoiceProto =
         TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-
     type CarolProjection = <() as Project<ChoiceProto, Carol>>::Output;
 
     // Carol should get EpChanChoice (simplified - all get same structure)
@@ -499,7 +496,6 @@ fn test_project_nested_choice_in_parallel() {
     >;
     type ComplexPar =
         TChanPar<TestIO, DataLbl, NestedChoice, SimpleBranch, (), BiDirectionalAction>;
-
     type AliceProjection = <() as Project<ComplexPar, Alice>>::Output;
     type BobProjection = <() as Project<ComplexPar, Bob>>::Output;
     type CarolProjection = <() as Project<ComplexPar, Carol>>::Output;
@@ -530,7 +526,6 @@ fn test_project_sequential_send_recv() {
         >,
         BiDirectionalAction,
     >;
-
     type AliceProjection = <() as Project<SeqProto, Alice>>::Output;
     type BobProjection = <() as Project<SeqProto, Bob>>::Output;
     type CarolProjection = <() as Project<SeqProto, Carol>>::Output;
@@ -566,7 +561,6 @@ fn test_project_choice_with_different_message_types() {
     >;
     type MixedChoice =
         TChanChoice<Alice, TestIO, DataLbl, LeftBranch, RightBranch, BiDirectionalAction>;
-
     type AliceProjection = <() as Project<MixedChoice, Alice>>::Output;
     type BobProjection = <() as Project<MixedChoice, Bob>>::Output;
     type CarolProjection = <() as Project<MixedChoice, Carol>>::Output;
@@ -590,14 +584,12 @@ fn test_role_equality_reflexive() {
     {
         // This function existing proves the trait bound is satisfied
     }
-
     fn _assert_bob_equals_bob()
     where
         <Bob as RoleEq<Bob>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-
     _assert_alice_equals_alice();
     _assert_bob_equals_bob();
 }
@@ -611,14 +603,12 @@ fn test_role_equality_non_reflexive() {
     {
         // This function existing proves the trait bound is satisfied
     }
-
     fn _assert_bob_not_equals_alice()
     where
         <Bob as RoleEq<Alice>>::Output: crate::protocol::projection::helpers::Bool,
     {
         // This function existing proves the trait bound is satisfied
     }
-
     _assert_alice_not_equals_bob();
     _assert_bob_not_equals_alice();
 }
@@ -641,7 +631,6 @@ fn test_project_with_input_action() {
     >;
 
     type AliceProjection = <() as Project<RecvOnlyProto, Alice>>::Output;
-
     // Alice is the sender, so gets the continuation (EpChanEnd)
     let _: AliceProjection = EpChanEnd::new();
 }

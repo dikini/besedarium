@@ -92,6 +92,7 @@ fn test_comm_metadata_trait_implementations() {
     // Test Debug (just ensure it doesn't panic)
     let _ = format!("{:?}", meta1);
 
+
     // Test Hash (put in a hash set to verify)
     use std::collections::HashSet;
     let mut set = HashSet::new();
@@ -113,7 +114,6 @@ fn test_metadata_trait_implementation() {
         *<CommMetadata<AuthChan, LoginLbl> as Metadata>::msg_lbl(&metadata),
         LoginLbl
     );
-}
 
 #[test]
 fn test_comm_metadata_different_channel_types() {
@@ -266,7 +266,7 @@ fn test_tchan_par_creation() {
 fn test_tchan_end_creation() {
     type TestEnd = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
-    // Verify it implements GlobalProtocol
+  // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestEnd>);
 }
@@ -477,7 +477,7 @@ fn test_epchan_par_creation() {
 fn test_epchan_end_creation() {
     type TestEnd = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
 
-    // Verify it implements LocalProtocol
+  // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestEnd>);
 }
@@ -492,7 +492,6 @@ fn test_epchan_start_creation() {
         StartProtocol,
         BiDirectionalAction,
     >;
-
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestStart>);
@@ -579,7 +578,7 @@ fn test_local_metadata_integration() {
         // Type constraints verified at compile time
     }
 
-    check_integration(metadata, std::marker::PhantomData::<TestLocal>);
+  check_integration(metadata, std::marker::PhantomData::<TestLocal>);
 }
 
 #[test]
@@ -588,7 +587,7 @@ fn test_local_global_protocol_integration() {
     type TestGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type TestLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
 
-    fn check_protocol_bounds<G, L>()
+  fn check_protocol_bounds<G, L>()
     where
         G: GlobalProtocol,
         L: LocalProtocol,
@@ -596,7 +595,7 @@ fn test_local_global_protocol_integration() {
         // Type constraints verified at compile time
     }
 
-    check_protocol_bounds::<TestGlobal, TestLocal>();
+  check_protocol_bounds::<TestGlobal, TestLocal>();
 }
 
 // ============================================================================
@@ -618,7 +617,8 @@ fn test_action_io_markers() {
 
 #[test]
 fn test_supports_action_io_tcp() {
-    // Test TcpOnlySessionIO supports all action types
+
+  // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<
@@ -784,18 +784,177 @@ fn test_msglbl_trait_implementation() {
 
 #[test]
 fn test_legacy_action_io_support() {
+
     // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<TcpOnlySessionIO as SupportsActionIO<
-        BiDirectionalAction,
-    >>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+}
+
+#[test]
+fn test_supports_action_io_http() {
+    // Test HttpOnlySessionIO supports output and bidirectional only
+    assert!(<HttpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
+    assert!(<HttpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    
+    // Note: HttpOnlySessionIO doesn't implement SupportsActionIO<InputAction>
+    // This is verified by the type system - if it did implement it, this would compile:
+    // assert!(<HttpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
+}
+
+#[test]
+fn test_custom_io_capability() {
+    // Test our TestIO supports all actions
+    assert!(<TestIO as SupportsActionIO<InputAction>>::supports_action_io());
+    assert!(<TestIO as SupportsActionIO<OutputAction>>::supports_action_io());
+    assert!(<TestIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+}
+
+#[test]
+fn test_action_io_integration_with_protocols() {
+    // Test that action I/O types integrate properly with protocol types
+    type InputLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, InputAction>;
+    type OutputLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, OutputAction>;
+    type BiLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
+    
+    fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+    requires_local_protocol(std::marker::PhantomData::<InputLocal>);
+    requires_local_protocol(std::marker::PhantomData::<OutputLocal>);
+    requires_local_protocol(std::marker::PhantomData::<BiLocal>);
+}
+
+#[test]
+fn test_action_io_constraint_verification() {
+    // Test compile-time verification of I/O capability constraints
+    fn verify_io_constraint<IO, AIO>()
+    where
+        IO: SupportsActionIO<AIO>,
+        AIO: ActionIOTMarker,
+    {
+        // Constraint verified at compile time
+    }
+    
+    // These should all compile successfully
+    verify_io_constraint::<TcpOnlySessionIO, InputAction>();
+    verify_io_constraint::<TcpOnlySessionIO, OutputAction>();
+    verify_io_constraint::<TcpOnlySessionIO, BiDirectionalAction>();
+    verify_io_constraint::<HttpOnlySessionIO, OutputAction>();
+    verify_io_constraint::<HttpOnlySessionIO, BiDirectionalAction>();
+}
+
+// ============================================================================
+// Foundation Traits Testing (4 tests)
+// ============================================================================
+
+#[test]
+fn test_role_trait_implementation() {
+    let alice = Alice;
+    let bob = Bob;
+    let carol = Carol;
+
+    // Test Clone
+    let alice_clone = alice.clone();
+    assert_eq!(alice, alice_clone);
+
+    // Test Debug
+    format!("{:?}", alice);
+    format!("{:?}", bob);
+    format!("{:?}", carol);
+
+    // Test PartialEq and Eq
+    assert_eq!(alice, alice);
+    // Note: Cannot compare different role types directly
+
+    // Test Hash - use separate sets for each role type to avoid type mismatch
+    use std::collections::HashSet;
+    let mut alice_set = HashSet::new();
+    alice_set.insert(alice);
+    assert_eq!(alice_set.len(), 1);
+}
+
+#[test]
+fn test_message_trait_implementation() {
+    let hello = HelloMsg("hello".to_string());
+    let ack = AckMsg;
+    let data = DataMsg(vec![1, 2, 3]);
+
+    // Test Clone
+    let hello_clone = hello.clone();
+    let ack_clone = ack.clone();
+    let data_clone = data.clone();
+
+    // Test Debug
+    format!("{:?}", hello);
+    format!("{:?}", ack);
+    format!("{:?}", data);
+
+    // Test that they implement Message trait
+    fn requires_message<T: Message>(_: T) {}
+    requires_message(hello_clone);
+    requires_message(ack_clone);
+    requires_message(data_clone);
+}
+
+#[test]
+fn test_chanid_trait_implementation() {
+    let default_chan = DefaultChan;
+    let handshake_chan = HandshakeChan;
+    let auth_chan = AuthChan;
+    let data_chan = DataChan;
+
+    // Test that they implement ChanId trait
+    fn requires_chanid<T: ChanId>(_: T) {}
+    requires_chanid(default_chan);
+    requires_chanid(handshake_chan);
+    requires_chanid(auth_chan);
+    requires_chanid(data_chan);
+
+    // Test Clone and PartialEq
+    assert_eq!(DefaultChan, DefaultChan);
+    // Note: Cannot compare different channel types directly
+
+    // Test Debug
+    format!("{:?}", DefaultChan);
+    format!("{:?}", HandshakeChan);
+}
+
+#[test]
+fn test_msglbl_trait_implementation() {
+    let request_lbl = RequestLbl;
+    let response_lbl = ResponseLbl;
+    let login_lbl = LoginLbl;
+    let status_lbl = StatusLbl;
+
+    // Test that they implement MsgLbl trait
+    fn requires_msglbl<T: MsgLbl>(_: T) {}
+    requires_msglbl(request_lbl);
+    requires_msglbl(response_lbl);
+    requires_msglbl(login_lbl);
+    requires_msglbl(status_lbl);
+
+    // Test Clone and PartialEq
+    assert_eq!(RequestLbl, RequestLbl);
+    // Note: Cannot compare different label types directly
+
+    // Test Debug
+    format!("{:?}", RequestLbl);
+    format!("{:?}", ResponseLbl);
+}
+
+// ============================================================================
+// Legacy Tests (preserved for compatibility)
+// ============================================================================
+
+#[test]
+fn test_legacy_action_io_support() {
+    // Test TcpOnlySessionIO supports all action types
+    assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
 
     // Test HttpOnlySessionIO supports output and bidirectional
     assert!(<HttpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<HttpOnlySessionIO as SupportsActionIO<
-        BiDirectionalAction,
-    >>::supports_action_io());
+    assert!(<HttpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
 }
 
 // Test that example roles implement the Role trait
