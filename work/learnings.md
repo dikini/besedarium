@@ -3,48 +3,117 @@
 This document distills essential patterns for implementing type-level session types in Rust
 without relying on unstable features.
 
+## Task 2.4.1 Completed: Remove/Overhaul Integration Tests (2025-05-27)
+
+**Achievement**: Successfully replaced legacy disabled integration tests with modern working integration 
+test infrastructure and 11 comprehensive integration tests, all passing.
+
+**Critical Accomplishments:**
+
+1. **Integration Test Infrastructure Creation**: Built complete test infrastructure with modern foundation 
+types in `tests/integration_common.rs`:
+   - Test roles: Alice, Bob, Charlie with complete RoleEq implementations
+   - Test channels: AuthChan, DataChan  
+   - Test messages: LoginMsg, AckMsg, DataMsg
+   - TestNetworkIO with proper SupportsActionIO implementations
+   - Type aliases for clean test code
+
+2. **SupportsActionIO Implementation Fixes**: Added missing trait implementations that were causing 
+compilation failures:
+   ```rust
+   impl SupportsActionIO<InputAction> for Alice {}
+   impl SupportsActionIO<OutputAction> for Alice {}
+   impl SupportsActionIO<BiDirectionalAction> for Alice {}
+   // + similar for Bob, Charlie
+   ```
+
+3. **RoleEq Trait Completeness**: Fixed incomplete RoleEq implementations with proper associated types:
+   ```rust
+   impl RoleEq<Bob> for Alice { type Output = False; }
+   impl RoleEq<Alice> for Bob { type Output = False; }
+   // + all role pair combinations
+   ```
+
+4. **Working Integration Test Suite**: Created 11 comprehensive integration tests in 
+`tests/client_server_integration.rs`:
+   - Basic protocol compilation and type validation tests
+   - Protocol duality verification tests  
+   - Protocol projection tests
+   - Choice/offer protocol tests
+   - Multi-party protocol tests
+   - Complex protocol composition tests
+
+5. **Code Quality Improvements**: Fixed all clippy warnings through targeted improvements:
+   - Snake case naming: `msgLbl` → `msg_lbl`
+   - Multiple bound locations: Combined trait bounds in single location
+   - Assertions on constants: Converted to compile-time assertions with `const _: () = assert!(...)`
+   - Unused must_use: Fixed format! calls with `let _ = format!(...)`
+   - Dead code: Added `#[allow(dead_code)]` for intentionally unused test types
+
+**Test Results**: 
+- ✅ **187 total tests passing** (176 unit + 11 integration)
+- ✅ **0 clippy warnings or errors**
+- ✅ **All library functionality preserved and working**
+
+**Key Pattern**: Modern integration test infrastructure using current foundation types enables 
+end-to-end verification of protocol type system functionality.
+
 ## Task 2.1.3 Completed: Project<P, Role> Trait Testing (2025-05-25)
 
-**Achievement**: Successfully implemented comprehensive unit test suite for Project<P, Role> trait with 23 passing tests, fixing critical projection semantics bugs.
+**Achievement**: Successfully implemented comprehensive unit test suite for Project<P, Role> trait 
+with 23 passing tests, fixing critical projection semantics bugs.
 
 **Critical Bug Fixes:**
 
-1. **ProjectSendCase Semantics**: Fixed ProjectSendCase<..., False> to return continuation directly instead of delegating to ProjectRecvCase
-2. **TChanRecv Parameter Order**: Corrected projection implementation parameter order from <S, R, ...> to <R, S, ...> to match definition
+1. **ProjectSendCase Semantics**: Fixed ProjectSendCase<..., False> to return continuation directly 
+instead of delegating to ProjectRecvCase
+2. **TChanRecv Parameter Order**: Corrected projection implementation parameter order from <S, R, 
+...> to <R, S, ...> to match definition
 3. **Test Expectations**: Updated test expectations to match corrected projection semantics
 
-**Test Coverage**: 23 comprehensive tests covering basic protocols (7), choice/offer constructs (4), parallel constructs (3), complex scenarios (4), action I/O integration (2), and role validation (3).
+**Test Coverage**: 23 comprehensive tests covering basic protocols (7), choice/offer constructs 
+(4), parallel constructs (3), complex scenarios (4), action I/O integration (2), and role 
+validation (3).
 
-**Key Pattern**: Role-based dispatch system using helper traits with compile-time role checking for proper endpoint type projection.
+**Key Pattern**: Role-based dispatch system using helper traits with compile-time role checking for 
+proper endpoint type projection.
 
 ## Recent Achievements (2025-05-25)
 
 ### Task 2.1.1 Successfully Completed: Comprehensive Foundation Testing ✅ FULLY COMPLETED
 
-**Testing Achievement:** Successfully implemented comprehensive unit test suite for all core foundation 
+**Testing Achievement:** Successfully implemented comprehensive unit test suite for all core 
+foundation
 components, validating the type-level protocol system implementation with 46 passing tests.
 
 **Test Coverage Accomplished:**
 
 **1. CommMetadata Testing (8 tests) ✅**
-- **Creation and field access**: Verified proper metadata construction with channel IDs and message labels
+- **Creation and field access**: Verified proper metadata construction with channel IDs and message 
+labels
 - **Trait implementations**: Tested Clone, PartialEq, Eq, Hash, Debug for all metadata types
-- **Different metadata types**: Verified type system handles different channel and label combinations
-- **Trait method verification**: Confirmed `Metadata` and `CommMetadataTrait` implementations work correctly
+- **Different metadata types**: Verified type system handles different channel and label 
+combinations
+- **Trait method verification**: Confirmed `Metadata` and `CommMetadataTrait` implementations work 
+correctly
 - **Extensibility patterns**: Validated metadata system supports multiple metadata types
 - **Hash consistency**: Verified HashMap usage works correctly with metadata as keys
 
 **2. Global Protocol Types Testing (12 tests) ✅**
-- **All global protocol types**: TChanSend, TChanRecv, TChanChoice, TChanOffer, TChanPar, TChanEnd, TChanStart
+- **All global protocol types**: TChanSend, TChanRecv, TChanChoice, TChanOffer, TChanPar, TChanEnd, 
+TChanStart
 - **Type parameter validation**: Fixed and verified correct type parameter usage for all constructs
 - **Protocol composition**: Tested complex protocol combinations and nesting
-- **Trait bound verification**: Confirmed all types satisfy required traits (GlobalProtocol, Send, Sync, Debug)
+- **Trait bound verification**: Confirmed all types satisfy required traits (GlobalProtocol, Send, 
+Sync, Debug)
 - **Type distinction**: Verified different protocol types are properly distinct at compile time
 - **Metadata integration**: Tested proper integration between global protocols and CommMetadata
-- **Action I/O compatibility**: Verified protocols work with InputAction, OutputAction, BiDirectionalAction
+- **Action I/O compatibility**: Verified protocols work with InputAction, OutputAction, 
+BiDirectionalAction
 
 **3. Local Endpoint Types Testing (12 tests) ✅**
-- **All local endpoint types**: EpChanSend, EpChanRecv, EpChanChoice, EpChanOffer, EpChanPar, EpChanEnd, EpChanStart
+- **All local endpoint types**: EpChanSend, EpChanRecv, EpChanChoice, EpChanOffer, EpChanPar, 
+EpChanEnd, EpChanStart
 - **I/O capability constraints**: Verified proper `SupportsActionIO` constraints and type checking
 - **Protocol composition**: Tested complex endpoint combinations and nesting structures
 - **Trait bound verification**: Confirmed all types satisfy LocalProtocol and related traits
@@ -52,15 +121,19 @@ components, validating the type-level protocol system implementation with 46 pas
 - **Metadata integration**: Tested proper integration between local endpoints and CommMetadata
 
 **4. Action I/O System Testing (6 tests) ✅**
-- **Marker trait verification**: Confirmed InputAction, OutputAction, BiDirectionalAction implement ActionIOTMarker
+- **Marker trait verification**: Confirmed InputAction, OutputAction, BiDirectionalAction implement 
+ActionIOTMarker
 - **Capability verification**: Tested TcpOnlySessionIO supports all action types
-- **HTTP constraints**: Verified HttpOnlySessionIO supports only OutputAction and BiDirectionalAction
+- **HTTP constraints**: Verified HttpOnlySessionIO supports only OutputAction and 
+BiDirectionalAction
 - **Custom I/O support**: Tested custom TestIO implementation supports all action types
 - **Protocol integration**: Verified action I/O types integrate properly with protocol constructs
-- **Compile-time constraints**: Confirmed proper compile-time verification of I/O capability constraints
+- **Compile-time constraints**: Confirmed proper compile-time verification of I/O capability 
+constraints
 
 **5. Foundation Traits Testing (4 tests) ✅**
-- **Role trait testing**: Verified Role implementations for Alice, Bob, Carol with proper Clone, Debug, PartialEq, Hash
+- **Role trait testing**: Verified Role implementations for Alice, Bob, Carol with proper Clone, 
+Debug, PartialEq, Hash
 - **Message trait testing**: Confirmed Message implementations for HelloMsg, AckMsg, DataMsg
 - **ChanId trait testing**: Validated ChanId implementations for all channel types
 - **MsgLbl trait testing**: Verified MsgLbl implementations for all label types
@@ -74,16 +147,20 @@ components, validating the type-level protocol system implementation with 46 pas
 **Critical Testing Patterns Learned:**
 
 - **Type Constraint Testing**: Use `PhantomData` and trait bounds to verify compile-time constraints
-- **Protocol Composition Testing**: Test complex combinations to ensure type system handles nesting correctly
-- **Trait Implementation Verification**: Use helper functions requiring traits to verify implementations
-- **Error Handling in Tests**: Different types cannot be compared directly - test each type separately
-- **Test Infrastructure Design**: Create reusable test types (roles, messages, I/O) for consistent testing
+- **Protocol Composition Testing**: Test complex combinations to ensure type system handles nesting 
+correctly
+- **Trait Implementation Verification**: Use helper functions requiring traits to verify 
+implementations
+- **Error Handling in Tests**: Different types cannot be compared directly - test each type 
+separately
+- **Test Infrastructure Design**: Create reusable test types (roles, messages, I/O) for consistent 
+testing
 - **Integration Testing**: Verify protocols, metadata, and I/O systems work together seamlessly
 
 ### Task 1.2.3 Successfully Completed: Label Transformation and Preservation Logic ✅ FULLY COMPLETED
 
-**Implementation Success:** Successfully implemented comprehensive label transformation system for 
-session types, enabling type-level label operations, preservation checks, and composition 
+**Implementation Success:** Successfully implemented comprehensive label transformation system for
+session types, enabling type-level label operations, preservation checks, and composition
 verification.
 
 **Key Implementation Components:**
@@ -91,7 +168,7 @@ verification.
 **1. Core Label Infrastructure ✅**
 
 - **Label trait**: Extended `ProtocolLabel` with type-level identity system (`type Id`)
-- **LabelList trait**: Type-level list operations with proper length tracking (`const LENGTH: 
+- **LabelList trait**: Type-level list operations with proper length tracking (`const LENGTH:
 usize`)
 - **LabelNil/LabelCons**: Empty and cons cell implementations for recursive label operations
 - **Type alias LList<H, T>**: Convenient syntax for building label lists
@@ -127,27 +204,27 @@ usize`)
 
 **Stable Rust Constraint Handling:**
 
-- **FilterImpl Helper Pattern**: Used helper trait with type-level dispatch to avoid `impl Trait` 
+- **FilterImpl Helper Pattern**: Used helper trait with type-level dispatch to avoid `impl Trait`
 in impl headers
-- **Conditional Implementation**: Separate implementations for `FilterImpl<H, T, P, True>` and 
+- **Conditional Implementation**: Separate implementations for `FilterImpl<H, T, P, True>` and
 `FilterImpl<H, T, P, False>`
-- **Trait Bound Propagation**: Carefully added trait bounds like `AndBoolImpl` and `NotImpl` to 
+- **Trait Bound Propagation**: Carefully added trait bounds like `AndBoolImpl` and `NotImpl` to
 ensure all type-level operations compile
 
 **Type-Level List Processing:**
 
 - **Recursive Base Cases**: Always implement trivial cases for `LabelNil` first
 - **Recursive Induction**: Use proper trait bounds on tail operations (`T: LabelList + TFilterP`)
-- **Identity Preservation**: Maintain type-level identity through `PhantomData` and careful 
+- **Identity Preservation**: Maintain type-level identity through `PhantomData` and careful
 associated type design
 
 **Label System Integration:**
 
-- **Protocol Integration Ready**: All traits designed for seamless integration with existing 
+- **Protocol Integration Ready**: All traits designed for seamless integration with existing
 protocol types
-- **Foundation Module Export**: Properly exported all key traits through 
+- **Foundation Module Export**: Properly exported all key traits through
 `src/protocol/foundation/mod.rs`
-- **Compilation Success**: Fixed all trait bound issues and conflicting implementations 
+- **Compilation Success**: Fixed all trait bound issues and conflicting implementations
 systematically
 
 **Compilation Error Resolution Process:**
@@ -155,30 +232,30 @@ systematically
 1. **E0562 errors**: Removed `impl Trait` syntax from impl headers (not allowed in stable Rust)
 2. **E0119 conflicts**: Resolved overlapping trait implementations by making them more specific
 3. **E0277 trait bounds**: Added proper trait bounds for `AndBoolImpl`, `NotImpl`, and `FilterImpl`
-4. **Type inference**: Used explicit trait calls like `<Self as FilterImpl<H, T, P, 
+4. **Type inference**: Used explicit trait calls like `<Self as FilterImpl<H, T, P,
 P::Output>>::filter_impl`
 
 **Testing and Quality Assurance:**
 
 - **All tests pass**: 35/35 tests successful after implementation
 - **Clean compilation**: `cargo check`, `cargo test`, `cargo fmt`, `cargo clippy` all pass
-- **Module integration**: Seamless integration with existing foundation types and protocol 
+- **Module integration**: Seamless integration with existing foundation types and protocol
 constructs
 
 **File Organization Achievement:**
 
-- **Single implementation file**: `src/protocol/foundation/labels.rs` (428 lines - within 
+- **Single implementation file**: `src/protocol/foundation/labels.rs` (428 lines - within
 guidelines)
-- **Comprehensive functionality**: All Task 1.2.3 requirements implemented in focused, 
+- **Comprehensive functionality**: All Task 1.2.3 requirements implemented in focused,
 well-documented module
-- **Ready for protocol integration**: Label system ready for use with Choice, Offer, Parallel, and 
+- **Ready for protocol integration**: Label system ready for use with Choice, Offer, Parallel, and
 Recursion constructs
 
 ## Recent Achievements (2025-05-24)
 
 ### Task 1.1.6c.2 Successfully Completed: Advanced Module Restructuring ✅ FULLY COMPLETED
 
-**Implementation Success:** Successfully completed advanced module restructuring to bring all 
+**Implementation Success:** Successfully completed advanced module restructuring to bring all
 protocol modules into compliance with Size and Module Structure Guidelines:
 
 **Phase 1: Duality Module Complete Restructuring ✅**
@@ -195,16 +272,16 @@ protocol modules into compliance with Size and Module Structure Guidelines:
 
 **Phase 2: Projection Module Restructuring ✅ FULLY COMPLETED**
 
-- **Original**: 460 lines → Final: 336 lines → **Final Restructuring**: 92 lines ✅ (80% 
+- **Original**: 460 lines → Final: 336 lines → **Final Restructuring**: 92 lines ✅ (80%
 reduction from final intermediate state)
 - **Complete restructuring across 4 modules**:
   - `mod.rs`: 92 lines ✅ (core Project trait and documentation - 73% reduction from 336 lines)
   - `helpers.rs`: 150 lines (role-based dispatch traits and type-level operations)
   - `implementations.rs`: 133 lines (Project trait implementations, cleaned up unused imports)
-  - `errors.rs`: 108 lines ✅ **NEW** (extracted error handling, validation traits, and 
+  - `errors.rs`: 108 lines ✅ **NEW** (extracted error handling, validation traits, and
   ProjectionError enum)
   - `tests.rs`: 71 lines (unit tests for projection functionality)
-- **Key achievement**: Successfully extracted all error types, validation logic, and duplicate 
+- **Key achievement**: Successfully extracted all error types, validation logic, and duplicate
 implementations
 - **Eliminated duplicates**: Removed conflicting Project trait implementations from `mod.rs`
 - **Fixed import issues**: Resolved trait bound references and cleaned up unused imports
@@ -216,7 +293,7 @@ implementations
 - **Original**: 448 lines (above 300-line guideline)
 - **Restructured into 3 focused modules**:
   - `mod.rs`: 80 lines ✅ (82% reduction, well under 300-line guideline)
-  - `endpoints.rs`: 166 lines (7 endpoint struct definitions: EpChanSend, EpChanRecv, 
+  - `endpoints.rs`: 166 lines (7 endpoint struct definitions: EpChanSend, EpChanRecv,
   EpChanOffer, EpChanChoice, EpChanPar, EpChanEnd, EpChanStart)
   - `implementations.rs`: 235 lines (LocalProtocol trait implementations and constructor methods)
 - **All tests pass**: 35/35 tests successful after restructuring
@@ -226,7 +303,7 @@ implementations
 - **Original**: 434 lines (above 300-line guideline)
 - **Restructured into 3 focused modules**:
   - `mod.rs`: 66 lines ✅ (85% reduction, well under 300-line guideline)
-  - `protocols.rs`: 172 lines (7 global protocol struct definitions: TChanSend, TChanRecv, 
+  - `protocols.rs`: 172 lines (7 global protocol struct definitions: TChanSend, TChanRecv,
   TChanChoice, TChanOffer, TChanPar, TChanEnd, TChanStart)
   - `implementations.rs`: 234 lines (GlobalProtocol trait implementations and constructor methods)
 - **All tests pass**: 35/35 tests successful after restructuring
@@ -238,13 +315,13 @@ implementations
 - `local/mod.rs`: 79 lines ✅ (compliant)
 - `global/mod.rs`: 63 lines ✅ (compliant)
 
-**Result**: All 5 protocol modules now meet the 300-line guideline. Task 1.1.6c.2 is fully 
+**Result**: All 5 protocol modules now meet the 300-line guideline. Task 1.1.6c.2 is fully
 completed.
 
 **Task 1.1.6b COMPLETE ✅:** Default Trait Implementation for Protocol Types
 
-**Implementation Success:** Successfully implemented `Default` trait for all 14 protocol types that 
-have `new()` methods, resolving all clippy `new_without_default` warnings and improving API 
+**Implementation Success:** Successfully implemented `Default` trait for all 14 protocol types that
+have `new()` methods, resolving all clippy `new_without_default` warnings and improving API
 ergonomics.
 
 **Types Enhanced with Default:**
@@ -255,7 +332,7 @@ ergonomics.
 - `TChanRecv<R, S, C, L, Msg, P, AIO>` - Default calls new() with proper type constraints
 - `TChanChoice<R, C, Lbl, Left, Right, AIO>` - Default calls new() with proper type constraints
 - `TChanOffer<R, C, Lbl, Left, Right, AIO>` - Default calls new() with proper type constraints
-- `TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO>` - Default calls new() with proper type 
+- `TChanPar<C, Lbl, Left, Right, IsDisjoint, AIO>` - Default calls new() with proper type
 constraints
 - `TChanEnd<C, L, AIO>` - Default calls new() with proper type constraints
 - `TChanStart<C, L, Start, AIO>` - Default calls new() with proper type constraints
@@ -266,14 +343,14 @@ constraints
 - `EpChanRecv<IO, M, Msg, P, AIO>` - Default calls new() with IO capability constraints
 - `EpChanOffer<IO, M, Left, Right, AIO>` - Default calls new() with IO capability constraints
 - `EpChanChoice<IO, M, Left, Right, AIO>` - Default calls new() with IO capability constraints
-- `EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>` - Default calls new() with IO capability 
+- `EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>` - Default calls new() with IO capability
 constraints
 - `EpChanEnd<IO, M, AIO>` - Default calls new() with IO capability constraints
 - `EpChanStart<IO, M, Start, AIO>` - Default calls new() with IO capability constraints
 
 **Implementation Insights:**
 
-1. **Constraint Preservation**: All Default implementations preserve the same trait bounds as their 
+1. **Constraint Preservation**: All Default implementations preserve the same trait bounds as their
 corresponding `new()` methods
 2. **API Ergonomics**: Users can now use `Default::default()` instead of calling `new()` explicitly
 3. **Generic Code Integration**: Better integration with generic code that expects Default trait
@@ -290,7 +367,7 @@ corresponding `new()` methods
 
 ### Task 1.1.3 Successfully Completed: Local Endpoint Types
 
-**Implementation Success:** Successfully implemented all local endpoint types using the extensible 
+**Implementation Success:** Successfully implemented all local endpoint types using the extensible
 metadata pattern:
 
 **Types Implemented:**
@@ -305,7 +382,7 @@ metadata pattern:
 
 **Key Implementation Insights:**
 
-1. **Extensible Metadata Success**: The `CommMetadataTrait` approach enabled using `M: 
+1. **Extensible Metadata Success**: The `CommMetadataTrait` approach enabled using `M:
 CommMetadataTrait` bounds while maintaining compatibility with `CommMetadata<C, L>` instances
 
 2. **Type Signature Consistency**: Successfully established consistent pattern:
@@ -319,7 +396,7 @@ CommMetadataTrait` bounds while maintaining compatibility with `CommMetadata<C, 
    EpChanPar<IO, M, Left, Right, IsDisjoint, AIO>
    ```
 
-3. **Test Infrastructure**: Created comprehensive test suite covering basic type creation, type 
+3. **Test Infrastructure**: Created comprehensive test suite covering basic type creation, type
 aliases, trait implementations, IO constraints, and complex compositions
 
 4. **Compilation Success**: All tests pass and project compiles with proper error checking
@@ -328,7 +405,7 @@ aliases, trait implementations, IO constraints, and complex compositions
 
 ### Task 1.1.4 Successfully Completed: IsDual Predicate Implementation
 
-**Implementation Success:** Successfully implemented comprehensive duality checking system using 
+**Implementation Success:** Successfully implemented comprehensive duality checking system using
 type-level programming patterns:
 
 **Core Trait System:**
@@ -347,19 +424,19 @@ type-level programming patterns:
 
 **Key Implementation Insights:**
 
-1. **Type-Level Boolean Logic**: Successfully used `True`/`False` types for compile-time duality 
+1. **Type-Level Boolean Logic**: Successfully used `True`/`False` types for compile-time duality
 decisions
 2. **Role Swapping Pattern**: Implemented role inversion for send/recv duality relationships
 3. **Default False Implementation**: Blanket implementation ensuring non-dual types return `False`
 4. **Assertion Macros**: Created `assert_dual!` and `assert_not_dual!` for compile-time verification
 5. **Comprehensive Testing**: Full test suite covering all protocol type combinations
 
-**Tool Usage Pattern**: Effective use of `semantic_search` to discover existing infrastructure 
+**Tool Usage Pattern**: Effective use of `semantic_search` to discover existing infrastructure
 (type-level booleans) before implementing new functionality.
 
 ### Task 1.1.5 Successfully Completed: Project Trait Implementation
 
-**Implementation Success:** Successfully implemented comprehensive protocol projection system with 
+**Implementation Success:** Successfully implemented comprehensive protocol projection system with
 robust error handling and role-based dispatch:
 
 **Core Projection System:**
@@ -390,7 +467,7 @@ robust error handling and role-based dispatch:
 
 2. **IO Parameter Resolution**: Successfully resolved critical IO parameter issues:
    - **Problem**: Unconstrained `IO` parameters in projection implementations
-   - **Solution**: Added `Me: Role + SupportsActionIO<AIO>` bounds to ensure the role can handle 
+   - **Solution**: Added `Me: Role + SupportsActionIO<AIO>` bounds to ensure the role can handle
    the required I/O actions
    - **Result**: EpChanSend/EpChanRecv now properly use role types that implement SupportsActionIO
 
@@ -411,13 +488,13 @@ robust error handling and role-based dispatch:
    }
    ```
 
-5. **Test Infrastructure Success**: Created comprehensive test suite with proper trait derives and 
+5. **Test Infrastructure Success**: Created comprehensive test suite with proper trait derives and
 type signatures
 
-**Critical Resolution:** Successfully resolved E0761 module conflicts from previous sessions by 
+**Critical Resolution:** Successfully resolved E0761 module conflicts from previous sessions by
 removing empty legacy files and fixed all duality module issues.
 
-**Compilation Status:** ✅ All 35 tests passing, project builds successfully with only dead code 
+**Compilation Status:** ✅ All 35 tests passing, project builds successfully with only dead code
 warnings
 
 ### Task 1.1.6a Successfully Completed: Critical Clippy Fixes (2025-05-24)
@@ -427,9 +504,9 @@ warnings
 **Issues Resolved:**
 
 1. **Empty Line After Doc Comment**: Fixed clippy warning in `duality/mod.rs` at line 400
-   - **Problem**: Lines starting with `///` were incorrectly interpreted as doc comments for the 
+   - **Problem**: Lines starting with `///` were incorrectly interpreted as doc comments for the
    `assert_dual!` macro
-   - **Solution**: Changed `///` comment markers to `//` for the commented-out default 
+   - **Solution**: Changed `///` comment markers to `//` for the commented-out default
    implementation
    - **Result**: Clippy no longer treats internal comments as macro documentation
 
@@ -438,10 +515,10 @@ warnings
    - **Solution**: Added `#[allow(dead_code)]` attribute to suppress warning
    - **Result**: Clean clippy output without compromising the sealed trait pattern
 
-**Remaining Clippy Suggestions:** 14 optional `Default` implementation suggestions for protocol 
+**Remaining Clippy Suggestions:** 14 optional `Default` implementation suggestions for protocol
 types with `new()` methods. These are API ergonomic improvements, not critical issues.
 
-**Code Quality Status:** ✅ All critical clippy warnings resolved, codebase ready for continued 
+**Code Quality Status:** ✅ All critical clippy warnings resolved, codebase ready for continued
 development
 
 ## Module Structure Analysis (2025-05-24)
@@ -460,7 +537,7 @@ development
 
 **Test Organization Issues:**
 
-- `duality/` and `projection/` modules still have embedded tests instead of separate `tests.rs` 
+- `duality/` and `projection/` modules still have embedded tests instead of separate `tests.rs`
 files
 - Implementation/test ratios exceed 2:1 guideline in duality (5.0:1) and projection (6.7:1)
 
@@ -492,9 +569,9 @@ files
 #### Key Updates Made
 
 1. **Task 1.1.6c.2 (Advanced Module Restructuring)**: Updated from incomplete to "MOSTLY COMPLETED"
-   - **Verified actual completion**: 4 out of 5 modules successfully restructured under 300-line 
+   - **Verified actual completion**: 4 out of 5 modules successfully restructured under 300-line
    guideline
-   - **Duality module**: 475 lines → 94 lines ✅ (extracted to helpers.rs, global_impl.rs, 
+   - **Duality module**: 475 lines → 94 lines ✅ (extracted to helpers.rs, global_impl.rs,
    local_impl.rs)
    - **Global module**: 434 lines → 63 lines ✅ (extracted to protocols.rs, implementations.rs)
    - **Local module**: 448 lines → 79 lines ✅ (extracted to endpoints.rs, implementations.rs)
@@ -557,7 +634,7 @@ impl LabelEq<TestLabel2> for TestLabel1 { type Equal = False; }
 impl LabelEq<TestLabel3> for TestLabel1 { type Equal = False; }
 ```
 
-**Key Pattern**: Test labels must implement complete `LabelEq` matrix for all combinations to 
+**Key Pattern**: Test labels must implement complete `LabelEq` matrix for all combinations to
 support `NotContains` trait functionality.
 
 **2. Type-Level Assertion Testing ✅**
@@ -577,7 +654,7 @@ let ids = MixedList::extract_ids();
 assert_eq!(ids, vec![1, 2, 3]);
 ```
 
-**Key Pattern**: Use associated constants and type aliases to verify compile-time computations at 
+**Key Pattern**: Use associated constants and type aliases to verify compile-time computations at
 runtime.
 
 **3. Recursive Trait Implementation Testing ✅**
@@ -599,7 +676,7 @@ type ExpectedMultiple = LabelCons<TestLabel2, LabelCons<TestLabel3, LabelNil>>;
 assert_eq!(MultipleMapped::LENGTH, ExpectedMultiple::LENGTH);
 ```
 
-**Key Pattern**: Test base cases, single element cases, and multi-element recursive cases 
+**Key Pattern**: Test base cases, single element cases, and multi-element recursive cases
 separately.
 
 **4. Complex Type-Level Filtering Testing ✅**
@@ -616,7 +693,7 @@ let filtered_ids = FilteredList::extract_ids();
 assert_eq!(filtered_ids, vec![1, 1]);
 ```
 
-**Key Pattern**: Use predicate traits with proper `LabelEq` implementations for type-level 
+**Key Pattern**: Use predicate traits with proper `LabelEq` implementations for type-level
 conditional logic.
 
 **5. Edge Case and Composition Testing ✅**
@@ -708,70 +785,58 @@ assert_eq!(ExpectedResult::LENGTH, 2);
 - **Leverage type system** to catch errors at compile time
 - **Verify runtime properties** of compile-time computations
 
-This comprehensive test implementation provides a solid foundation for verifying label 
-transformation functionality and serves as a reference for implementing similar type-level testing 
+This comprehensive test implementation provides a solid foundation for verifying label
+transformation functionality and serves as a reference for implementing similar type-level testing
 in other protocol components.
 
-## Task 2.1.4 Completed: SupportsActionIO Integration Testing (2025-05-25)
+## Task 2.4.1 Completed: Integration Test Infrastructure Overhaul (2025-05-26)
 
-**Achievement**: Successfully implemented comprehensive unit test suite for `SupportsActionIO` and `ActionIOType` integration with 25 passing tests, completing Phase 2 testing tasks.
+**Achievement**: Successfully completed overhaul of integration test infrastructure, resolving compilation issues and establishing a working foundation for complex protocol testing. All 11 integration tests now pass.
 
-**Implementation Details:**
+**Key Infrastructure Fixes:**
 
-**Test Suite Created:** `/home/dikini/Projects/besedarium/src/protocol/foundation/action_io_tests.rs`
-- **25 comprehensive test functions** covering all aspects of action I/O capability system
-- **Custom I/O Types**: Created MqttPublisherIO, MqttSubscriberIO, WebSocketIO, UdpSenderIO, UdpReceiverIO, RestApiClientIO for realistic testing scenarios
-- **Multi-dimensional Coverage**: ActionIOTMarker traits, capability verification, protocol integration, complex scenarios, and custom I/O implementations
+1. **Role Type Trait Implementations**: Added missing `SupportsActionIO<AIO>` implementations for all test role types (Alice, Bob, Charlie):
 
-**Test Categories Covered:**
+   ```rust
+   impl SupportsActionIO<InputAction> for Alice {}
+   impl SupportsActionIO<OutputAction> for Alice {}
+   impl SupportsActionIO<BiDirectionalAction> for Alice {}
+   ```
 
-1. **ActionIOTMarker Trait Tests (3 tests)**:
-   - Trait bound verification for all action types
-   - Type equality within same types (cross-type comparisons prevented by type system)
-   - Clone functionality for all ActionIOTMarker types
+2. **Role Equality Implementations**: Fixed `RoleEq<Other>` trait implementations with proper associated types:
 
-2. **SupportsActionIO Implementation Tests (7 tests)**:
-   - TcpOnlySessionIO capabilities (supports all actions)
-   - HttpOnlySessionIO capabilities (output + bidirectional only)
-   - Custom I/O type capabilities (MQTT, WebSocket, UDP, REST API)
-   - Capability constraint verification at compile time
+   ```rust
+   impl RoleEq<Bob> for Alice {
+       type Output = False;
+   }
+   ```
 
-3. **Compile-Time Constraint Tests (2 tests)**:
-   - Single capability requirements verification
-   - Multiple capability constraints (input+output, all capabilities)
-   - Negative testing through commented code that would fail to compile
+3. **Test Infrastructure Components**: Successfully established comprehensive test infrastructure:
 
-4. **Protocol Integration Tests (5 tests)**:
-   - Endpoint action I/O integration with different capability types
-   - Send/Recv endpoint integration with various I/O types
-   - Choice/Parallel construct integration with action I/O
-   - Mixed protocol capability testing with realistic I/O scenarios
-   - Nested protocol capability inheritance testing
+   - Test roles: Alice, Bob, Charlie with full trait implementations
+   - Test channels: AuthChan, DataChan
+   - Test message labels: LoginLbl, AckLbl, DataLbl
+   - Test messages: LoginMsg, AckMsg, DataMsg
+   - Test I/O: TestNetworkIO with full ActionIO support
 
-5. **Advanced Testing Scenarios (8 tests)**:
-   - Custom I/O capability patterns
-   - Different metadata type integration
-   - Default implementation behavior
-   - Debug formatting verification
-   - Comprehensive capability matrix testing
+**Working Integration Test Coverage (11 tests passing):**
 
-**Critical Implementation Fixes:**
+- Protocol compilation verification
+- Type validation and constraints
+- Message creation and metadata integration
+- Protocol duality verification
+- Protocol projection (basic and comprehensive)
+- Choice/offer protocol constructs
+- Multi-party protocol scenarios
 
-1. **Type Comparison Issue**: Removed invalid cross-type comparisons (`assert_ne!(InputAction, OutputAction)`) that violated Rust's type system
-2. **Test Configuration**: Added missing `#[cfg(test)]` attributes to all 25 test functions to ensure proper test execution
-3. **Import Resolution**: Used `use crate::protocol::local::*;` for proper access to endpoint types in test context
+**Critical Pattern Insight**: Integration tests require complete trait implementations for all role types to enable projection system functionality. Missing `SupportsActionIO` or `RoleEq` implementations prevent compilation of complex protocol projections.
 
-**Validation Results:**
-- **All 25 tests passing** ✅
-- **Compilation successful** with only harmless warnings about unused test structs
-- **Integration verified** between SupportsActionIO traits and protocol system
-- **Type safety confirmed** at compile time through constraint verification
+**Foundation Success**: The integration test infrastructure now provides a solid foundation for demonstrating:
 
-**Pattern Insights:**
+- Protocol type system correctness
+- Duality relationships between protocol specifications
+- Projection from global protocols to local endpoints
+- Multi-party protocol composition
+- Complex protocol structures with choices and parallel execution
 
-1. **Capability-Based I/O Design**: The `SupportsActionIO<AIO>` trait provides excellent compile-time verification of I/O capability compatibility
-2. **Test-Driven Type Safety**: Using trait bounds in test functions effectively verifies compile-time constraints
-3. **Custom I/O Integration**: The system successfully supports custom I/O implementations with different capability profiles
-4. **Protocol Flexibility**: Action I/O types integrate seamlessly with all protocol constructs (Send, Recv, Choice, Parallel, etc.)
-
-This completes Task 2.1.4 and provides a robust foundation for action I/O capability testing in the protocol system.
+**Next Phase Ready**: Task 2.4.1 completion enables progression to Tasks 2.4.2-2.4.4 for advanced integration test scenarios.

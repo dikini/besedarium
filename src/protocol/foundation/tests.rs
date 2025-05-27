@@ -1,6 +1,10 @@
 use super::*;
-use crate::protocol::global::{TChanChoice, TChanEnd, TChanOffer, TChanPar, TChanRecv, TChanSend, TChanStart};
-use crate::protocol::local::{EpChanChoice, EpChanEnd, EpChanOffer, EpChanPar, EpChanRecv, EpChanSend, EpChanStart};
+use crate::protocol::global::{
+    TChanChoice, TChanEnd, TChanOffer, TChanPar, TChanRecv, TChanSend, TChanStart,
+};
+use crate::protocol::local::{
+    EpChanChoice, EpChanEnd, EpChanOffer, EpChanPar, EpChanRecv, EpChanSend, EpChanStart,
+};
 
 // ============================================================================
 // Test Infrastructure
@@ -86,7 +90,7 @@ fn test_comm_metadata_trait_implementations() {
     assert_eq!(meta1, meta2);
 
     // Test Debug (just ensure it doesn't panic)
-    format!("{:?}", meta1);
+    let _ = format!("{:?}", meta1);
 
     // Test Hash (put in a hash set to verify)
     use std::collections::HashSet;
@@ -99,20 +103,26 @@ fn test_comm_metadata_trait_implementations() {
 #[test]
 fn test_metadata_trait_implementation() {
     let metadata = CommMetadata::new(AuthChan, LoginLbl);
-    
+
     // Test Metadata trait methods using the trait methods
-    assert_eq!(*<CommMetadata<AuthChan, LoginLbl> as Metadata>::chan_id(&metadata), AuthChan);
-    assert_eq!(*<CommMetadata<AuthChan, LoginLbl> as Metadata>::msg_lbl(&metadata), LoginLbl);
+    assert_eq!(
+        *<CommMetadata<AuthChan, LoginLbl> as Metadata>::chan_id(&metadata),
+        AuthChan
+    );
+    assert_eq!(
+        *<CommMetadata<AuthChan, LoginLbl> as Metadata>::msg_lbl(&metadata),
+        LoginLbl
+    );
 }
 
 #[test]
 fn test_comm_metadata_different_channel_types() {
     type Meta1 = CommMetadata<DefaultChan, RequestLbl>;
     type Meta2 = CommMetadata<HandshakeChan, RequestLbl>;
-    
+
     let meta1 = Meta1::new(DefaultChan, RequestLbl);
     let meta2 = Meta2::new(HandshakeChan, RequestLbl);
-    
+
     // These are different types, test each separately
     assert_eq!(meta1.chan_id, DefaultChan);
     assert_eq!(meta2.chan_id, HandshakeChan);
@@ -121,13 +131,14 @@ fn test_comm_metadata_different_channel_types() {
 #[test]
 fn test_comm_metadata_trait_implementation() {
     let metadata = CommMetadata::new(DataChan, StatusLbl);
-    
+
     // Test CommMetadataTrait methods
     assert_eq!(*CommMetadataTrait::chan_id(&metadata), DataChan);
     assert_eq!(*CommMetadataTrait::msg_lbl(&metadata), StatusLbl);
-    
+
     // Test construction via trait
-    let new_metadata = <CommMetadata<DataChan, StatusLbl> as CommMetadataTrait>::new(DataChan, StatusLbl);
+    let new_metadata =
+        <CommMetadata<DataChan, StatusLbl> as CommMetadataTrait>::new(DataChan, StatusLbl);
     assert_eq!(new_metadata, metadata);
 }
 
@@ -137,15 +148,18 @@ fn test_extensible_metadata_pattern() {
     // by using multiple metadata types
     let std_metadata = CommMetadata::new(DefaultChan, RequestLbl);
     let auth_metadata = CommMetadata::new(AuthChan, LoginLbl);
-    
+
     // Function that accepts any metadata implementing the trait
     fn process_metadata<M: Metadata>(meta: &M) -> (String, String) {
-        (format!("{:?}", meta.chan_id()), format!("{:?}", meta.msg_lbl()))
+        (
+            format!("{:?}", meta.chan_id()),
+            format!("{:?}", meta.msg_lbl()),
+        )
     }
-    
+
     let (chan1, lbl1) = process_metadata(&std_metadata);
     let (chan2, lbl2) = process_metadata(&auth_metadata);
-    
+
     assert!(chan1.contains("DefaultChan"));
     assert!(lbl1.contains("RequestLbl"));
     assert!(chan2.contains("AuthChan"));
@@ -155,18 +169,21 @@ fn test_extensible_metadata_pattern() {
 #[test]
 fn test_comm_metadata_hash_consistency() {
     use std::collections::HashMap;
-    
+
     // Test with homogeneous metadata types
     let mut map: HashMap<CommMetadata<DefaultChan, RequestLbl>, &str> = HashMap::new();
-    
+
     let key1 = CommMetadata::new(DefaultChan, RequestLbl);
     let key2 = CommMetadata::new(DefaultChan, RequestLbl);
-    
+
     map.insert(key1, "first");
     map.insert(key2, "second"); // Should overwrite since keys are equal
-    
+
     assert_eq!(map.len(), 1);
-    assert_eq!(map.get(&CommMetadata::new(DefaultChan, RequestLbl)), Some(&"second"));
+    assert_eq!(
+        map.get(&CommMetadata::new(DefaultChan, RequestLbl)),
+        Some(&"second")
+    );
 }
 
 // ============================================================================
@@ -175,8 +192,16 @@ fn test_comm_metadata_hash_consistency() {
 
 #[test]
 fn test_tchan_send_creation() {
-    type TestSend = TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type TestSend = TChanSend<
+        Alice,
+        Bob,
+        DefaultChan,
+        RequestLbl,
+        HelloMsg,
+        TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestSend>);
@@ -184,8 +209,16 @@ fn test_tchan_send_creation() {
 
 #[test]
 fn test_tchan_recv_creation() {
-    type TestRecv = TChanRecv<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type TestRecv = TChanRecv<
+        Alice,
+        Bob,
+        DefaultChan,
+        RequestLbl,
+        HelloMsg,
+        TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestRecv>);
@@ -195,8 +228,9 @@ fn test_tchan_recv_creation() {
 fn test_tchan_choice_creation() {
     type LeftChoice = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type RightChoice = TChanEnd<HandshakeChan, ResponseLbl, BiDirectionalAction>;
-    type TestChoice = TChanChoice<Alice, DefaultChan, RequestLbl, LeftChoice, RightChoice, BiDirectionalAction>;
-    
+    type TestChoice =
+        TChanChoice<Alice, DefaultChan, RequestLbl, LeftChoice, RightChoice, BiDirectionalAction>;
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestChoice>);
@@ -206,8 +240,9 @@ fn test_tchan_choice_creation() {
 fn test_tchan_offer_creation() {
     type LeftOffer = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type RightOffer = TChanEnd<HandshakeChan, ResponseLbl, BiDirectionalAction>;
-    type TestOffer = TChanOffer<Alice, DefaultChan, RequestLbl, LeftOffer, RightOffer, BiDirectionalAction>;
-    
+    type TestOffer =
+        TChanOffer<Alice, DefaultChan, RequestLbl, LeftOffer, RightOffer, BiDirectionalAction>;
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestOffer>);
@@ -219,8 +254,9 @@ fn test_tchan_par_creation() {
     type RightProt = TChanEnd<HandshakeChan, ResponseLbl, BiDirectionalAction>;
     // Need to provide a disjoint marker (using unit type for simplicity)
     type DisjointMarker = ();
-    type TestPar = TChanPar<DefaultChan, RequestLbl, LeftProt, RightProt, DisjointMarker, BiDirectionalAction>;
-    
+    type TestPar =
+        TChanPar<DefaultChan, RequestLbl, LeftProt, RightProt, DisjointMarker, BiDirectionalAction>;
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestPar>);
@@ -229,7 +265,7 @@ fn test_tchan_par_creation() {
 #[test]
 fn test_tchan_end_creation() {
     type TestEnd = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
-    
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestEnd>);
@@ -239,7 +275,7 @@ fn test_tchan_end_creation() {
 fn test_tchan_start_creation() {
     type StartProtocol = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type TestStart = TChanStart<DefaultChan, RequestLbl, StartProtocol, BiDirectionalAction>;
-    
+
     // Verify it implements GlobalProtocol
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<TestStart>);
@@ -248,9 +284,25 @@ fn test_tchan_start_creation() {
 #[test]
 fn test_global_protocol_composition() {
     // Test composing multiple global protocol types
-    type SendHello = TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>, BiDirectionalAction>;
-    type RecvAck = TChanRecv<Bob, Alice, DefaultChan, ResponseLbl, AckMsg, TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type SendHello = TChanSend<
+        Alice,
+        Bob,
+        DefaultChan,
+        RequestLbl,
+        HelloMsg,
+        TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+    type RecvAck = TChanRecv<
+        Bob,
+        Alice,
+        DefaultChan,
+        ResponseLbl,
+        AckMsg,
+        TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<SendHello>);
     requires_global_protocol(std::marker::PhantomData::<RecvAck>);
@@ -259,8 +311,11 @@ fn test_global_protocol_composition() {
 #[test]
 fn test_global_protocol_trait_bounds() {
     // Verify that GlobalProtocol types satisfy their trait bounds
-    fn check_global_bounds<T: GlobalProtocol + Send + Sync + 'static + Debug>(_: std::marker::PhantomData<T>) {}
-    
+    fn check_global_bounds<T: GlobalProtocol + Send + Sync + 'static + Debug>(
+        _: std::marker::PhantomData<T>,
+    ) {
+    }
+
     type TestGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     check_global_bounds(std::marker::PhantomData::<TestGlobal>);
 }
@@ -268,13 +323,29 @@ fn test_global_protocol_trait_bounds() {
 #[test]
 fn test_global_type_distinction() {
     // Test that different global types are indeed different
-    type SendType = TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>, BiDirectionalAction>;
-    type RecvType = TChanRecv<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type SendType = TChanSend<
+        Alice,
+        Bob,
+        DefaultChan,
+        RequestLbl,
+        HelloMsg,
+        TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+    type RecvType = TChanRecv<
+        Alice,
+        Bob,
+        DefaultChan,
+        RequestLbl,
+        HelloMsg,
+        TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     // These should be different types (verified at compile time)
     fn accepts_send(_: std::marker::PhantomData<SendType>) {}
     fn accepts_recv(_: std::marker::PhantomData<RecvType>) {}
-    
+
     accepts_send(std::marker::PhantomData::<SendType>);
     accepts_recv(std::marker::PhantomData::<RecvType>);
 }
@@ -284,18 +355,18 @@ fn test_global_metadata_integration() {
     // Test that global types properly integrate with CommMetadata
     type TestMetadata = CommMetadata<DefaultChan, RequestLbl>;
     type TestGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
-    
+
     let metadata = TestMetadata::new(DefaultChan, RequestLbl);
-    
+
     // Function that requires both metadata and global protocol
-    fn check_integration<M, G>(_meta: M, _global: std::marker::PhantomData<G>) 
-    where 
+    fn check_integration<M, G>(_meta: M, _global: std::marker::PhantomData<G>)
+    where
         M: Metadata,
         G: GlobalProtocol,
     {
         // Type constraints verified at compile time
     }
-    
+
     check_integration(metadata, std::marker::PhantomData::<TestGlobal>);
 }
 
@@ -305,7 +376,7 @@ fn test_global_action_io_compatibility() {
     type InputGlobal = TChanEnd<DefaultChan, RequestLbl, InputAction>;
     type OutputGlobal = TChanEnd<DefaultChan, RequestLbl, OutputAction>;
     type BiGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
-    
+
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_global_protocol(std::marker::PhantomData::<InputGlobal>);
     requires_global_protocol(std::marker::PhantomData::<OutputGlobal>);
@@ -318,8 +389,14 @@ fn test_global_action_io_compatibility() {
 
 #[test]
 fn test_epchan_send_creation() {
-    type TestSend = EpChanSend<TestIO, CommMetadata<DefaultChan, RequestLbl>, HelloMsg, EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type TestSend = EpChanSend<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        HelloMsg,
+        EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestSend>);
@@ -327,8 +404,14 @@ fn test_epchan_send_creation() {
 
 #[test]
 fn test_epchan_recv_creation() {
-    type TestRecv = EpChanRecv<TestIO, CommMetadata<DefaultChan, RequestLbl>, HelloMsg, EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type TestRecv = EpChanRecv<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        HelloMsg,
+        EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestRecv>);
@@ -337,9 +420,16 @@ fn test_epchan_recv_creation() {
 #[test]
 fn test_epchan_choice_creation() {
     type LeftChoice = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    type RightChoice = EpChanEnd<TestIO, CommMetadata<HandshakeChan, ResponseLbl>, BiDirectionalAction>;
-    type TestChoice = EpChanChoice<TestIO, CommMetadata<DefaultChan, RequestLbl>, LeftChoice, RightChoice, BiDirectionalAction>;
-    
+    type RightChoice =
+        EpChanEnd<TestIO, CommMetadata<HandshakeChan, ResponseLbl>, BiDirectionalAction>;
+    type TestChoice = EpChanChoice<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        LeftChoice,
+        RightChoice,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestChoice>);
@@ -348,9 +438,16 @@ fn test_epchan_choice_creation() {
 #[test]
 fn test_epchan_offer_creation() {
     type LeftOffer = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    type RightOffer = EpChanEnd<TestIO, CommMetadata<HandshakeChan, ResponseLbl>, BiDirectionalAction>;
-    type TestOffer = EpChanOffer<TestIO, CommMetadata<DefaultChan, RequestLbl>, LeftOffer, RightOffer, BiDirectionalAction>;
-    
+    type RightOffer =
+        EpChanEnd<TestIO, CommMetadata<HandshakeChan, ResponseLbl>, BiDirectionalAction>;
+    type TestOffer = EpChanOffer<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        LeftOffer,
+        RightOffer,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestOffer>);
@@ -362,8 +459,15 @@ fn test_epchan_par_creation() {
     type RightEp = EpChanEnd<TestIO, CommMetadata<HandshakeChan, ResponseLbl>, BiDirectionalAction>;
     // Need disjoint marker and correct metadata parameter
     type DisjointMarker = ();
-    type TestPar = EpChanPar<TestIO, CommMetadata<DefaultChan, RequestLbl>, LeftEp, RightEp, DisjointMarker, BiDirectionalAction>;
-    
+    type TestPar = EpChanPar<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        LeftEp,
+        RightEp,
+        DisjointMarker,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestPar>);
@@ -372,7 +476,7 @@ fn test_epchan_par_creation() {
 #[test]
 fn test_epchan_end_creation() {
     type TestEnd = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestEnd>);
@@ -380,9 +484,15 @@ fn test_epchan_end_creation() {
 
 #[test]
 fn test_epchan_start_creation() {
-    type StartProtocol = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    type TestStart = EpChanStart<TestIO, CommMetadata<DefaultChan, RequestLbl>, StartProtocol, BiDirectionalAction>;
-    
+    type StartProtocol =
+        EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
+    type TestStart = EpChanStart<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        StartProtocol,
+        BiDirectionalAction,
+    >;
+
     // Verify it implements LocalProtocol
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<TestStart>);
@@ -391,9 +501,21 @@ fn test_epchan_start_creation() {
 #[test]
 fn test_local_protocol_composition() {
     // Test composing multiple local endpoint types
-    type SendHello = EpChanSend<TestIO, CommMetadata<DefaultChan, RequestLbl>, HelloMsg, EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>, BiDirectionalAction>;
-    type RecvAck = EpChanRecv<TestIO, CommMetadata<DefaultChan, ResponseLbl>, AckMsg, EpChanEnd<TestIO, CommMetadata<DefaultChan, ResponseLbl>, BiDirectionalAction>, BiDirectionalAction>;
-    
+    type SendHello = EpChanSend<
+        TestIO,
+        CommMetadata<DefaultChan, RequestLbl>,
+        HelloMsg,
+        EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+    type RecvAck = EpChanRecv<
+        TestIO,
+        CommMetadata<DefaultChan, ResponseLbl>,
+        AckMsg,
+        EpChanEnd<TestIO, CommMetadata<DefaultChan, ResponseLbl>, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<SendHello>);
     requires_local_protocol(std::marker::PhantomData::<RecvAck>);
@@ -402,8 +524,11 @@ fn test_local_protocol_composition() {
 #[test]
 fn test_local_protocol_trait_bounds() {
     // Verify that LocalProtocol types satisfy their trait bounds
-    fn check_local_bounds<T: LocalProtocol + Send + Sync + 'static + Debug>(_: std::marker::PhantomData<T>) {}
-    
+    fn check_local_bounds<T: LocalProtocol + Send + Sync + 'static + Debug>(
+        _: std::marker::PhantomData<T>,
+    ) {
+    }
+
     type TestLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
     check_local_bounds(std::marker::PhantomData::<TestLocal>);
 }
@@ -411,8 +536,10 @@ fn test_local_protocol_trait_bounds() {
 #[test]
 fn test_local_io_capability_constraints() {
     // Test that local endpoints properly constrain I/O capabilities
-    fn check_io_constraints<IO, AIO>(phantom_io: std::marker::PhantomData<IO>, phantom_aio: std::marker::PhantomData<AIO>)
-    where
+    fn check_io_constraints<IO, AIO>(
+        phantom_io: std::marker::PhantomData<IO>,
+        phantom_aio: std::marker::PhantomData<AIO>,
+    ) where
         IO: SupportsActionIO<AIO>,
         AIO: ActionIOTMarker,
     {
@@ -420,10 +547,19 @@ fn test_local_io_capability_constraints() {
         let _ = phantom_io;
         let _ = phantom_aio;
     }
-    
-    check_io_constraints(std::marker::PhantomData::<TestIO>, std::marker::PhantomData::<InputAction>);
-    check_io_constraints(std::marker::PhantomData::<TestIO>, std::marker::PhantomData::<OutputAction>);
-    check_io_constraints(std::marker::PhantomData::<TestIO>, std::marker::PhantomData::<BiDirectionalAction>);
+
+    check_io_constraints(
+        std::marker::PhantomData::<TestIO>,
+        std::marker::PhantomData::<InputAction>,
+    );
+    check_io_constraints(
+        std::marker::PhantomData::<TestIO>,
+        std::marker::PhantomData::<OutputAction>,
+    );
+    check_io_constraints(
+        std::marker::PhantomData::<TestIO>,
+        std::marker::PhantomData::<BiDirectionalAction>,
+    );
 }
 
 #[test]
@@ -431,18 +567,18 @@ fn test_local_metadata_integration() {
     // Test that local endpoints properly integrate with CommMetadata
     type TestMetadata = CommMetadata<DefaultChan, RequestLbl>;
     type TestLocal = EpChanEnd<TestIO, TestMetadata, BiDirectionalAction>;
-    
+
     let metadata = TestMetadata::new(DefaultChan, RequestLbl);
-    
+
     // Function that requires both metadata and local protocol
-    fn check_integration<M, L>(_meta: M, _local: std::marker::PhantomData<L>) 
-    where 
+    fn check_integration<M, L>(_meta: M, _local: std::marker::PhantomData<L>)
+    where
         M: Metadata,
         L: LocalProtocol,
     {
         // Type constraints verified at compile time
     }
-    
+
     check_integration(metadata, std::marker::PhantomData::<TestLocal>);
 }
 
@@ -451,7 +587,7 @@ fn test_local_global_protocol_integration() {
     // Test that local and global protocols can be used together
     type TestGlobal = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type TestLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    
+
     fn check_protocol_bounds<G, L>()
     where
         G: GlobalProtocol,
@@ -459,7 +595,7 @@ fn test_local_global_protocol_integration() {
     {
         // Type constraints verified at compile time
     }
-    
+
     check_protocol_bounds::<TestGlobal, TestLocal>();
 }
 
@@ -485,15 +621,19 @@ fn test_supports_action_io_tcp() {
     // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
 }
 
 #[test]
 fn test_supports_action_io_http() {
     // Test HttpOnlySessionIO supports output and bidirectional only
     assert!(<HttpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<HttpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
-    
+    assert!(<HttpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
+
     // Note: HttpOnlySessionIO doesn't implement SupportsActionIO<InputAction>
     // This is verified by the type system - if it did implement it, this would compile:
     // assert!(<HttpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
@@ -513,7 +653,7 @@ fn test_action_io_integration_with_protocols() {
     type InputLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, InputAction>;
     type OutputLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, OutputAction>;
     type BiLocal = EpChanEnd<TestIO, CommMetadata<DefaultChan, RequestLbl>, BiDirectionalAction>;
-    
+
     fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
     requires_local_protocol(std::marker::PhantomData::<InputLocal>);
     requires_local_protocol(std::marker::PhantomData::<OutputLocal>);
@@ -530,7 +670,7 @@ fn test_action_io_constraint_verification() {
     {
         // Constraint verified at compile time
     }
-    
+
     // These should all compile successfully
     verify_io_constraint::<TcpOnlySessionIO, InputAction>();
     verify_io_constraint::<TcpOnlySessionIO, OutputAction>();
@@ -554,9 +694,9 @@ fn test_role_trait_implementation() {
     assert_eq!(alice, alice_clone);
 
     // Test Debug
-    format!("{:?}", alice);
-    format!("{:?}", bob);
-    format!("{:?}", carol);
+    let _ = format!("{:?}", alice);
+    let _ = format!("{:?}", bob);
+    let _ = format!("{:?}", carol);
 
     // Test PartialEq and Eq
     assert_eq!(alice, alice);
@@ -581,9 +721,9 @@ fn test_message_trait_implementation() {
     let data_clone = data.clone();
 
     // Test Debug
-    format!("{:?}", hello);
-    format!("{:?}", ack);
-    format!("{:?}", data);
+    let _ = format!("{:?}", hello);
+    let _ = format!("{:?}", ack);
+    let _ = format!("{:?}", data);
 
     // Test that they implement Message trait
     fn requires_message<T: Message>(_: T) {}
@@ -611,8 +751,8 @@ fn test_chanid_trait_implementation() {
     // Note: Cannot compare different channel types directly
 
     // Test Debug
-    format!("{:?}", DefaultChan);
-    format!("{:?}", HandshakeChan);
+    let _ = format!("{:?}", DefaultChan);
+    let _ = format!("{:?}", HandshakeChan);
 }
 
 #[test]
@@ -634,8 +774,8 @@ fn test_msglbl_trait_implementation() {
     // Note: Cannot compare different label types directly
 
     // Test Debug
-    format!("{:?}", RequestLbl);
-    format!("{:?}", ResponseLbl);
+    let _ = format!("{:?}", RequestLbl);
+    let _ = format!("{:?}", ResponseLbl);
 }
 
 // ============================================================================
@@ -647,11 +787,15 @@ fn test_legacy_action_io_support() {
     // Test TcpOnlySessionIO supports all action types
     assert!(<TcpOnlySessionIO as SupportsActionIO<InputAction>>::supports_action_io());
     assert!(<TcpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<TcpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    assert!(<TcpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
 
     // Test HttpOnlySessionIO supports output and bidirectional
     assert!(<HttpOnlySessionIO as SupportsActionIO<OutputAction>>::supports_action_io());
-    assert!(<HttpOnlySessionIO as SupportsActionIO<BiDirectionalAction>>::supports_action_io());
+    assert!(<HttpOnlySessionIO as SupportsActionIO<
+        BiDirectionalAction,
+    >>::supports_action_io());
 }
 
 // Test that example roles implement the Role trait

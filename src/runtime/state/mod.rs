@@ -1,0 +1,325 @@
+//! Protocol state machine for tracking and validating protocol execution
+//!
+//! This module implements the core state machine that tracks protocol execution
+//! progress, validates state transitions, and provides async support for
+//! protocol operations.
+
+use std::collections::HashMap;
+use std::fmt;
+use std::marker::PhantomData;
+use std::time::{Duration, Instant, SystemTime};
+
+use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
+
+use crate::protocol::foundation::{Role, GlobalProtocol, LocalProtocol};
+use crate::runtime::error::{RuntimeError, ProtocolViolation, RuntimeResult};
+
+/// Core protocol state machine tracking execution progress
+#[derive(Debug)]
+pub struct ProtocolState<P> {
+    session_id: String,
+    current_protocol: P,
+    is_complete: bool,
+    step_count: usize,
+    start_time: Instant,
+    last_activity: SystemTime,
+    execution_context: ExecutionContext,
+    _protocol: PhantomData<P>,
+}
+
+impl<P> ProtocolState<P>
+where
+    P: GlobalProtocol + Clone,
+{
+    /// Create a new protocol state machine
+    pub fn new(session_id: impl Into<String>, role: Box<dyn Role>, protocol: P) -> Self {
+        Self {
+            session_id: session_id.into(),
+            current_protocol: protocol,
+            is_complete: false,
+            step_count: 0,
+            start_time: Instant::now(),
+            last_activity: SystemTime::now(),
+            execution_context: ExecutionContext::new(session_id.into(), role),
+            _protocol: PhantomData,
+        }
+    }
+
+    /// Get the current session ID
+    pub fn session_id(&self) -> &str {
+        &self.session_id
+    }
+
+    /// Get the current protocol
+    pub fn current_protocol(&self) -> &P {
+        &self.current_protocol
+    }
+
+    /// Check if protocol execution is complete
+    pub fn is_complete(&self) -> bool {
+        self.is_complete
+    }
+
+    /// Get execution step count
+    pub fn step_count(&self) -> usize {
+        self.step_count
+    }
+
+    /// Get elapsed execution time
+    pub fn elapsed(&self) -> Duration {
+        self.start_time.elapsed()
+    }
+
+    /// Get the execution context
+    pub fn context(&self) -> &ExecutionContext {
+        &self.execution_context
+    }
+
+    /// Update activity timestamp
+    pub fn update_activity(&mut self) {
+        self.last_activity = SystemTime::now();
+        self.step_count += 1;
+    }
+
+    /// Mark protocol as complete
+    pub fn mark_complete(&mut self) -> RuntimeResult<()> {
+        if self.is_complete {
+            return Err(RuntimeError::Protocol(
+                ProtocolViolation::SessionTerminated {
+                    session_id: self.session_id.clone(),
+                }
+            ));
+        }
+        
+        self.is_complete = true;
+        self.update_activity();
+        Ok(())
+    }
+
+    /// Transition to a new protocol state
+    pub fn transition<NewP>(
+        self,
+        new_protocol: NewP,
+    ) -> RuntimeResult<ProtocolState<NewP>>
+    where
+        NewP: GlobalProtocol + Clone,
+    {
+        if self.is_complete {
+            return Err(RuntimeError::Protocol(
+                ProtocolViolation::SessionTerminated {
+                    session_id: self.session_id.clone(),
+                }
+            ));
+        }
+
+        Ok(ProtocolState {
+            session_id: self.session_id,
+            current_protocol: new_protocol,
+            is_complete: false,
+            step_count: self.step_count + 1,
+            start_time: self.start_time,
+            last_activity: SystemTime::now(),
+            execution_context: self.execution_context,
+            _protocol: PhantomData,
+        })
+    }
+}
+
+/// Represents a valid state transition in protocol execution
+pub trait StateTransition<From, To> {
+    type Error;
+
+    /// Attempt to transition from one protocol state to another
+    fn transition(from: ProtocolState<From>) -> Result<ProtocolState<To>, Self::Error>;
+}
+
+/// Execution context for protocol operations
+#[derive(Debug, Clone)]
+pub struct ExecutionContext {
+    session_id: String,
+    role: String, // Store role as string for simplicity
+    start_time: Instant,
+    metadata: HashMap<String, String>,
+    recursion_depth: usize,
+    max_recursion_depth: usize,
+}
+
+impl ExecutionContext {
+    pub fn new(session_id: String, role: Box<dyn Role>) -> Self {
+        Self {
+            session_id,
+            role: format!("{:?}", role),
+            start_time: Instant::now(),
+            metadata: HashMap::new(),
+            recursion_depth: 0,
+            max_recursion_depth: 100, // Default max recursion depth
+        }
+    }
+
+    pub fn session_id(&self) -> &str {
+        &self.session_id
+    }
+
+    pub fn role(&self) -> &str {
+        &self.role
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.start_time.elapsed()
+    }
+
+    pub fn metadata(&self) -> &HashMap<String, String> {
+        &self.metadata
+    }
+
+    pub fn metadata_mut(&mut self) -> &mut HashMap<String, String> {
+        &mut self.metadata
+    }
+
+    pub fn recursion_depth(&self) -> usize {
+        self.recursion_depth
+    }
+
+    pub fn max_recursion_depth(&self) -> usize {
+        self.max_recursion_depth
+    }
+
+    pub fn set_max_recursion_depth(&mut self, depth: usize) {
+        self.max_recursion_depth = depth;
+    }
+
+    pub fn enter_recursion(&mut self) -> RuntimeResult<()> {
+        self.recursion_depth += 1;
+        if self.recursion_depth > self.max_recursion_depth {
+            Err(RuntimeError::Protocol(
+                ProtocolViolation::RecursionDepthExceeded {
+                    depth: self.recursion_depth,
+                    max_depth: self.max_recursion_depth,
+                }
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn exit_recursion(&mut self) {
+        if self.recursion_depth > 0 {
+            self.recursion_depth -= 1;
+        }
+    }
+}
+
+/// Async state machine for managing protocol execution with async operations
+#[derive(Debug)]
+pub struct AsyncProtocolMachine<S> {
+    state: S,
+    channels: HashMap<String, Box<dyn std::any::Any + Send + Sync>>,
+    context: ExecutionContext,
+}
+
+impl<S> AsyncProtocolMachine<S> {
+    pub fn new(state: S, context: ExecutionContext) -> Self {
+        Self {
+            state,
+            channels: HashMap::new(),
+            context,
+        }
+    }
+
+    pub fn state(&self) -> &S {
+        &self.state
+    }
+
+    pub fn context(&self) -> &ExecutionContext {
+        &self.context
+    }
+
+    pub fn context_mut(&mut self) -> &mut ExecutionContext {
+        &mut self.context
+    }
+
+    /// Transition to a new state
+    pub fn transition<T>(self, new_state: T) -> AsyncProtocolMachine<T> {
+        AsyncProtocolMachine {
+            state: new_state,
+            channels: self.channels,
+            context: self.context,
+        }
+    }
+
+    /// Add a channel to the machine
+    pub fn add_channel(&mut self, name: String, channel: Box<dyn std::any::Any + Send + Sync>) {
+        self.channels.insert(name, channel);
+    }
+
+    /// Get a channel by name (unsafe cast required)
+    pub fn get_channel<T: 'static>(&self, name: &str) -> Option<&T> {
+        self.channels.get(name)?.downcast_ref::<T>()
+    }
+
+    /// Remove a channel by name
+    pub fn remove_channel(&mut self, name: &str) -> Option<Box<dyn std::any::Any + Send + Sync>> {
+        self.channels.remove(name)
+    }
+}
+
+/// State manager for tracking multiple concurrent protocol sessions
+#[derive(Debug)]
+pub struct StateManager {
+    sessions: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync>>>,
+}
+
+impl StateManager {
+    pub fn new() -> Self {
+        Self {
+            sessions: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Add a new protocol session
+    pub async fn add_session<P>(&self, session_id: String, state: ProtocolState<P>)
+    where
+        P: GlobalProtocol + Clone + Send + Sync + 'static,
+    {
+        let mut sessions = self.sessions.write().await;
+        sessions.insert(session_id, Box::new(state));
+    }
+
+    /// Get a protocol session
+    pub async fn get_session<P>(&self, session_id: &str) -> Option<ProtocolState<P>>
+    where
+        P: GlobalProtocol + Clone + Send + Sync + 'static,
+    {
+        let sessions = self.sessions.read().await;
+        sessions.get(session_id)?
+            .downcast_ref::<ProtocolState<P>>()
+            .cloned()
+    }
+
+    /// Remove a protocol session
+    pub async fn remove_session(&self, session_id: &str) -> bool {
+        let mut sessions = self.sessions.write().await;
+        sessions.remove(session_id).is_some()
+    }
+
+    /// List all active session IDs
+    pub async fn list_sessions(&self) -> Vec<String> {
+        let sessions = self.sessions.read().await;
+        sessions.keys().cloned().collect()
+    }
+
+    /// Get session count
+    pub async fn session_count(&self) -> usize {
+        let sessions = self.sessions.read().await;
+        sessions.len()
+    }
+}
+
+impl Default for StateManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub mod tests;

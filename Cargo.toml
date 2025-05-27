@@ -11,6 +11,11 @@ path = "src/lib.rs"
 # No [[bin]] section, as we are removing main.rs and do not want an executable artifact
 
 [dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
 
 [dev-dependencies]
 trybuild = "1.0.85"

@@ -182,8 +182,7 @@ fn test_global_choice_with_different_branches() {
     type RecvBranch =
         TChanRecv<Bob, Alice, DefaultChan, RequestLbl, DataMsg, End, BiDirectionalAction>;
 
-    type Choice =
-        TChanChoice<Alice, DefaultChan, RequestLbl, SendBranch, End, BiDirectionalAction>;
+    type Choice = TChanChoice<Alice, DefaultChan, RequestLbl, SendBranch, End, BiDirectionalAction>;
     type Offer = TChanOffer<Alice, DefaultChan, RequestLbl, RecvBranch, End, BiDirectionalAction>;
 
     // Choice with send branch should be dual to offer with recv branch
@@ -439,24 +438,10 @@ fn test_nested_protocol_duality() {
     type MiddleOffer =
         TChanOffer<Alice, DefaultChan, RequestLbl, InnerRecv, End, BiDirectionalAction>;
 
-    type OuterSend = TChanSend<
-        Alice,
-        Bob,
-        DefaultChan,
-        RequestLbl,
-        HelloMsg,
-        MiddleChoice,
-        BiDirectionalAction,
-    >;
-    type OuterRecv = TChanRecv<
-        Bob,
-        Alice,
-        DefaultChan,
-        RequestLbl,
-        HelloMsg,
-        MiddleOffer,
-        BiDirectionalAction,
-    >;
+    type OuterSend =
+        TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, MiddleChoice, BiDirectionalAction>;
+    type OuterRecv =
+        TChanRecv<Bob, Alice, DefaultChan, RequestLbl, HelloMsg, MiddleOffer, BiDirectionalAction>;
 
     // Deeply nested protocols should be dual
     fn _test_dual()
@@ -491,4 +476,3 @@ fn test_protocol_composition_duality_consistency() {
     {
     }
 }
-
