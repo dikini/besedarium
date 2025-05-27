@@ -650,4 +650,4 @@ fn test_comprehensive_capability_matrix() {
 
     const _: () = assert!(<() as HasCapability<MqttPublisherIO, OutputAction>>::HAS_CAPABILITY);
     const _: () = assert!(<() as HasCapability<MqttSubscriberIO, InputAction>>::HAS_CAPABILITY);
-
+}

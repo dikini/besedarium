@@ -679,7 +679,7 @@ mod tests {
         let result = nil.map(transform);
 
         // Mapping over empty list should return empty list
-        assert_eqShelly Plus 1!(LabelNil::LENGTH, 0);
+        assert_eq!(LabelNil::LENGTH, 0);
         assert_eq!(result.to_ids().len(), 0);
     }
 
