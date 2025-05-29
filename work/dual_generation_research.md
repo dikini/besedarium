@@ -11,7 +11,9 @@ This document captures the research and prototyping work for Task 1.4.3, explori
 The concept of duality in session types originates from linear logic and π-calculus research:
 
 1. **Honda, Vasconcelos, and Kubo (1998)**: Introduced basic session types with send/receive duality
+
 2. **Gay and Hole (2005)**: Formalized duality rules for choice and branching
+
 3. **Carbone, Honda, and Yoshida (2007)**: Extended to multiparty session types with projection
 
 ### Duality Rules Summary
@@ -91,12 +93,14 @@ pub fn generate_dual(input: TokenStream) -> TokenStream {
 ```
 
 ### Benefits
+
 - More flexible type transformations
 - Better error messages
 - Can handle complex nested structures
 - Integration with IDE tooling
 
 ### Drawbacks
+
 - Compile-time dependency
 - Less integrated with type system
 - Harder to compose with other type-level operations
@@ -110,6 +114,7 @@ The biggest challenge is automatically swapping role parameters in `TChanSend`/`
 ### 2. Recursive Protocol Handling
 
 For recursive protocols, we need to ensure that:
+
 - Recursive references are preserved
 - The dual generation terminates
 - Type bounds are maintained
@@ -117,6 +122,7 @@ For recursive protocols, we need to ensure that:
 ### 3. Integration with Existing `IsDual` System
 
 The generated dual should satisfy:
+
 ```rust
 fn verify_dual_generation<P>() 
 where 
@@ -148,6 +154,7 @@ where
 ### Type-Level Generation Feasibility: ✅ PROMISING
 
 The type-level approach appears feasible with current Rust stable features:
+
 - We can implement `GenerateDual` for each protocol type
 - Role swapping can be handled through explicit implementations
 - Recursive types can be handled with proper trait bounds
@@ -155,6 +162,7 @@ The type-level approach appears feasible with current Rust stable features:
 ### Integration Feasibility: ✅ GOOD
 
 Integration with existing system looks straightforward:
+
 - `GenerateDual` can coexist with `IsDual`
 - Type aliases provide clean user interface
 - Backward compatibility maintained
@@ -162,6 +170,7 @@ Integration with existing system looks straightforward:
 ### Performance Considerations: ⚠️ NEEDS TESTING
 
 Compile-time impact needs measurement:
+
 - Type-level computation adds to compile times
 - Complex nested protocols may be expensive
 - Need benchmarking on realistic protocols
@@ -177,21 +186,25 @@ Compile-time impact needs measurement:
 ## Implementation Roadmap
 
 ### Phase 1: Core Trait Implementation
+
 - [ ] Define `GenerateDual` trait
 - [ ] Implement for basic protocol types (`TChanEnd`, `TChanSend`, `TChanRecv`)
 - [ ] Add helper type alias `Dual<P>`
 
 ### Phase 2: Complex Protocol Support
+
 - [ ] Implement for choice/offer constructs
 - [ ] Implement for parallel composition
 - [ ] Handle nested protocol structures
 
 ### Phase 3: Integration and Testing
+
 - [ ] Verify integration with `IsDual` system
 - [ ] Add comprehensive test suite
 - [ ] Performance benchmarking
 
 ### Phase 4: Advanced Features
+
 - [ ] Error message improvement
 - [ ] Macro-based convenience functions
 - [ ] Documentation and examples

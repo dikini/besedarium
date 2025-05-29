@@ -4,9 +4,12 @@
 
 **Initial Implementation Error**: The original research focused on generating duals for global protocols, which is theoretically incorrect.
 
-**Correct Approach**: 
+**Correct Approach**:
+
 - **Global protocols** represent complete communication choreography and should be checked for **well-foundedness**
-- **Local protocols** (endpoint projections) can have duals representing complementary participant viewpoints  
+
+- **Local protocols** (endpoint projections) can have duals representing complementary participant viewpoints
+
 - **Dual generation** applies to local protocols, not global protocols
 
 ## Session Type Theory Foundation
@@ -14,15 +17,23 @@
 ### Global vs Local Protocols
 
 **Global Protocols**:
+
 - Describe complete multi-party communication patterns
+
 - Bird's eye view of all interactions
+
 - Need **well-foundedness checking** (can be safely implemented)
+
 - **Do not have duals** - they are complete descriptions
 
 **Local Protocols (Endpoints)**:
+
 - Result from projecting global protocols to individual roles
+
 - Represent one participant's view of the protocol
+
 - **Can have duals** - complementary viewpoints between participants
+
 - Alice's local protocol should be dual to Bob's local protocol
 
 ### Well-Founded Protocols
@@ -30,8 +41,11 @@
 Instead of generating duals for global protocols, we should focus on:
 
 1. **Well-foundedness checking** - ensuring global protocols can be safely implemented
+
 2. **Projection verification** - ensuring local protocols can be derived
+
 3. **Local dual generation** - generating duals for endpoint protocols
+
 4. **Compatibility verification** - ensuring projected protocols are properly dual
 
 ## Correct Implementation Strategy
@@ -93,15 +107,21 @@ where
 ## Theoretical Benefits of Corrected Approach
 
 1. **Theoretically Sound** - Aligns with session type theory
+
 2. **Practical Safety** - Well-foundedness ensures implementability
+
 3. **Compositional** - Local duals can be reasoned about independently
+
 4. **Extensible** - Supports complex multiparty protocols
 
 ## Next Steps
 
 1. **Implement well-foundedness checking** for global protocols
+
 2. **Focus dual generation on local protocols** (endpoints)
+
 3. **Create projection + dual pipeline** for complete workflow
+
 4. **Update documentation** to reflect correct theoretical foundation
 
 ## Research Conclusions
@@ -109,7 +129,9 @@ where
 The corrected approach provides a theoretically sound and practically useful foundation for protocol verification in Besedarium:
 
 - **Global protocols** need well-foundedness, not duals
+
 - **Local protocols** (projections) are where duality applies
+
 - **Complete pipeline** from global verification to local dual generation
 
 This aligns with established session type theory and provides a solid foundation for protocol safety verification.
