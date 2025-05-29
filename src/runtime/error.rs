@@ -39,19 +39,33 @@ pub enum RuntimeError {
 /// Protocol-specific violations that occur during execution
 #[derive(Error, Debug)]
 pub enum ProtocolViolation {
-    #[error("Invalid state transition from '{from}' to '{to}'")]
-    InvalidTransition { from: String, to: String },
-    
-    #[error("Unexpected message type: expected '{expected}', got '{actual}'")]
-    UnexpectedMessage { expected: String, actual: String },
-    
+    #[error("Invalid state transition: attempted to move from state '{current_state}' by action '{action_taken}' to invalid next state. Expected one of: {expected_actions_or_states}")]
+    InvalidTransition {
+        current_state: String,
+        action_taken: String, // e.g., "receive MessageX", "perform ActionY"
+        expected_actions_or_states: String, // e.g., "receive MessageZ", "transition to StateA"
+    },
+
+    #[error("Unexpected message type: expected '{expected}', got '{actual}' in state '{current_state}'")]
+    UnexpectedMessage {
+        expected: String,
+        actual: String,
+        current_state: String,
+    },
+
+    #[error("Action '{action}' not allowed in current state '{current_state}'")]
+    ActionNotAllowedInState {
+        action: String,
+        current_state: String,
+    },
+
     #[error("Protocol deadlock detected in session '{session_id}'")]
     Deadlock { session_id: String },
     
-    #[error("Choice '{choice}' not available in current protocol state")]
-    ChoiceNotAvailable { choice: String },
-    
-    #[error("Role mismatch: expected '{expected}', got '{actual}'")]
+    #[error("Choice '{choice}' not available in current protocol state '{current_state}'")]
+    ChoiceNotAvailable { choice: String, current_state: String },
+
+    #[error("Role mismatch: expected role '{expected}', got '{actual}' for current action")]
     RoleMismatch { expected: String, actual: String },
     
     #[error("Protocol not complete: {remaining} steps remaining")]
@@ -163,12 +177,41 @@ mod tests {
     #[test]
     fn test_error_display() {
         let error = ProtocolViolation::InvalidTransition {
-            from: "Ready".to_string(),
-            to: "Invalid".to_string(),
+            current_state: "Ready".to_string(),
+            action_taken: "ProcessData".to_string(),
+            expected_actions_or_states: "ReceiveAck or Timeout".to_string(),
         };
         assert_eq!(
             format!("{}", error),
-            "Invalid state transition from 'Ready' to 'Invalid'"
+            "Invalid state transition: attempted to move from state 'Ready' by action 'ProcessData' to invalid next state. Expected one of: ReceiveAck or Timeout"
+        );
+
+        let error = ProtocolViolation::UnexpectedMessage {
+            expected: "Ack".to_string(),
+            actual: "Nack".to_string(),
+            current_state: "WaitingForAck".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Unexpected message type: expected 'Ack', got 'Nack' in state 'WaitingForAck'"
+        );
+
+        let error = ProtocolViolation::ActionNotAllowedInState {
+            action: "SendPayment".to_string(),
+            current_state: "OrderPending".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Action 'SendPayment' not allowed in current state 'OrderPending'"
+        );
+
+        let error = ProtocolViolation::ChoiceNotAvailable {
+            choice: "Retry".to_string(),
+            current_state: "Failed".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Choice 'Retry' not available in current protocol state 'Failed'"
         );
     }
 
