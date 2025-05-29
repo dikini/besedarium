@@ -4,15 +4,14 @@
 //! using the modern foundation types and architecture.
 
 use besedarium::{
+    impl_traits_for_label, // Import the macro directly
     // Grouped imports from besedarium crate
     BiDirectionalAction,
     ChanId as ChanIdTrait,
     HasDual,
     InputAction,
     Message as MessageTrait, // Renamed to avoid conflict
-    MsgLbl as MsgLblTrait,   // Renamed to avoid conflict
     OutputAction,
-    ProtocolLabel,
     Role as RoleTrait, // Renamed to avoid conflict
     SessionType,
     SupportsActionIO,
@@ -346,84 +345,42 @@ impl HasDual for DbChan {
 // Labels (implementing MsgLblTrait and ProtocolLabel)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LLogin;
-impl MsgLblTrait for LLogin {}
-impl ProtocolLabel for LLogin {}
-impl SessionType for LLogin {} // If labels are used in contexts requiring SessionType for HasDual
-impl HasDual for LLogin {
-    type Dual = LLogin;
-}
+impl_traits_for_label!(LLogin);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LAck;
-impl MsgLblTrait for LAck {}
-impl ProtocolLabel for LAck {}
-impl SessionType for LAck {}
-impl HasDual for LAck {
-    type Dual = LAck;
-}
+impl_traits_for_label!(LAck);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LQuoteRequest;
-impl MsgLblTrait for LQuoteRequest {}
-impl ProtocolLabel for LQuoteRequest {}
-impl SessionType for LQuoteRequest {}
-impl HasDual for LQuoteRequest {
-    type Dual = LQuoteRequest;
-}
+impl_traits_for_label!(LQuoteRequest);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LQuoteResponse;
-impl MsgLblTrait for LQuoteResponse {}
-impl ProtocolLabel for LQuoteResponse {}
-impl SessionType for LQuoteResponse {}
-impl HasDual for LQuoteResponse {
-    type Dual = LQuoteResponse;
-}
+impl_traits_for_label!(LQuoteResponse);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoginLbl;
-impl MsgLblTrait for LoginLbl {}
-impl ProtocolLabel for LoginLbl {}
-impl SessionType for LoginLbl {}
-impl HasDual for LoginLbl {
-    type Dual = LoginLbl;
-}
+impl_traits_for_label!(LoginLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AckLbl;
-impl MsgLblTrait for AckLbl {}
-impl ProtocolLabel for AckLbl {}
-impl SessionType for AckLbl {}
-impl HasDual for AckLbl {
-    type Dual = AckLbl;
-}
+impl_traits_for_label!(AckLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataLbl;
-impl MsgLblTrait for DataLbl {}
+impl_traits_for_label!(DataLbl);
 
 // New Message Labels for Query Protocol
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryLbl;
-impl MsgLblTrait for QueryLbl {}
+impl_traits_for_label!(QueryLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResultLbl;
-impl MsgLblTrait for ResultLbl {}
+impl_traits_for_label!(ResultLbl);
 
 // New Message Labels for Complex Data Types
-// Macro to implement common traits for label types
-macro_rules! impl_traits_for_label {
-    ($label:ident) => {
-        impl MsgLblTrait for $label {}
-        impl ProtocolLabel for $label {}
-        impl SessionType for $label {} // Assuming labels might need to be SessionTypes for HasDual
-        impl HasDual for $label {
-            type Dual = $label;
-        }
-    };
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UserProfileLbl;
 impl_traits_for_label!(UserProfileLbl);
