@@ -412,32 +412,29 @@ pub struct ResultLbl;
 impl MsgLblTrait for ResultLbl {}
 
 // New Message Labels for Complex Data Types
+// Macro to implement common traits for label types
+macro_rules! impl_traits_for_label {
+    ($label:ident) => {
+        impl MsgLblTrait for $label {}
+        impl ProtocolLabel for $label {}
+        impl SessionType for $label {} // Assuming labels might need to be SessionTypes for HasDual
+        impl HasDual for $label {
+            type Dual = $label;
+        }
+    };
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UserProfileLbl;
-impl MsgLblTrait for UserProfileLbl {}
-impl ProtocolLabel for UserProfileLbl {}
-impl SessionType for UserProfileLbl {}
-impl HasDual for UserProfileLbl {
-    type Dual = UserProfileLbl;
-}
+impl_traits_for_label!(UserProfileLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OrderDetailsLbl;
-impl MsgLblTrait for OrderDetailsLbl {}
-impl ProtocolLabel for OrderDetailsLbl {}
-impl SessionType for OrderDetailsLbl {}
-impl HasDual for OrderDetailsLbl {
-    type Dual = OrderDetailsLbl;
-}
+impl_traits_for_label!(OrderDetailsLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServerCommandLbl;
-impl MsgLblTrait for ServerCommandLbl {}
-impl ProtocolLabel for ServerCommandLbl {}
-impl SessionType for ServerCommandLbl {}
-impl HasDual for ServerCommandLbl {
-    type Dual = ServerCommandLbl;
-}
+impl_traits_for_label!(ServerCommandLbl);
 
 // --- Complex Data Structures for Serialization Tests ---
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -449,7 +446,7 @@ pub struct UserProfile {
     pub aliases: Vec<String>,
 }
 impl MessageTrait for UserProfile {}
-impl SessionType for UserProfile {} // Assuming complex types might need to be SessionTypes for HasDual
+impl SessionType for UserProfile {} // Required for HasDual
 impl HasDual for UserProfile {
     type Dual = UserProfile; // Simplistic dual for data types
 }
@@ -461,7 +458,7 @@ pub struct OrderDetails {
     pub notes: Option<String>,
 }
 impl MessageTrait for OrderDetails {}
-impl SessionType for OrderDetails {}
+impl SessionType for OrderDetails {} // Required for HasDual
 impl HasDual for OrderDetails {
     type Dual = OrderDetails;
 }
@@ -473,7 +470,7 @@ pub enum ServerCommand {
     GetStatus, // A variant without data
 }
 impl MessageTrait for ServerCommand {}
-impl SessionType for ServerCommand {}
+impl SessionType for ServerCommand {} // Required for HasDual
 impl HasDual for ServerCommand {
     type Dual = ServerCommand;
 }
@@ -482,7 +479,7 @@ impl HasDual for ServerCommand {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserProfileMsg(pub UserProfile);
 impl MessageTrait for UserProfileMsg {}
-impl SessionType for UserProfileMsg {}
+impl SessionType for UserProfileMsg {} // Required for HasDual
 impl HasDual for UserProfileMsg {
     type Dual = UserProfileMsg;
 }
@@ -490,7 +487,7 @@ impl HasDual for UserProfileMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderDetailsMsg(pub OrderDetails);
 impl MessageTrait for OrderDetailsMsg {}
-impl SessionType for OrderDetailsMsg {}
+impl SessionType for OrderDetailsMsg {} // Required for HasDual
 impl HasDual for OrderDetailsMsg {
     type Dual = OrderDetailsMsg;
 }
@@ -498,7 +495,7 @@ impl HasDual for OrderDetailsMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerCommandMsg(pub ServerCommand);
 impl MessageTrait for ServerCommandMsg {}
-impl SessionType for ServerCommandMsg {}
+impl SessionType for ServerCommandMsg {} // Required for HasDual
 impl HasDual for ServerCommandMsg {
     type Dual = ServerCommandMsg;
 }
