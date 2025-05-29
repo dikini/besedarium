@@ -403,7 +403,7 @@ pub struct UserProfile {
     pub aliases: Vec<String>,
 }
 impl MessageTrait for UserProfile {}
-impl SessionType for UserProfile {} // Required for HasDual
+impl SessionType for UserProfile {}
 impl HasDual for UserProfile {
     type Dual = UserProfile; // Simplistic dual for data types
 }

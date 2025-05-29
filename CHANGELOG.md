@@ -7,23 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+### Fixed Issues
 
 - Resolved markdown linting issues across multiple files, ensuring compliance with `markdownlint-cli2` rules.
 
-### Added
+### Added Features
 
 #### Task-Specific Prompts (2025-05-26)
 
 - Enhanced GitHub Copilot Integration: Added guidelines for maintaining task-specific prompt files
-- Added detailed prompt structure recommendations
-- Added examples of effective Copilot interactions
-- Documentation for prompt maintenance process
+  - Added detailed prompt structure recommendations
+  - Added examples of effective Copilot interactions
+  - Documentation for prompt maintenance process
 
 #### Documentation Enhancements (2025-05-24)
 
 - Enhanced `docs/duality.md`: Major update with implementation-ready content
-
   - Added Foundation Types section with concrete Rust trait definitions
   - Added Projection Implementation Details with complete `Project<P, Role>` trait patterns
   - Added Label Transformation Logic with type-level operations and validation

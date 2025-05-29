@@ -140,7 +140,7 @@ Phase 1 tasks.
   - [x] **Task 2.3.3**: Write unit tests for session lifecycle management. ✅ **COMPLETED** - created `src/runtime/session/tests.rs` with 20+ comprehensive tests
 - [ ] **Task 2.4**: Develop Integration Tests (Complex Protocol Examples)
   - [x] **Task 2.4.1**: Remove or overhaul existing integration tests. ✅ **COMPLETED** (11 integration tests passing)
-  - [X] **Task 2.4.2**: Implement multi-party protocol examples as integration tests.
+  - [x] **Task 2.4.2**: Implement multi-party protocol examples as integration tests.
   - [x] **Task 2.4.3**: Implement examples with complex data serialization as integration tests. ✅ **COMPLETED**
   - [ ] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests.
 
