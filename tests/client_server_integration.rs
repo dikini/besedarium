@@ -7,7 +7,11 @@ mod integration_common;
 
 use besedarium::protocol::foundation::*;
 use besedarium::protocol::global::*;
-use integration_common::*;
+use integration_common::{ // Import specific types needed
+    AckLbl, AckMsg, Alice, AuthChan, Bob, Charlie, DataChan, DataLbl, DataMsg, LoginLbl, LoginMsg
+};
+use besedarium::protocol::projection::*; // Keep wildcard for projection traits
+
 
 #[cfg(test)]
 mod client_server_tests {
@@ -88,17 +92,9 @@ mod client_server_tests {
     #[test]
     fn test_message_creation() {
         // Test that messages can be created and used
-        let login = LoginMsg {
-            username: "alice".to_string(),
-            password: "secret".to_string(),
-        };
-        let ack = AckMsg {
-            success: true,
-            session_token: Some("token123".to_string()),
-        };
-        let data = DataMsg {
-            payload: b"test data".to_vec(),
-        };
+        let login = LoginMsg("alice".to_string(), "secret".to_string());
+        let ack = AckMsg(true, Some("token123".to_string()));
+        let data = DataMsg(b"test data".to_vec());
 
         // Verify messages implement required traits
         fn requires_message<T: Message>(_: T) {}
@@ -110,8 +106,8 @@ mod client_server_tests {
     #[test]
     fn test_metadata_integration() {
         // Test that metadata types integrate properly with protocol types
-        let auth_meta = AuthMeta::new(AuthChan, LoginLbl);
-        let data_meta = DataMeta::new(DataChan, DataLbl);
+        let auth_meta = CommMetadata::new(AuthChan, LoginLbl);
+        let data_meta = CommMetadata::new(DataChan, DataLbl);
 
         // Test metadata satisfies required traits
         fn requires_metadata<T: Metadata>(_: T) {}
@@ -239,7 +235,7 @@ mod client_server_tests {
     #[test]
     fn test_protocol_projection() {
         // Test that protocols can be projected to local endpoints
-        use besedarium::protocol::projection::*;
+        // use besedarium::protocol::projection::*; // Already imported at the top level
 
         // Test projection for Alice's role in the login protocol
         type AliceEndpoint = <() as Project<LoginProtocol, Alice>>::Output;
@@ -294,40 +290,27 @@ mod client_server_tests {
         requires_global_protocol(std::marker::PhantomData::<ComprehensiveProtocol>);
 
         // 3. Verify projections work for all roles
-        use besedarium::protocol::projection::*;
+        // use besedarium::protocol::projection::*; // Already imported
         type AliceProj = <() as Project<ComprehensiveProtocol, Alice>>::Output;
         type BobProj = <() as Project<ComprehensiveProtocol, Bob>>::Output;
         type CharlieProj = <() as Project<ComprehensiveProtocol, Charlie>>::Output;
 
+        // Verify projections are valid local protocols
         fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
         requires_local_protocol(std::marker::PhantomData::<AliceProj>);
         requires_local_protocol(std::marker::PhantomData::<BobProj>);
         requires_local_protocol(std::marker::PhantomData::<CharlieProj>);
+    }
 
-        // 4. Test that metadata and messages integrate properly
-        let auth_meta = AuthMeta::new(AuthChan, LoginLbl);
-        let data_meta = DataMeta::new(DataChan, DataLbl);
+    #[test]
+    fn test_complex_protocol_message_instantiation() {
+        // Test instantiation of messages used in complex protocols
+        let login_msg = LoginMsg("alice".to_string(), "secret123".to_string());
+        let ack_msg = AckMsg(true, Some("session_abc123".to_string()));
+        let data_msg = DataMsg(b"sensitive user data".to_vec());
 
-        let login_msg = LoginMsg {
-            username: "alice".to_string(),
-            password: "secret123".to_string(),
-        };
-
-        let ack_msg = AckMsg {
-            success: true,
-            session_token: Some("session_abc123".to_string()),
-        };
-
-        let data_msg = DataMsg {
-            payload: b"sensitive user data".to_vec(),
-        };
-
-        // Verify all types implement required traits
-        fn requires_metadata<T: Metadata>(_: T) {}
+        // Verify messages implement required traits
         fn requires_message<T: Message>(_: T) {}
-
-        requires_metadata(auth_meta);
-        requires_metadata(data_meta);
         requires_message(login_msg);
         requires_message(ack_msg);
         requires_message(data_msg);
