@@ -24,12 +24,12 @@ use integration_common::{
     DbChan,   // Added DbChan
     LoginLbl,
     LoginMsg,
-    QueryLbl,   // Added QueryLbl
-    QueryMsg,   // Added QueryMsg
-    ResultLbl,  // Added ResultLbl
-    ResultMsg,  // Added ResultMsg
-    Service,    // Added Service
-    ServiceChan // Added ServiceChan
+    QueryLbl,    // Added QueryLbl
+    QueryMsg,    // Added QueryMsg
+    ResultLbl,   // Added ResultLbl
+    ResultMsg,   // Added ResultMsg
+    Service,     // Added Service
+    ServiceChan, // Added ServiceChan
 }; // Keep wildcard for projection traits
 
 #[cfg(test)]

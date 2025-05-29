@@ -532,7 +532,9 @@ mod tests {
         let _login_msg = LoginMsg("user".to_string(), "pass".to_string());
         let _ack_msg = AckMsg(true, Some("token".to_string()));
         let _data_msg = DataMsg(vec![1, 2, 3]);
-        let _quote_request_msg = QuoteRequestMsg { item_id: "item123".to_string() };
+        let _quote_request_msg = QuoteRequestMsg {
+            item_id: "item123".to_string(),
+        };
         let _quote_response_msg = QuoteResponseMsg { price: 100 };
         let _query_msg = QueryMsg("SELECT * FROM users".to_string());
         let _result_msg = ResultMsg("user_id: 1, name: Alice".to_string());
