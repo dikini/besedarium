@@ -411,6 +411,98 @@ impl MsgLblTrait for QueryLbl {}
 pub struct ResultLbl;
 impl MsgLblTrait for ResultLbl {}
 
+// New Message Labels for Complex Data Types
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UserProfileLbl;
+impl MsgLblTrait for UserProfileLbl {}
+impl ProtocolLabel for UserProfileLbl {}
+impl SessionType for UserProfileLbl {}
+impl HasDual for UserProfileLbl {
+    type Dual = UserProfileLbl;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OrderDetailsLbl;
+impl MsgLblTrait for OrderDetailsLbl {}
+impl ProtocolLabel for OrderDetailsLbl {}
+impl SessionType for OrderDetailsLbl {}
+impl HasDual for OrderDetailsLbl {
+    type Dual = OrderDetailsLbl;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServerCommandLbl;
+impl MsgLblTrait for ServerCommandLbl {}
+impl ProtocolLabel for ServerCommandLbl {}
+impl SessionType for ServerCommandLbl {}
+impl HasDual for ServerCommandLbl {
+    type Dual = ServerCommandLbl;
+}
+
+// --- Complex Data Structures for Serialization Tests ---
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserProfile {
+    pub user_id: u64,
+    pub username: String,
+    pub email: Option<String>,
+    pub preferences: Vec<(String, String)>, // Using Vec of tuples as a simpler alternative to HashMap for Eq/Hash
+    pub aliases: Vec<String>,
+}
+impl MessageTrait for UserProfile {}
+impl SessionType for UserProfile {} // Assuming complex types might need to be SessionTypes for HasDual
+impl HasDual for UserProfile {
+    type Dual = UserProfile; // Simplistic dual for data types
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrderDetails {
+    pub item_id: String,
+    pub quantity: u32,
+    pub notes: Option<String>,
+}
+impl MessageTrait for OrderDetails {}
+impl SessionType for OrderDetails {}
+impl HasDual for OrderDetails {
+    type Dual = OrderDetails;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ServerCommand {
+    StoreProfile(UserProfile),
+    ProcessOrder(OrderDetails),
+    GetStatus, // A variant without data
+}
+impl MessageTrait for ServerCommand {}
+impl SessionType for ServerCommand {}
+impl HasDual for ServerCommand {
+    type Dual = ServerCommand;
+}
+
+// --- New Message Types Wrapping Complex Data ---
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserProfileMsg(pub UserProfile);
+impl MessageTrait for UserProfileMsg {}
+impl SessionType for UserProfileMsg {}
+impl HasDual for UserProfileMsg {
+    type Dual = UserProfileMsg;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrderDetailsMsg(pub OrderDetails);
+impl MessageTrait for OrderDetailsMsg {}
+impl SessionType for OrderDetailsMsg {}
+impl HasDual for OrderDetailsMsg {
+    type Dual = OrderDetailsMsg;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerCommandMsg(pub ServerCommand);
+impl MessageTrait for ServerCommandMsg {}
+impl SessionType for ServerCommandMsg {}
+impl HasDual for ServerCommandMsg {
+    type Dual = ServerCommandMsg;
+}
+
 // --- Message Definitions ---
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QuoteRequestMsg {
@@ -523,6 +615,10 @@ mod tests {
         let _data_lbl = DataLbl;
         let _query_lbl = QueryLbl;
         let _result_lbl = ResultLbl;
+        // Add new labels
+        let _user_profile_lbl = UserProfileLbl;
+        let _order_details_lbl = OrderDetailsLbl;
+        let _server_command_lbl = ServerCommandLbl;
         assert!(true); // Placeholder assertion
     }
 
@@ -539,6 +635,29 @@ mod tests {
         let _query_msg = QueryMsg("SELECT * FROM users".to_string());
         let _result_msg = ResultMsg("user_id: 1, name: Alice".to_string());
 
+        // New complex messages
+        let user_profile_data = UserProfile {
+            user_id: 1,
+            username: "testuser".to_string(),
+            email: Some("test@example.com".to_string()),
+            preferences: vec![("theme".to_string(), "dark".to_string())],
+            aliases: vec!["tester".to_string()],
+        };
+        let _user_profile_msg = UserProfileMsg(user_profile_data.clone());
+
+        let order_details_data = OrderDetails {
+            item_id: "item001".to_string(),
+            quantity: 2,
+            notes: Some("Gift wrap".to_string()),
+        };
+        let _order_details_msg = OrderDetailsMsg(order_details_data.clone());
+
+        let _server_command_msg_profile =
+            ServerCommandMsg(ServerCommand::StoreProfile(user_profile_data.clone()));
+        let _server_command_msg_order =
+            ServerCommandMsg(ServerCommand::ProcessOrder(order_details_data.clone()));
+        let _server_command_msg_status = ServerCommandMsg(ServerCommand::GetStatus);
+
         // Verify messages implement required traits
         fn requires_message<T: MessageTrait>(_: T) {}
         requires_message(_login_msg.clone());
@@ -548,5 +667,10 @@ mod tests {
         requires_message(_quote_response_msg.clone());
         requires_message(_query_msg.clone());
         requires_message(_result_msg.clone());
+        requires_message(_user_profile_msg.clone());
+        requires_message(_order_details_msg.clone());
+        requires_message(_server_command_msg_profile.clone());
+        requires_message(_server_command_msg_order.clone());
+        requires_message(_server_command_msg_status.clone());
     }
 }

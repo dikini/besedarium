@@ -24,17 +24,23 @@ use integration_common::{
     DbChan,   // Added DbChan
     LoginLbl,
     LoginMsg,
-    QueryLbl,    // Added QueryLbl
-    QueryMsg,    // Added QueryMsg
-    ResultLbl,   // Added ResultLbl
-    ResultMsg,   // Added ResultMsg
-    Service,     // Added Service
-    ServiceChan, // Added ServiceChan
+    QueryLbl,         // Added QueryLbl
+    QueryMsg,         // Added QueryMsg
+    ResultLbl,        // Added ResultLbl
+    ResultMsg,        // Added ResultMsg
+    ServerCommandLbl, // Added for complex data test
+    ServerCommandMsg, // Added for complex data test
+    Service,          // Added Service
+    ServiceChan,      // Added ServiceChan
+    UserProfile,      // Added for complex data test
+    UserProfileLbl,   // Added for complex data test
+    UserProfileMsg,   // Added for complex data test
 }; // Keep wildcard for projection traits
 
 #[cfg(test)]
 mod client_server_tests {
     use super::*;
+    use integration_common::{OrderDetails, ServerCommand}; // Ensure these are in scope
 
     /// Simple Login Protocol: Client → Server (login) → Client (ack) → End
     type LoginProtocol = TChanSend<
@@ -386,5 +392,127 @@ mod client_server_tests {
         requires_message(login_msg);
         requires_message(ack_msg);
         requires_message(data_msg);
+    }
+
+    // --- Tests for Complex Data Serialization ---
+
+    #[test]
+    fn test_complex_data_exchange_user_profile() {
+        // Protocol: Alice sends UserProfileMsg to Bob, Bob responds with AckMsg
+        type UserProfileExchangeProtocol = TChanSend<
+            Alice,          // Sender
+            Bob,            // Receiver
+            DataChan,       // Channel
+            UserProfileLbl, // Message Label
+            UserProfileMsg, // Message Type
+            TChanSend<
+                Bob,      // Sender
+                Alice,    // Receiver
+                DataChan, // Channel
+                AckLbl,   // Message Label
+                AckMsg,   // Message Type
+                TChanEnd<DataChan, AckLbl, BiDirectionalAction>,
+                BiDirectionalAction,
+            >,
+            BiDirectionalAction,
+        >;
+
+        // Verify global protocol compilation
+        fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_global_protocol(std::marker::PhantomData::<UserProfileExchangeProtocol>);
+
+        // Verify projection to local protocols
+        type AliceLocal = <() as Project<UserProfileExchangeProtocol, Alice>>::Output;
+        type BobLocal = <() as Project<UserProfileExchangeProtocol, Bob>>::Output;
+
+        fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_local_protocol(std::marker::PhantomData::<AliceLocal>);
+        requires_local_protocol(std::marker::PhantomData::<BobLocal>);
+
+        // Simulate execution (conceptual - actual execution requires runtime)
+        let user_profile_data = UserProfile {
+            user_id: 101,
+            username: "complex_user".to_string(),
+            email: Some("complex@example.com".to_string()),
+            preferences: vec![("lang".to_string(), "en".to_string())],
+            aliases: vec!["tester_one".to_string(), "dev_user".to_string()],
+        };
+        let sent_msg = UserProfileMsg(user_profile_data.clone());
+        let ack_msg = AckMsg(true, Some("session_complex_profile".to_string()));
+
+        // In a real scenario, you'd send `sent_msg` and receive `ack_msg`
+        // Here, we just assert that the types are correct and data can be constructed.
+        assert_eq!(sent_msg.0, user_profile_data);
+        assert_eq!(ack_msg.0, true);
+    }
+
+    #[test]
+    fn test_complex_data_exchange_server_command() {
+        // Protocol: Client sends ServerCommandMsg to Service, Service responds with AckMsg
+        type ServerCommandExchangeProtocol = TChanSend<
+            Client,           // Sender
+            Service,          // Receiver
+            ServiceChan,      // Channel
+            ServerCommandLbl, // Message Label
+            ServerCommandMsg, // Message Type
+            TChanSend<
+                Service,     // Sender
+                Client,      // Receiver
+                ServiceChan, // Channel
+                AckLbl,      // Message Label
+                AckMsg,      // Message Type
+                TChanEnd<ServiceChan, AckLbl, BiDirectionalAction>,
+                BiDirectionalAction,
+            >,
+            BiDirectionalAction,
+        >;
+
+        // Verify global protocol compilation
+        fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_global_protocol(std::marker::PhantomData::<ServerCommandExchangeProtocol>);
+
+        // Verify projection to local protocols
+        type ClientLocal = <() as Project<ServerCommandExchangeProtocol, Client>>::Output;
+        type ServiceLocal = <() as Project<ServerCommandExchangeProtocol, Service>>::Output;
+
+        fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_local_protocol(std::marker::PhantomData::<ClientLocal>);
+        requires_local_protocol(std::marker::PhantomData::<ServiceLocal>);
+
+        // Simulate execution with ServerCommand::StoreProfile
+        let user_profile_data = UserProfile {
+            user_id: 202,
+            username: "command_user".to_string(),
+            email: None,
+            preferences: vec![],
+            aliases: vec!["cmd_alias".to_string()],
+        };
+        let command_store_profile = ServerCommand::StoreProfile(user_profile_data.clone());
+        let sent_cmd_msg_profile = ServerCommandMsg(command_store_profile.clone());
+        let ack_msg_profile = AckMsg(true, Some("session_store_profile".to_string()));
+
+        assert_eq!(sent_cmd_msg_profile.0, command_store_profile);
+        assert_eq!(ack_msg_profile.0, true);
+
+        // Simulate execution with ServerCommand::ProcessOrder
+        let order_details_data = OrderDetails {
+            item_id: "item789".to_string(),
+            quantity: 5,
+            notes: Some("Urgent delivery".to_string()),
+        };
+        let command_process_order = ServerCommand::ProcessOrder(order_details_data.clone());
+        let sent_cmd_msg_order = ServerCommandMsg(command_process_order.clone());
+        let ack_msg_order = AckMsg(true, Some("session_process_order".to_string()));
+
+        assert_eq!(sent_cmd_msg_order.0, command_process_order);
+        assert_eq!(ack_msg_order.0, true);
+
+        // Simulate execution with ServerCommand::GetStatus
+        let command_get_status = ServerCommand::GetStatus;
+        let sent_cmd_msg_status = ServerCommandMsg(command_get_status.clone());
+        let ack_msg_status = AckMsg(true, Some("session_get_status".to_string()));
+
+        assert_eq!(sent_cmd_msg_status.0, command_get_status);
+        assert_eq!(ack_msg_status.0, true);
     }
 }
