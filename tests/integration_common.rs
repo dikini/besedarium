@@ -4,15 +4,14 @@
 //! using the modern foundation types and architecture.
 
 use besedarium::{
+    impl_traits_for_label, // Import the macro directly
     // Grouped imports from besedarium crate
     BiDirectionalAction,
     ChanId as ChanIdTrait,
     HasDual,
     InputAction,
     Message as MessageTrait, // Renamed to avoid conflict
-    MsgLbl as MsgLblTrait,   // Renamed to avoid conflict
     OutputAction,
-    ProtocolLabel,
     Role as RoleTrait, // Renamed to avoid conflict
     SessionType,
     SupportsActionIO,
@@ -346,98 +345,53 @@ impl HasDual for DbChan {
 // Labels (implementing MsgLblTrait and ProtocolLabel)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LLogin;
-impl MsgLblTrait for LLogin {}
-impl ProtocolLabel for LLogin {}
-impl SessionType for LLogin {} // If labels are used in contexts requiring SessionType for HasDual
-impl HasDual for LLogin {
-    type Dual = LLogin;
-}
+impl_traits_for_label!(LLogin);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LAck;
-impl MsgLblTrait for LAck {}
-impl ProtocolLabel for LAck {}
-impl SessionType for LAck {}
-impl HasDual for LAck {
-    type Dual = LAck;
-}
+impl_traits_for_label!(LAck);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LQuoteRequest;
-impl MsgLblTrait for LQuoteRequest {}
-impl ProtocolLabel for LQuoteRequest {}
-impl SessionType for LQuoteRequest {}
-impl HasDual for LQuoteRequest {
-    type Dual = LQuoteRequest;
-}
+impl_traits_for_label!(LQuoteRequest);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LQuoteResponse;
-impl MsgLblTrait for LQuoteResponse {}
-impl ProtocolLabel for LQuoteResponse {}
-impl SessionType for LQuoteResponse {}
-impl HasDual for LQuoteResponse {
-    type Dual = LQuoteResponse;
-}
+impl_traits_for_label!(LQuoteResponse);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoginLbl;
-impl MsgLblTrait for LoginLbl {}
-impl ProtocolLabel for LoginLbl {}
-impl SessionType for LoginLbl {}
-impl HasDual for LoginLbl {
-    type Dual = LoginLbl;
-}
+impl_traits_for_label!(LoginLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AckLbl;
-impl MsgLblTrait for AckLbl {}
-impl ProtocolLabel for AckLbl {}
-impl SessionType for AckLbl {}
-impl HasDual for AckLbl {
-    type Dual = AckLbl;
-}
+impl_traits_for_label!(AckLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataLbl;
-impl MsgLblTrait for DataLbl {}
+impl_traits_for_label!(DataLbl);
 
 // New Message Labels for Query Protocol
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryLbl;
-impl MsgLblTrait for QueryLbl {}
+impl_traits_for_label!(QueryLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResultLbl;
-impl MsgLblTrait for ResultLbl {}
+impl_traits_for_label!(ResultLbl);
 
 // New Message Labels for Complex Data Types
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UserProfileLbl;
-impl MsgLblTrait for UserProfileLbl {}
-impl ProtocolLabel for UserProfileLbl {}
-impl SessionType for UserProfileLbl {}
-impl HasDual for UserProfileLbl {
-    type Dual = UserProfileLbl;
-}
+impl_traits_for_label!(UserProfileLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OrderDetailsLbl;
-impl MsgLblTrait for OrderDetailsLbl {}
-impl ProtocolLabel for OrderDetailsLbl {}
-impl SessionType for OrderDetailsLbl {}
-impl HasDual for OrderDetailsLbl {
-    type Dual = OrderDetailsLbl;
-}
+impl_traits_for_label!(OrderDetailsLbl);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServerCommandLbl;
-impl MsgLblTrait for ServerCommandLbl {}
-impl ProtocolLabel for ServerCommandLbl {}
-impl SessionType for ServerCommandLbl {}
-impl HasDual for ServerCommandLbl {
-    type Dual = ServerCommandLbl;
-}
+impl_traits_for_label!(ServerCommandLbl);
 
 // --- Complex Data Structures for Serialization Tests ---
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -449,7 +403,7 @@ pub struct UserProfile {
     pub aliases: Vec<String>,
 }
 impl MessageTrait for UserProfile {}
-impl SessionType for UserProfile {} // Assuming complex types might need to be SessionTypes for HasDual
+impl SessionType for UserProfile {}
 impl HasDual for UserProfile {
     type Dual = UserProfile; // Simplistic dual for data types
 }
@@ -461,7 +415,7 @@ pub struct OrderDetails {
     pub notes: Option<String>,
 }
 impl MessageTrait for OrderDetails {}
-impl SessionType for OrderDetails {}
+impl SessionType for OrderDetails {} // Required for HasDual
 impl HasDual for OrderDetails {
     type Dual = OrderDetails;
 }
@@ -473,7 +427,7 @@ pub enum ServerCommand {
     GetStatus, // A variant without data
 }
 impl MessageTrait for ServerCommand {}
-impl SessionType for ServerCommand {}
+impl SessionType for ServerCommand {} // Required for HasDual
 impl HasDual for ServerCommand {
     type Dual = ServerCommand;
 }
@@ -482,7 +436,7 @@ impl HasDual for ServerCommand {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserProfileMsg(pub UserProfile);
 impl MessageTrait for UserProfileMsg {}
-impl SessionType for UserProfileMsg {}
+impl SessionType for UserProfileMsg {} // Required for HasDual
 impl HasDual for UserProfileMsg {
     type Dual = UserProfileMsg;
 }
@@ -490,7 +444,7 @@ impl HasDual for UserProfileMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderDetailsMsg(pub OrderDetails);
 impl MessageTrait for OrderDetailsMsg {}
-impl SessionType for OrderDetailsMsg {}
+impl SessionType for OrderDetailsMsg {} // Required for HasDual
 impl HasDual for OrderDetailsMsg {
     type Dual = OrderDetailsMsg;
 }
@@ -498,7 +452,7 @@ impl HasDual for OrderDetailsMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerCommandMsg(pub ServerCommand);
 impl MessageTrait for ServerCommandMsg {}
-impl SessionType for ServerCommandMsg {}
+impl SessionType for ServerCommandMsg {} // Required for HasDual
 impl HasDual for ServerCommandMsg {
     type Dual = ServerCommandMsg;
 }

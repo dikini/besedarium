@@ -27,21 +27,15 @@
 
 #![cfg_attr(docsrs, doc = include_str!("../README.md"))]
 
+pub mod macros; // Added module declaration
+
 // Core module containing the new MPST implementation
 pub mod protocol;
 
 // Type-level programming types and utilities
 pub mod types;
 
-pub(crate) mod sealed {
-    #[allow(dead_code)]
-    pub trait Sealed {}
-}
-
-// Legacy macros and introspection module temporarily disabled during Task 1.1 implementation
-// They will be reimplemented to work with the new protocol types
-
-// Re-exports for completed Task 1.1 components
+// Re-export key components for easier use
 pub use protocol::foundation::*;
 pub use protocol::global::*;
 pub use types::*;

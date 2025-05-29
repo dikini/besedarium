@@ -3,6 +3,7 @@
 ## Current State Analysis
 
 All existing integration tests in `/tests/` use the old protocol API that was removed during legacy cleanup:
+
 - `TStart`, `TSend`, `TChoice` etc. (old global protocol types)
 - `ProtocolLabel` trait (replaced with our `MsgLbl` trait)
 - Channel types like `Http`, `Mqtt` (replaced with our `CommMetadata` system)
@@ -11,6 +12,7 @@ All existing integration tests in `/tests/` use the old protocol API that was re
 ## Decision: Complete Replacement
 
 **Reasoning:**
+
 1. **API Incompatibility**: All existing tests use deprecated APIs that no longer exist
 2. **Architecture Change**: Tests use old single-channel model vs. our multi-channel `CommMetadata` approach
 3. **Type System Evolution**: Tests use old trait system vs. our new foundation types
@@ -19,21 +21,25 @@ All existing integration tests in `/tests/` use the old protocol API that was re
 ## Integration Test Strategy
 
 ### Task 2.4.1: Remove Legacy Tests ✅
+
 - Remove all `.disabled` test files (they're unsalvageable)  
 - Keep `trybuild.rs` infrastructure for compile-failure tests
 - Create clean slate for new integration tests
 
 ### Task 2.4.2: Multi-Party Protocol Examples
+
 - Client-Server handshake using `TChanSend`/`TChanRecv`
 - Three-party authentication protocol
 - Publish-Subscribe with broker coordination
 
 ### Task 2.4.3: Complex Data Serialization
+
 - JSON message protocols
 - Binary data streaming
 - Mixed message type scenarios
 
-### Task 2.4.4: Async Runtime Integration  
+### Task 2.4.4: Async Runtime Integration
+
 - Tokio integration examples
 - Real channel communication
 - Error handling and recovery
