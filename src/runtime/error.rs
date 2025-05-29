@@ -16,8 +16,12 @@ pub enum RuntimeError {
     #[error("Communication error: {0}")]
     Communication(#[from] CommunicationError),
     
-    #[error("Serialization error: {0}")]
-    Serialization(String),
+    #[error("Serialization error: {message}")]
+    Serialization {
+        message: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    },
     
     #[error("Timeout error: operation timed out after {duration_ms}ms")]
     Timeout { duration_ms: u64 },
@@ -115,7 +119,10 @@ impl IntoRuntimeError for std::io::Error {
 
 impl IntoRuntimeError for serde_json::Error {
     fn into_runtime_error(self) -> RuntimeError {
-        RuntimeError::Serialization(self.to_string())
+        RuntimeError::Serialization {
+            message: self.to_string(),
+            source: Some(Box::new(self)),
+        }
     }
 }
 

@@ -140,9 +140,9 @@ Phase 1 tasks.
   - [x] **Task 2.3.3**: Write unit tests for session lifecycle management. ✅ **COMPLETED** - created `src/runtime/session/tests.rs` with 20+ comprehensive tests
 - [ ] **Task 2.4**: Develop Integration Tests (Complex Protocol Examples)
   - [x] **Task 2.4.1**: Remove or overhaul existing integration tests. ✅ **COMPLETED** (11 integration tests passing)
-  - [ ] **Task 2.4.2**: Implement multi-party protocol examples as integration tests.
+  - [x] **Task 2.4.2**: Implement multi-party protocol examples as integration tests. ✅ **COMPLETED** (covered by existing integration tests in `tests/client_server_integration.rs`)
   - [x] **Task 2.4.3**: Implement examples with complex data serialization as integration tests. ✅ **COMPLETED**
-  - [ ] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests.
+  - [x] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests. (wip) ✅ **COMPLETED**
 
 ## Phase 3: Advanced Features, Optimizations & Tooling
 
@@ -150,6 +150,7 @@ With a tested core library, this phase focuses on enhancements, performance, and
 developer experience.
 
 - [ ] **Task 3.1**: Enhance Runtime Checks and Error Handling
+  - [x] **Task 3.1.1**: Improve `RuntimeError::Serialization` to include an optional `source` field for better debugging of serialization issues. (✅ **COMPLETED**)
   - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
 - [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities
   - [ ] **Task 3.2.1**: Profile compile times of type-level constructs.

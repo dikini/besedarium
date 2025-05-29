@@ -6,8 +6,10 @@ use crate::protocol::foundation::{
 
 // Define test roles
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Alice;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Bob;
 
 impl Role for Alice {}

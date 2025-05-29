@@ -12,10 +12,13 @@ use crate::protocol::local::{
 
 // Define test roles
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Alice;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Bob;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Carol;
 
 impl Role for Alice {}
@@ -24,10 +27,13 @@ impl Role for Carol {}
 
 // Define test messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct HelloMsg;
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AckMsg;
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct DataMsg;
 
 impl Message for HelloMsg {}
@@ -36,6 +42,7 @@ impl Message for DataMsg {}
 
 // Define test IO capabilities
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TestIO;
 impl SupportsActionIO<BiDirectionalAction> for TestIO {}
 impl SupportsActionIO<InputAction> for TestIO {}
@@ -46,6 +53,7 @@ impl SupportsActionIO<OutputAction> for TestIO {}
 // =============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_global_send_recv_duality() {
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type Send = TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, End, BiDirectionalAction>;
@@ -61,6 +69,7 @@ fn test_global_send_recv_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_recv_send_duality_symmetric() {
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type Send = TChanSend<Alice, Bob, DefaultChan, RequestLbl, HelloMsg, End, BiDirectionalAction>;
@@ -76,6 +85,7 @@ fn test_global_recv_send_duality_symmetric() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_end_self_duality() {
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
@@ -89,6 +99,7 @@ fn test_global_end_self_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_choice_offer_duality() {
     type EndType = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
@@ -106,6 +117,7 @@ fn test_global_choice_offer_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_offer_choice_duality_symmetric() {
     type EndType = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
 
@@ -123,6 +135,7 @@ fn test_global_offer_choice_duality_symmetric() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_par_duality() {
     type End1 = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type End2 = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
@@ -140,6 +153,7 @@ fn test_global_par_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_start_self_duality() {
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type Start = TChanStart<DefaultChan, RequestLbl, End, BiDirectionalAction>;
@@ -154,6 +168,7 @@ fn test_global_start_self_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_complex_protocol_duality() {
     // Test duality with more complex nested protocols
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
@@ -175,6 +190,7 @@ fn test_global_complex_protocol_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_choice_with_different_branches() {
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
     type SendBranch =
@@ -199,6 +215,7 @@ fn test_global_choice_with_different_branches() {
 // =============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_local_send_recv_duality() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -215,6 +232,7 @@ fn test_local_send_recv_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_recv_send_duality_symmetric() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -231,6 +249,7 @@ fn test_local_recv_send_duality_symmetric() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_end_self_duality() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -245,6 +264,7 @@ fn test_local_end_self_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_choice_offer_duality() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -262,6 +282,7 @@ fn test_local_choice_offer_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_offer_choice_duality_symmetric() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -279,6 +300,7 @@ fn test_local_offer_choice_duality_symmetric() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_par_duality() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -296,6 +318,7 @@ fn test_local_par_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_start_self_duality() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -311,6 +334,7 @@ fn test_local_start_self_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_complex_endpoint_duality() {
     // Test duality with more complex nested local endpoints
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
@@ -331,6 +355,7 @@ fn test_local_complex_endpoint_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_choice_with_different_branches() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, BiDirectionalAction>;
@@ -354,6 +379,7 @@ fn test_local_choice_with_different_branches() {
 // =============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_duality_with_input_action() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, InputAction>;
@@ -370,6 +396,7 @@ fn test_duality_with_input_action() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_duality_with_output_action() {
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
     type EndEp = EpChanEnd<TestIO, Meta, OutputAction>;
@@ -386,6 +413,7 @@ fn test_duality_with_output_action() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_global_par_with_different_constituents() {
     // Test parallel composition where branches are different but dual
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
@@ -405,6 +433,7 @@ fn test_global_par_with_different_constituents() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_local_par_with_different_constituents() {
     // Test local parallel composition where branches are different but dual
     type Meta = CommMetadata<DefaultChan, RequestLbl>;
@@ -425,6 +454,7 @@ fn test_local_par_with_different_constituents() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_nested_protocol_duality() {
     // Test deeply nested protocols
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
@@ -453,6 +483,7 @@ fn test_nested_protocol_duality() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_protocol_composition_duality_consistency() {
     // Test that duality is maintained through protocol composition
     type End = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;

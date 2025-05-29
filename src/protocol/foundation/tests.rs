@@ -24,10 +24,12 @@ impl Role for Carol {}
 
 // Test messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Used in tests, fields may not be directly read
 struct HelloMsg(String);
 #[derive(Debug, Clone)]
 struct AckMsg;
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Used in tests, fields may not be directly read
 struct DataMsg(Vec<u8>);
 
 impl Message for HelloMsg {}
@@ -805,6 +807,7 @@ fn test_legacy_role_implementation() {
 
 // Test that example messages implement the Message trait
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Used in tests, fields may not be directly read
 struct TestMessage(String);
 impl Message for TestMessage {}
 

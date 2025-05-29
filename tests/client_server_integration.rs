@@ -443,7 +443,7 @@ mod client_server_tests {
         // In a real scenario, you'd send `sent_msg` and receive `ack_msg`
         // Here, we just assert that the types are correct and data can be constructed.
         assert_eq!(sent_msg.0, user_profile_data);
-        assert_eq!(ack_msg.0, true);
+        assert!(ack_msg.0);
     }
 
     #[test]
@@ -492,7 +492,7 @@ mod client_server_tests {
         let ack_msg_profile = AckMsg(true, Some("session_store_profile".to_string()));
 
         assert_eq!(sent_cmd_msg_profile.0, command_store_profile);
-        assert_eq!(ack_msg_profile.0, true);
+        assert!(ack_msg_profile.0);
 
         // Simulate execution with ServerCommand::ProcessOrder
         let order_details_data = OrderDetails {
@@ -505,7 +505,7 @@ mod client_server_tests {
         let ack_msg_order = AckMsg(true, Some("session_process_order".to_string()));
 
         assert_eq!(sent_cmd_msg_order.0, command_process_order);
-        assert_eq!(ack_msg_order.0, true);
+        assert!(ack_msg_order.0);
 
         // Simulate execution with ServerCommand::GetStatus
         let command_get_status = ServerCommand::GetStatus;
@@ -513,6 +513,20 @@ mod client_server_tests {
         let ack_msg_status = AckMsg(true, Some("session_get_status".to_string()));
 
         assert_eq!(sent_cmd_msg_status.0, command_get_status);
-        assert_eq!(ack_msg_status.0, true);
+        assert!(ack_msg_status.0);
     }
+
+    #[test]
+    fn test_runtime_placeholder() {
+        // This test is a placeholder for future runtime integration tests.
+        // It ensures that the test suite can include tests that might involve
+        // async runtimes or other complex setups without causing issues now.
+        // Placeholder for actual runtime execution simulation
+    }
+
+    // TODO: Add more tests for:
+    // - Error cases and recovery
+    // - Performance under load
+    // - Security aspects (e.g., authentication, authorization)
+    // - Edge cases in protocol usage
 }

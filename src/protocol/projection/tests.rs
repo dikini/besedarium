@@ -15,6 +15,7 @@ use crate::protocol::projection::helpers::{False, RoleEq};
 
 // Define test roles
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Alice;
 impl Role for Alice {}
 impl SupportsActionIO<BiDirectionalAction> for Alice {}
@@ -22,6 +23,7 @@ impl SupportsActionIO<InputAction> for Alice {}
 impl SupportsActionIO<OutputAction> for Alice {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Bob;
 impl Role for Bob {}
 impl SupportsActionIO<BiDirectionalAction> for Bob {}
@@ -29,6 +31,7 @@ impl SupportsActionIO<InputAction> for Bob {}
 impl SupportsActionIO<OutputAction> for Bob {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct Carol;
 impl Role for Carol {}
 impl SupportsActionIO<BiDirectionalAction> for Carol {}
@@ -57,19 +60,23 @@ impl RoleEq<Bob> for Carol {
 
 // Define test messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct HelloMsg;
 impl Message for HelloMsg {}
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AckMsg;
 impl Message for AckMsg {}
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct DataMsg;
 impl Message for DataMsg {}
 
 // Define test IO type that supports all action types and ChanId
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct TestIO;
 impl SupportsActionIO<BiDirectionalAction> for TestIO {}
 impl SupportsActionIO<InputAction> for TestIO {}
@@ -78,11 +85,14 @@ impl ChanId for TestIO {}
 
 // Test label types
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 struct DataLbl;
 impl crate::protocol::foundation::MsgLbl for DataLbl {}
 
 // Helper type aliases for cleaner test code
+#[allow(dead_code)]
 type TestMeta = CommMetadata<DefaultChan, RequestLbl>;
+#[allow(dead_code)]
 type DataMeta = CommMetadata<TestIO, DataLbl>;
 
 // ============================================================================
@@ -90,6 +100,7 @@ type DataMeta = CommMetadata<TestIO, DataLbl>;
 // ============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tsend_sender_role() {
     // Test that TChanSend projects to EpChanSend when role is the sender
     type SendProto = TChanSend<
@@ -108,6 +119,7 @@ fn test_project_tsend_sender_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tsend_receiver_role() {
     // Test that TChanSend doesn't directly project to EpChanRecv for receiver
     // (Receiver role gets the continuation since TSend doesn't create a receive for the receiver)
@@ -127,6 +139,7 @@ fn test_project_tsend_receiver_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tsend_uninvolved_role() {
     // Test that uninvolved role gets the continuation
     type SendProto = TChanSend<
@@ -145,6 +158,7 @@ fn test_project_tsend_uninvolved_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_trecv_receiver_role() {
     // Test that TChanRecv projects to EpChanRecv when role is the receiver
     type RecvProto = TChanRecv<
@@ -163,6 +177,7 @@ fn test_project_trecv_receiver_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_trecv_sender_role() {
     // Test that sender role gets the continuation for TChanRecv
     type RecvProto = TChanRecv<
@@ -181,6 +196,7 @@ fn test_project_trecv_sender_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_trecv_uninvolved_role() {
     // Test that uninvolved role gets the continuation
     type RecvProto = TChanRecv<
@@ -203,6 +219,7 @@ fn test_project_trecv_uninvolved_role() {
 // ============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tchoice_simple() {
     // Test basic choice projection
     type LeftBranch = TChanSend<
@@ -232,6 +249,7 @@ fn test_project_tchoice_simple() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tchoice_involved_role() {
     // Test choice projection when role is involved in branches
     type LeftBranch = TChanSend<
@@ -261,6 +279,7 @@ fn test_project_tchoice_involved_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tchoice_uninvolved_role() {
     // Test choice projection when role is not involved in any branch
     type LeftBranch = TChanSend<
@@ -294,6 +313,7 @@ fn test_project_tchoice_uninvolved_role() {
 // ============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tpar_involved_role() {
     // Test parallel projection when role is involved in both branches
     type LeftBranch = TChanSend<
@@ -323,6 +343,7 @@ fn test_project_tpar_involved_role() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tpar_single_branch_involvement() {
     // Test parallel projection when role is involved in only one branch
     type LeftBranch = TChanSend<
@@ -352,6 +373,7 @@ fn test_project_tpar_single_branch_involvement() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tpar_uninvolved_role() {
     // Test parallel projection when role is not involved in any branch
     type LeftBranch = TChanSend<
@@ -385,6 +407,7 @@ fn test_project_tpar_uninvolved_role() {
 // ============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tend() {
     // Test that TChanEnd projects to EpChanEnd
     type EndProto = TChanEnd<TestIO, RequestLbl, BiDirectionalAction>;
@@ -395,6 +418,7 @@ fn test_project_tend() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tend_different_roles() {
     // Test that TChanEnd projects to EpChanEnd for any role
     type EndProto = TChanEnd<DefaultChan, DataLbl, BiDirectionalAction>;
@@ -410,6 +434,7 @@ fn test_project_tend_different_roles() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tstart() {
     // Test that TChanStart projects to EpChanStart
     type StartProto = TChanStart<
@@ -425,6 +450,7 @@ fn test_project_tstart() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_tstart_with_complex_continuation() {
     // Test TChanStart with complex continuation
     type ComplexContinuation = TChanSend<
@@ -459,6 +485,7 @@ fn test_project_tstart_with_complex_continuation() {
 // ============================================================================
 
 #[test]
+#[allow(dead_code)]
 fn test_project_nested_choice_in_parallel() {
     // Test complex nested protocol: parallel branches with choice inside
     type NestedChoice = TChanChoice<
@@ -507,6 +534,7 @@ fn test_project_nested_choice_in_parallel() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_sequential_send_recv() {
     // Test sequential send followed by receive
     type SeqProto = TChanSend<
@@ -539,6 +567,7 @@ fn test_project_sequential_send_recv() {
 }
 
 #[test]
+#[allow(dead_code)]
 fn test_project_choice_with_different_message_types() {
     // Test choice with different message types in branches
     type LeftBranch = TChanSend<

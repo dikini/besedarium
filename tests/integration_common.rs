@@ -503,31 +503,11 @@ impl HasDual for ServerCommandMsg {
     type Dual = ServerCommandMsg;
 }
 
-// --- Message Definitions ---
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuoteRequestMsg {
-    // Changed to struct with named field
-    pub item_id: String,
-}
-impl MessageTrait for QuoteRequestMsg {}
-impl SessionType for QuoteRequestMsg {}
-impl HasDual for QuoteRequestMsg {
-    type Dual = QuoteRequestMsg;
-}
+// --- Message Types (moved from common_type_sanity_tests) ---
+// These are basic message types used across integration tests.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuoteResponseMsg {
-    pub price: u64,
-}
-impl MessageTrait for QuoteResponseMsg {}
-impl SessionType for QuoteResponseMsg {}
-impl HasDual for QuoteResponseMsg {
-    type Dual = QuoteResponseMsg;
-}
-
-// Messages for Client-Server Protocol
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LoginMsg(pub String, pub String); // username, password
+pub struct LoginMsg(pub String, pub String);
 impl MessageTrait for LoginMsg {}
 impl SessionType for LoginMsg {}
 impl HasDual for LoginMsg {
@@ -535,7 +515,7 @@ impl HasDual for LoginMsg {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AckMsg(pub bool, pub Option<String>); // success, session_token
+pub struct AckMsg(pub bool, pub Option<String>);
 impl MessageTrait for AckMsg {}
 impl SessionType for AckMsg {}
 impl HasDual for AckMsg {
@@ -543,39 +523,65 @@ impl HasDual for AckMsg {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataMsg(pub Vec<u8>); // payload
+pub struct DataMsg(pub Vec<u8>);
 impl MessageTrait for DataMsg {}
+impl SessionType for DataMsg {}
+impl HasDual for DataMsg {
+    type Dual = DataMsg;
+}
 
-// New Messages for Query Protocol
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryMsg(pub String);
 impl MessageTrait for QueryMsg {}
+impl SessionType for QueryMsg {}
+impl HasDual for QueryMsg {
+    type Dual = QueryMsg;
+}
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResultMsg(pub String);
 impl MessageTrait for ResultMsg {}
-
-// Helper types for metadata (if needed, though CommMetadata is generic)
-// Commented out as per compiler warning
-/*
-pub fn auth_login_meta() -> CommMetadata<AuthChan, LLogin> {
-    CommMetadata::new(AuthChan, LLogin)
+impl SessionType for ResultMsg {}
+impl HasDual for ResultMsg {
+    type Dual = ResultMsg;
 }
 
-pub fn auth_ack_meta() -> CommMetadata<AuthChan, LAck> {
-    CommMetadata::new(AuthChan, LAck)
-}
-*/
 
-// Basic test to ensure types compile (will be expanded with actual protocol tests)
+// --- Test Utility Functions (Optional) ---
+
+// Helper function to create a UserProfile for tests
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use besedarium::Message as MessageTrait; // Ensure correct Message trait is in scope
+pub fn create_test_user_profile(id: u64, name: &str) -> UserProfile {
+    UserProfile {
+        user_id: id,
+        username: name.to_string(),
+        email: Some(format!("{}@example.com", name)),
+        preferences: vec![("theme".to_string(), "dark".to_string())],
+        aliases: vec![format!("{}_alias", name)],
+    }
+}
+
+// Helper function to create OrderDetails for tests
+#[cfg(test)]
+pub fn create_test_order_details(item_id: &str, quantity: u32) -> OrderDetails {
+    OrderDetails {
+        item_id: item_id.to_string(),
+        quantity,
+        notes: Some("Test order".to_string()),
+    }
+}
+
+// --- Basic Sanity Checks for Common Types ---
+// These tests are simple assertions to ensure that the common types
+// can be instantiated and meet very basic criteria. They are not exhaustive
+// protocol tests but serve as quick checks during development.
+
+#[cfg(test)]
+mod common_type_sanity_tests {
+    use super::*; // Import everything from the parent module
 
     #[test]
-    fn test_role_definitions() {
-        // Test that role types can be instantiated (implicitly tested by compilation)
+    fn test_role_instantiation() {
         let _alice = Alice;
         let _bob = Bob;
         let _charlie = Charlie;
@@ -585,92 +591,107 @@ mod tests {
         let _client = Client;
         let _service = Service;
         let _database = Database;
-        assert!(true); // Placeholder assertion
+        // Basic check: ensure types can be created
     }
 
     #[test]
-    fn test_channel_definitions() {
-        // Test that channel types can be instantiated
+    fn test_channel_instantiation() {
         let _auth_chan = AuthChan;
         let _order_chan = OrderChan;
-        let _data_chan = DataChan;
         let _query_chan_s1 = QueryChanS1;
         let _query_chan_s2 = QueryChanS2;
         let _order_chan_s1 = OrderChanS1;
         let _order_chan_s2 = OrderChanS2;
+        let _data_chan = DataChan;
         let _service_chan = ServiceChan;
         let _db_chan = DbChan;
-        assert!(true); // Placeholder assertion
+        // Basic check
     }
 
     #[test]
-    fn test_label_definitions() {
-        // Test that label types can be instantiated
+    fn test_label_instantiation() {
         let _l_login = LLogin;
         let _l_ack = LAck;
-        let _l_quote_request = LQuoteRequest;
-        let _l_quote_response = LQuoteResponse;
+        let _l_quote_req = LQuoteRequest;
+        let _l_quote_resp = LQuoteResponse;
         let _login_lbl = LoginLbl;
         let _ack_lbl = AckLbl;
         let _data_lbl = DataLbl;
         let _query_lbl = QueryLbl;
         let _result_lbl = ResultLbl;
-        // Add new labels
         let _user_profile_lbl = UserProfileLbl;
         let _order_details_lbl = OrderDetailsLbl;
         let _server_command_lbl = ServerCommandLbl;
-        assert!(true); // Placeholder assertion
+        // Basic check
     }
 
     #[test]
-    fn test_message_definitions() {
-        // Test that message types can be instantiated
-        let _login_msg = LoginMsg("user".to_string(), "pass".to_string());
-        let _ack_msg = AckMsg(true, Some("token".to_string()));
-        let _data_msg = DataMsg(vec![1, 2, 3]);
-        let _quote_request_msg = QuoteRequestMsg {
-            item_id: "item123".to_string(),
-        };
-        let _quote_response_msg = QuoteResponseMsg { price: 100 };
-        let _query_msg = QueryMsg("SELECT * FROM users".to_string());
-        let _result_msg = ResultMsg("user_id: 1, name: Alice".to_string());
+    fn test_complex_data_creation() {
+        let user_profile = create_test_user_profile(1, "testuser");
+        assert_eq!(user_profile.user_id, 1);
+        assert_eq!(user_profile.username, "testuser");
+        assert_eq!(user_profile.email, Some("testuser@example.com".to_string()));
 
-        // New complex messages
-        let user_profile_data = UserProfile {
-            user_id: 1,
-            username: "testuser".to_string(),
-            email: Some("test@example.com".to_string()),
-            preferences: vec![("theme".to_string(), "dark".to_string())],
-            aliases: vec!["tester".to_string()],
-        };
-        let _user_profile_msg = UserProfileMsg(user_profile_data.clone());
+        let order_details = create_test_order_details("item123", 5);
+        assert_eq!(order_details.item_id, "item123");
+        assert_eq!(order_details.quantity, 5);
+        assert_eq!(order_details.notes, Some("Test order".to_string()));
 
-        let order_details_data = OrderDetails {
-            item_id: "item001".to_string(),
-            quantity: 2,
-            notes: Some("Gift wrap".to_string()),
-        };
-        let _order_details_msg = OrderDetailsMsg(order_details_data.clone());
+        let server_command_profile = ServerCommand::StoreProfile(user_profile.clone());
+        let server_command_order = ServerCommand::ProcessOrder(order_details.clone());
+        let server_command_status = ServerCommand::GetStatus;
 
-        let _server_command_msg_profile =
-            ServerCommandMsg(ServerCommand::StoreProfile(user_profile_data.clone()));
-        let _server_command_msg_order =
-            ServerCommandMsg(ServerCommand::ProcessOrder(order_details_data.clone()));
-        let _server_command_msg_status = ServerCommandMsg(ServerCommand::GetStatus);
+        // Check that enum variants can be constructed
+        match server_command_profile {
+            ServerCommand::StoreProfile(up) => assert_eq!(up, user_profile),
+            _ => panic!("Unexpected enum variant"),
+        }
+        match server_command_order {
+            ServerCommand::ProcessOrder(od) => assert_eq!(od, order_details),
+            _ => panic!("Unexpected enum variant"),
+        }
+        match server_command_status {
+            ServerCommand::GetStatus => {} // Correct variant
+            _ => panic!("Unexpected enum variant"),
+        }
+    }
 
-        // Verify messages implement required traits
-        fn requires_message<T: MessageTrait>(_: T) {}
-        requires_message(_login_msg.clone());
-        requires_message(_ack_msg.clone());
-        requires_message(_data_msg.clone());
-        requires_message(_quote_request_msg.clone());
-        requires_message(_quote_response_msg.clone());
-        requires_message(_query_msg.clone());
-        requires_message(_result_msg.clone());
-        requires_message(_user_profile_msg.clone());
-        requires_message(_order_details_msg.clone());
-        requires_message(_server_command_msg_profile.clone());
-        requires_message(_server_command_msg_order.clone());
-        requires_message(_server_command_msg_status.clone());
+    #[test]
+    fn test_message_wrapper_creation() {
+        let user_profile = create_test_user_profile(2, "anotheruser");
+        let user_profile_msg = UserProfileMsg(user_profile.clone());
+        assert_eq!(user_profile_msg.0, user_profile);
+
+        let order_details = create_test_order_details("item456", 10);
+        let order_details_msg = OrderDetailsMsg(order_details.clone());
+        assert_eq!(order_details_msg.0, order_details);
+
+        let server_command = ServerCommand::GetStatus;
+        let server_command_msg = ServerCommandMsg(server_command.clone());
+        assert_eq!(server_command_msg.0, server_command);
+    }
+
+    #[test]
+    fn test_basic_message_creation() {
+        let login_msg = LoginMsg("user".to_string(), "pass".to_string());
+        assert_eq!(login_msg.0, "user");
+        assert_eq!(login_msg.1, "pass");
+
+        let ack_msg_ok = AckMsg(true, Some("token".to_string()));
+        assert!(ack_msg_ok.0);
+        assert_eq!(ack_msg_ok.1, Some("token".to_string()));
+        
+        let ack_msg_fail = AckMsg(false, None);
+        assert!(!ack_msg_fail.0);
+        assert_eq!(ack_msg_fail.1, None);
+
+        let data_msg = DataMsg(vec![1, 2, 3]);
+        assert_eq!(data_msg.0, vec![1, 2, 3]);
+
+        let query_msg = QueryMsg("SELECT * FROM data_table".to_string());
+        assert_eq!(query_msg.0, "SELECT * FROM data_table");
+
+        let result_msg = ResultMsg("id: 1, value: example".to_string());
+        assert_eq!(result_msg.0, "id: 1, value: example");
     }
 }
