@@ -7,7 +7,30 @@ mod integration_common;
 
 use besedarium::protocol::foundation::*;
 use besedarium::protocol::global::*;
-use integration_common::*;
+use besedarium::protocol::projection::*;
+use integration_common::{
+    // Import specific types needed
+    AckLbl,
+    AckMsg,
+    Alice,
+    AuthChan,
+    Bob,
+    Charlie,
+    Client, // Added Client
+    DataChan,
+    DataLbl,
+    DataMsg,
+    Database, // Added Database
+    DbChan,   // Added DbChan
+    LoginLbl,
+    LoginMsg,
+    QueryLbl,    // Added QueryLbl
+    QueryMsg,    // Added QueryMsg
+    ResultLbl,   // Added ResultLbl
+    ResultMsg,   // Added ResultMsg
+    Service,     // Added Service
+    ServiceChan, // Added ServiceChan
+}; // Keep wildcard for projection traits
 
 #[cfg(test)]
 mod client_server_tests {
@@ -88,30 +111,22 @@ mod client_server_tests {
     #[test]
     fn test_message_creation() {
         // Test that messages can be created and used
-        let login = LoginMsg {
-            username: "alice".to_string(),
-            password: "secret".to_string(),
-        };
-        let ack = AckMsg {
-            success: true,
-            session_token: Some("token123".to_string()),
-        };
-        let data = DataMsg {
-            payload: b"test data".to_vec(),
-        };
+        let login_msg = LoginMsg("alice".to_string(), "secret".to_string());
+        let ack_msg = AckMsg(true, Some("token123".to_string()));
+        let data_msg = DataMsg(b"test data".to_vec());
 
         // Verify messages implement required traits
         fn requires_message<T: Message>(_: T) {}
-        requires_message(login);
-        requires_message(ack);
-        requires_message(data);
+        requires_message(login_msg);
+        requires_message(ack_msg);
+        requires_message(data_msg);
     }
 
     #[test]
     fn test_metadata_integration() {
         // Test that metadata types integrate properly with protocol types
-        let auth_meta = AuthMeta::new(AuthChan, LoginLbl);
-        let data_meta = DataMeta::new(DataChan, DataLbl);
+        let auth_meta = CommMetadata::new(AuthChan, LoginLbl);
+        let data_meta = CommMetadata::new(DataChan, DataLbl);
 
         // Test metadata satisfies required traits
         fn requires_metadata<T: Metadata>(_: T) {}
@@ -159,7 +174,8 @@ mod client_server_tests {
     #[test]
     fn test_multi_party_protocol() {
         // Test a more complex protocol involving three parties
-        type ThreePartyProtocol = TChanSend<
+        // Original ThreePartyProtocol involving Alice, Bob, Charlie remains for now
+        type OriginalThreePartyProtocol = TChanSend<
             Alice, // Client sends to Server
             Bob,
             AuthChan,
@@ -196,9 +212,63 @@ mod client_server_tests {
             BiDirectionalAction,
         >;
 
-        // Verify protocol compiles
+        // Verify original protocol compiles
         fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
-        requires_global_protocol(std::marker::PhantomData::<ThreePartyProtocol>);
+        requires_global_protocol(std::marker::PhantomData::<OriginalThreePartyProtocol>);
+
+        // New Query Protocol: Client -> Service -> Database -> Service -> Client
+        type QueryServiceProtocol = TChanSend<
+            Client,
+            Service,
+            ServiceChan,
+            QueryLbl,
+            QueryMsg,
+            TChanSend<
+                Service,
+                Database,
+                DbChan,
+                QueryLbl,
+                QueryMsg, // Service forwards the same query
+                TChanRecv<
+                    Database,
+                    Service,
+                    DbChan,
+                    ResultLbl,
+                    ResultMsg,
+                    TChanRecv<
+                        Service,
+                        Client,
+                        ServiceChan,
+                        ResultLbl,
+                        ResultMsg, // Service forwards the result
+                        TChanEnd<ServiceChan, ResultLbl, BiDirectionalAction>,
+                        BiDirectionalAction,
+                    >,
+                    BiDirectionalAction,
+                >,
+                BiDirectionalAction,
+            >,
+            BiDirectionalAction,
+        >;
+
+        // Verify new query protocol compiles
+        requires_global_protocol(std::marker::PhantomData::<QueryServiceProtocol>);
+
+        // Test projection for the new QueryServiceProtocol
+        type ClientEndpointQuery = <() as Project<QueryServiceProtocol, Client>>::Output;
+        type ServiceEndpointQuery = <() as Project<QueryServiceProtocol, Service>>::Output;
+        type DatabaseEndpointQuery = <() as Project<QueryServiceProtocol, Database>>::Output;
+
+        // Verify projections are valid local protocols
+        fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_local_protocol(std::marker::PhantomData::<ClientEndpointQuery>);
+        requires_local_protocol(std::marker::PhantomData::<ServiceEndpointQuery>);
+        requires_local_protocol(std::marker::PhantomData::<DatabaseEndpointQuery>);
+
+        // Optional: Add assertions to check the structure of projected types if needed
+        // This can be useful for debugging or deep understanding but makes tests verbose.
+        // Example (conceptual, actual types might be complex and require helper assertions):
+        // assert_eq!(std::any::type_name::<ClientEndpointQuery>(), "...");
     }
 
     #[test]
@@ -239,7 +309,6 @@ mod client_server_tests {
     #[test]
     fn test_protocol_projection() {
         // Test that protocols can be projected to local endpoints
-        use besedarium::protocol::projection::*;
 
         // Test projection for Alice's role in the login protocol
         type AliceEndpoint = <() as Project<LoginProtocol, Alice>>::Output;
@@ -294,40 +363,26 @@ mod client_server_tests {
         requires_global_protocol(std::marker::PhantomData::<ComprehensiveProtocol>);
 
         // 3. Verify projections work for all roles
-        use besedarium::protocol::projection::*;
         type AliceProj = <() as Project<ComprehensiveProtocol, Alice>>::Output;
         type BobProj = <() as Project<ComprehensiveProtocol, Bob>>::Output;
         type CharlieProj = <() as Project<ComprehensiveProtocol, Charlie>>::Output;
 
+        // Verify projections are valid local protocols
         fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
         requires_local_protocol(std::marker::PhantomData::<AliceProj>);
         requires_local_protocol(std::marker::PhantomData::<BobProj>);
         requires_local_protocol(std::marker::PhantomData::<CharlieProj>);
+    }
 
-        // 4. Test that metadata and messages integrate properly
-        let auth_meta = AuthMeta::new(AuthChan, LoginLbl);
-        let data_meta = DataMeta::new(DataChan, DataLbl);
+    #[test]
+    fn test_complex_protocol_message_instantiation() {
+        // Test instantiation of messages used in complex protocols
+        let login_msg = LoginMsg("alice".to_string(), "secret123".to_string());
+        let ack_msg = AckMsg(true, Some("session_abc123".to_string()));
+        let data_msg = DataMsg(b"sensitive user data".to_vec());
 
-        let login_msg = LoginMsg {
-            username: "alice".to_string(),
-            password: "secret123".to_string(),
-        };
-
-        let ack_msg = AckMsg {
-            success: true,
-            session_token: Some("session_abc123".to_string()),
-        };
-
-        let data_msg = DataMsg {
-            payload: b"sensitive user data".to_vec(),
-        };
-
-        // Verify all types implement required traits
-        fn requires_metadata<T: Metadata>(_: T) {}
+        // Verify messages implement required traits
         fn requires_message<T: Message>(_: T) {}
-
-        requires_metadata(auth_meta);
-        requires_metadata(data_meta);
         requires_message(login_msg);
         requires_message(ack_msg);
         requires_message(data_msg);
