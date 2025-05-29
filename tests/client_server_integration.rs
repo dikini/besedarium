@@ -102,15 +102,15 @@ mod client_server_tests {
     #[test]
     fn test_message_creation() {
         // Test that messages can be created and used
-        let login = LoginMsg("alice".to_string(), "secret".to_string());
-        let ack = AckMsg(true, Some("token123".to_string()));
-        let data = DataMsg(b"test data".to_vec());
+        let login_msg = LoginMsg("alice".to_string(), "secret".to_string());
+        let ack_msg = AckMsg(true, Some("token123".to_string()));
+        let data_msg = DataMsg(b"test data".to_vec());
 
         // Verify messages implement required traits
         fn requires_message<T: Message>(_: T) {}
-        requires_message(login);
-        requires_message(ack);
-        requires_message(data);
+        requires_message(login_msg);
+        requires_message(ack_msg);
+        requires_message(data_msg);
     }
 
     #[test]
@@ -245,7 +245,6 @@ mod client_server_tests {
     #[test]
     fn test_protocol_projection() {
         // Test that protocols can be projected to local endpoints
-        // use besedarium::protocol::projection::*; // Already imported at the top level
 
         // Test projection for Alice's role in the login protocol
         type AliceEndpoint = <() as Project<LoginProtocol, Alice>>::Output;
@@ -300,7 +299,6 @@ mod client_server_tests {
         requires_global_protocol(std::marker::PhantomData::<ComprehensiveProtocol>);
 
         // 3. Verify projections work for all roles
-        // use besedarium::protocol::projection::*; // Already imported
         type AliceProj = <() as Project<ComprehensiveProtocol, Alice>>::Output;
         type BobProj = <() as Project<ComprehensiveProtocol, Bob>>::Output;
         type CharlieProj = <() as Project<ComprehensiveProtocol, Charlie>>::Output;
