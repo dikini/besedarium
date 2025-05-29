@@ -3,7 +3,8 @@
 //! This module contains integration tests that demonstrate complex protocol scenarios
 //! using the modern foundation types and architecture.
 
-use besedarium::{ // Grouped imports from besedarium crate
+use besedarium::{
+    // Grouped imports from besedarium crate
     BiDirectionalAction,
     ChanId as ChanIdTrait,
     HasDual,
@@ -12,7 +13,7 @@ use besedarium::{ // Grouped imports from besedarium crate
     MsgLbl as MsgLblTrait,   // Renamed to avoid conflict
     OutputAction,
     ProtocolLabel,
-    Role as RoleTrait,       // Renamed to avoid conflict
+    Role as RoleTrait, // Renamed to avoid conflict
     SessionType,
     SupportsActionIO,
 };
@@ -50,7 +51,6 @@ impl SupportsActionIO<InputAction> for Buyer {}
 impl SupportsActionIO<OutputAction> for Buyer {}
 impl SupportsActionIO<BiDirectionalAction> for Buyer {}
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Seller1;
 impl RoleTrait for Seller1 {}
@@ -67,47 +67,106 @@ impl SupportsActionIO<BiDirectionalAction> for Seller2 {}
 
 // --- RoleEq Implementations (Non-Reflexive) ---
 // Alice vs Others
-impl RoleEq<Bob> for Alice { type Output = False; }
-impl RoleEq<Charlie> for Alice { type Output = False; }
-impl RoleEq<Buyer> for Alice { type Output = False; }
-impl RoleEq<Seller1> for Alice { type Output = False; }
-impl RoleEq<Seller2> for Alice { type Output = False; }
+impl RoleEq<Bob> for Alice {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Alice {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Alice {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Alice {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Alice {
+    type Output = False;
+}
 
 // Bob vs Others
-impl RoleEq<Alice> for Bob { type Output = False; }
-impl RoleEq<Charlie> for Bob { type Output = False; }
-impl RoleEq<Buyer> for Bob { type Output = False; }
-impl RoleEq<Seller1> for Bob { type Output = False; }
-impl RoleEq<Seller2> for Bob { type Output = False; }
+impl RoleEq<Alice> for Bob {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Bob {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Bob {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Bob {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Bob {
+    type Output = False;
+}
 
 // Charlie vs Others
-impl RoleEq<Alice> for Charlie { type Output = False; }
-impl RoleEq<Bob> for Charlie { type Output = False; }
-impl RoleEq<Buyer> for Charlie { type Output = False; }
-impl RoleEq<Seller1> for Charlie { type Output = False; }
-impl RoleEq<Seller2> for Charlie { type Output = False; }
+impl RoleEq<Alice> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Bob> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Charlie {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Charlie {
+    type Output = False;
+}
 
 // Buyer vs Others
-impl RoleEq<Alice> for Buyer { type Output = False; }
-impl RoleEq<Bob> for Buyer { type Output = False; }
-impl RoleEq<Charlie> for Buyer { type Output = False; }
-impl RoleEq<Seller1> for Buyer { type Output = False; }
-impl RoleEq<Seller2> for Buyer { type Output = False; }
+impl RoleEq<Alice> for Buyer {
+    type Output = False;
+}
+impl RoleEq<Bob> for Buyer {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Buyer {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Buyer {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Buyer {
+    type Output = False;
+}
 
 // Seller1 vs Others
-impl RoleEq<Alice> for Seller1 { type Output = False; }
-impl RoleEq<Bob> for Seller1 { type Output = False; }
-impl RoleEq<Charlie> for Seller1 { type Output = False; }
-impl RoleEq<Buyer> for Seller1 { type Output = False; }
-impl RoleEq<Seller2> for Seller1 { type Output = False; }
+impl RoleEq<Alice> for Seller1 {
+    type Output = False;
+}
+impl RoleEq<Bob> for Seller1 {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Seller1 {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Seller1 {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Seller1 {
+    type Output = False;
+}
 
 // Seller2 vs Others
-impl RoleEq<Alice> for Seller2 { type Output = False; }
-impl RoleEq<Bob> for Seller2 { type Output = False; }
-impl RoleEq<Charlie> for Seller2 { type Output = False; }
-impl RoleEq<Buyer> for Seller2 { type Output = False; }
-impl RoleEq<Seller1> for Seller2 { type Output = False; }
-
+impl RoleEq<Alice> for Seller2 {
+    type Output = False;
+}
+impl RoleEq<Bob> for Seller2 {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Seller2 {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Seller2 {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Seller2 {
+    type Output = False;
+}
 
 // Channels
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -118,7 +177,6 @@ impl HasDual for AuthChan {
     type Dual = AuthChan;
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OrderChan;
 impl ChanIdTrait for OrderChan {}
@@ -126,7 +184,6 @@ impl SessionType for OrderChan {}
 impl HasDual for OrderChan {
     type Dual = OrderChan;
 }
-
 
 // Channels for multi-party
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -169,7 +226,6 @@ impl HasDual for DataChan {
     type Dual = DataChan;
 }
 
-
 // Labels (implementing MsgLblTrait and ProtocolLabel)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LLogin;
@@ -179,7 +235,6 @@ impl SessionType for LLogin {} // If labels are used in contexts requiring Sessi
 impl HasDual for LLogin {
     type Dual = LLogin;
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LAck;
@@ -237,7 +292,8 @@ impl HasDual for DataLbl {
 
 // --- Message Definitions ---
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuoteRequestMsg { // Changed to struct with named field
+pub struct QuoteRequestMsg {
+    // Changed to struct with named field
     pub item_id: String,
 }
 impl MessageTrait for QuoteRequestMsg {}
@@ -306,7 +362,6 @@ impl HasDual for OrderMsg {
     type Dual = OrderMsg;
 }
 
-
 // --- Metadata Definitions (Illustrative) ---
 // Helper functions for creating metadata instances
 // Commented out as per compiler warning
@@ -319,7 +374,6 @@ pub fn auth_ack_meta() -> CommMetadata<AuthChan, LAck> {
     CommMetadata::new(AuthChan, LAck)
 }
 */
-
 
 // Basic test to ensure types compile (will be expanded with actual protocol tests)
 #[cfg(test)]

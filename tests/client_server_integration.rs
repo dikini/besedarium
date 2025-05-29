@@ -7,11 +7,21 @@ mod integration_common;
 
 use besedarium::protocol::foundation::*;
 use besedarium::protocol::global::*;
-use integration_common::{ // Import specific types needed
-    AckLbl, AckMsg, Alice, AuthChan, Bob, Charlie, DataChan, DataLbl, DataMsg, LoginLbl, LoginMsg
-};
-use besedarium::protocol::projection::*; // Keep wildcard for projection traits
-
+use besedarium::protocol::projection::*;
+use integration_common::{
+    // Import specific types needed
+    AckLbl,
+    AckMsg,
+    Alice,
+    AuthChan,
+    Bob,
+    Charlie,
+    DataChan,
+    DataLbl,
+    DataMsg,
+    LoginLbl,
+    LoginMsg,
+}; // Keep wildcard for projection traits
 
 #[cfg(test)]
 mod client_server_tests {
