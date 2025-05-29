@@ -16,11 +16,20 @@ use integration_common::{
     AuthChan,
     Bob,
     Charlie,
+    Client, // Added Client
     DataChan,
     DataLbl,
     DataMsg,
+    Database, // Added Database
+    DbChan,   // Added DbChan
     LoginLbl,
     LoginMsg,
+    QueryLbl,   // Added QueryLbl
+    QueryMsg,   // Added QueryMsg
+    ResultLbl,  // Added ResultLbl
+    ResultMsg,  // Added ResultMsg
+    Service,    // Added Service
+    ServiceChan // Added ServiceChan
 }; // Keep wildcard for projection traits
 
 #[cfg(test)]
@@ -165,7 +174,8 @@ mod client_server_tests {
     #[test]
     fn test_multi_party_protocol() {
         // Test a more complex protocol involving three parties
-        type ThreePartyProtocol = TChanSend<
+        // Original ThreePartyProtocol involving Alice, Bob, Charlie remains for now
+        type OriginalThreePartyProtocol = TChanSend<
             Alice, // Client sends to Server
             Bob,
             AuthChan,
@@ -202,9 +212,63 @@ mod client_server_tests {
             BiDirectionalAction,
         >;
 
-        // Verify protocol compiles
+        // Verify original protocol compiles
         fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
-        requires_global_protocol(std::marker::PhantomData::<ThreePartyProtocol>);
+        requires_global_protocol(std::marker::PhantomData::<OriginalThreePartyProtocol>);
+
+        // New Query Protocol: Client -> Service -> Database -> Service -> Client
+        type QueryServiceProtocol = TChanSend<
+            Client,
+            Service,
+            ServiceChan,
+            QueryLbl,
+            QueryMsg,
+            TChanSend<
+                Service,
+                Database,
+                DbChan,
+                QueryLbl,
+                QueryMsg, // Service forwards the same query
+                TChanRecv<
+                    Database,
+                    Service,
+                    DbChan,
+                    ResultLbl,
+                    ResultMsg,
+                    TChanRecv<
+                        Service,
+                        Client,
+                        ServiceChan,
+                        ResultLbl,
+                        ResultMsg, // Service forwards the result
+                        TChanEnd<ServiceChan, ResultLbl, BiDirectionalAction>,
+                        BiDirectionalAction,
+                    >,
+                    BiDirectionalAction,
+                >,
+                BiDirectionalAction,
+            >,
+            BiDirectionalAction,
+        >;
+
+        // Verify new query protocol compiles
+        requires_global_protocol(std::marker::PhantomData::<QueryServiceProtocol>);
+
+        // Test projection for the new QueryServiceProtocol
+        type ClientEndpointQuery = <() as Project<QueryServiceProtocol, Client>>::Output;
+        type ServiceEndpointQuery = <() as Project<QueryServiceProtocol, Service>>::Output;
+        type DatabaseEndpointQuery = <() as Project<QueryServiceProtocol, Database>>::Output;
+
+        // Verify projections are valid local protocols
+        fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+        requires_local_protocol(std::marker::PhantomData::<ClientEndpointQuery>);
+        requires_local_protocol(std::marker::PhantomData::<ServiceEndpointQuery>);
+        requires_local_protocol(std::marker::PhantomData::<DatabaseEndpointQuery>);
+
+        // Optional: Add assertions to check the structure of projected types if needed
+        // This can be useful for debugging or deep understanding but makes tests verbose.
+        // Example (conceptual, actual types might be complex and require helper assertions):
+        // assert_eq!(std::any::type_name::<ClientEndpointQuery>(), "...");
     }
 
     #[test]

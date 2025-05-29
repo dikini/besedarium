@@ -65,6 +65,28 @@ impl SupportsActionIO<InputAction> for Seller2 {}
 impl SupportsActionIO<OutputAction> for Seller2 {}
 impl SupportsActionIO<BiDirectionalAction> for Seller2 {}
 
+// New Roles for Query Protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Client;
+impl RoleTrait for Client {}
+impl SupportsActionIO<InputAction> for Client {}
+impl SupportsActionIO<OutputAction> for Client {}
+impl SupportsActionIO<BiDirectionalAction> for Client {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Service;
+impl RoleTrait for Service {}
+impl SupportsActionIO<InputAction> for Service {}
+impl SupportsActionIO<OutputAction> for Service {}
+impl SupportsActionIO<BiDirectionalAction> for Service {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Database;
+impl RoleTrait for Database {}
+impl SupportsActionIO<InputAction> for Database {}
+impl SupportsActionIO<OutputAction> for Database {}
+impl SupportsActionIO<BiDirectionalAction> for Database {}
+
 // --- RoleEq Implementations (Non-Reflexive) ---
 // Alice vs Others
 impl RoleEq<Bob> for Alice {
@@ -168,6 +190,84 @@ impl RoleEq<Seller1> for Seller2 {
     type Output = False;
 }
 
+// Client vs Others
+impl RoleEq<Alice> for Client {
+    type Output = False;
+}
+impl RoleEq<Bob> for Client {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Client {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Client {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Client {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Client {
+    type Output = False;
+}
+impl RoleEq<Service> for Client {
+    type Output = False;
+}
+impl RoleEq<Database> for Client {
+    type Output = False;
+}
+
+// Service vs Others
+impl RoleEq<Alice> for Service {
+    type Output = False;
+}
+impl RoleEq<Bob> for Service {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Service {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Service {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Service {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Service {
+    type Output = False;
+}
+impl RoleEq<Client> for Service {
+    type Output = False;
+}
+impl RoleEq<Database> for Service {
+    type Output = False;
+}
+
+// Database vs Others
+impl RoleEq<Alice> for Database {
+    type Output = False;
+}
+impl RoleEq<Bob> for Database {
+    type Output = False;
+}
+impl RoleEq<Charlie> for Database {
+    type Output = False;
+}
+impl RoleEq<Buyer> for Database {
+    type Output = False;
+}
+impl RoleEq<Seller1> for Database {
+    type Output = False;
+}
+impl RoleEq<Seller2> for Database {
+    type Output = False;
+}
+impl RoleEq<Client> for Database {
+    type Output = False;
+}
+impl RoleEq<Service> for Database {
+    type Output = False;
+}
+
 // Channels
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AuthChan;
@@ -224,6 +324,23 @@ impl ChanIdTrait for DataChan {}
 impl SessionType for DataChan {}
 impl HasDual for DataChan {
     type Dual = DataChan;
+}
+
+// New Channels for Query Protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServiceChan; // Client to Service
+impl ChanIdTrait for ServiceChan {}
+impl SessionType for ServiceChan {}
+impl HasDual for ServiceChan {
+    type Dual = ServiceChan;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DbChan; // Service to Database
+impl ChanIdTrait for DbChan {}
+impl SessionType for DbChan {}
+impl HasDual for DbChan {
+    type Dual = DbChan;
 }
 
 // Labels (implementing MsgLblTrait and ProtocolLabel)
@@ -284,11 +401,15 @@ impl HasDual for AckLbl {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataLbl;
 impl MsgLblTrait for DataLbl {}
-impl ProtocolLabel for DataLbl {}
-impl SessionType for DataLbl {}
-impl HasDual for DataLbl {
-    type Dual = DataLbl;
-}
+
+// New Message Labels for Query Protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QueryLbl;
+impl MsgLblTrait for QueryLbl {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResultLbl;
+impl MsgLblTrait for ResultLbl {}
 
 // --- Message Definitions ---
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -332,38 +453,17 @@ impl HasDual for AckMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataMsg(pub Vec<u8>); // payload
 impl MessageTrait for DataMsg {}
-impl SessionType for DataMsg {}
-impl HasDual for DataMsg {
-    type Dual = DataMsg;
-}
 
-// Messages for Multi-Party Scenario (Illustrative)
-#[derive(Debug, Clone, PartialEq, Eq)]
+// New Messages for Query Protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryMsg(pub String);
 impl MessageTrait for QueryMsg {}
-impl SessionType for QueryMsg {}
-impl HasDual for QueryMsg {
-    type Dual = QueryMsg;
-}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuoteMsg(pub u64);
-impl MessageTrait for QuoteMsg {}
-impl SessionType for QuoteMsg {}
-impl HasDual for QuoteMsg {
-    type Dual = QuoteMsg;
-}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResultMsg(pub String);
+impl MessageTrait for ResultMsg {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OrderMsg(pub String, pub u64); // e.g. item_id, quantity
-impl MessageTrait for OrderMsg {}
-impl SessionType for OrderMsg {}
-impl HasDual for OrderMsg {
-    type Dual = OrderMsg;
-}
-
-// --- Metadata Definitions (Illustrative) ---
-// Helper functions for creating metadata instances
+// Helper types for metadata (if needed, though CommMetadata is generic)
 // Commented out as per compiler warning
 /*
 pub fn auth_login_meta() -> CommMetadata<AuthChan, LLogin> {
@@ -390,6 +490,9 @@ mod tests {
         let _buyer = Buyer;
         let _seller1 = Seller1;
         let _seller2 = Seller2;
+        let _client = Client;
+        let _service = Service;
+        let _database = Database;
         assert!(true); // Placeholder assertion
     }
 
@@ -403,6 +506,8 @@ mod tests {
         let _query_chan_s2 = QueryChanS2;
         let _order_chan_s1 = OrderChanS1;
         let _order_chan_s2 = OrderChanS2;
+        let _service_chan = ServiceChan;
+        let _db_chan = DbChan;
         assert!(true); // Placeholder assertion
     }
 
@@ -416,6 +521,8 @@ mod tests {
         let _login_lbl = LoginLbl;
         let _ack_lbl = AckLbl;
         let _data_lbl = DataLbl;
+        let _query_lbl = QueryLbl;
+        let _result_lbl = ResultLbl;
         assert!(true); // Placeholder assertion
     }
 
@@ -425,32 +532,19 @@ mod tests {
         let _login_msg = LoginMsg("user".to_string(), "pass".to_string());
         let _ack_msg = AckMsg(true, Some("token".to_string()));
         let _data_msg = DataMsg(vec![1, 2, 3]);
-
-        let _quote_req_msg = QuoteRequestMsg {
-            item_id: "GPU123".to_string(),
-        };
-        let _quote_resp_msg = QuoteResponseMsg { price: 1200 };
-
-        // Verify messages implement required traits
-        fn requires_message<T: MessageTrait>(_: T) {}
-        requires_message(_login_msg);
-        requires_message(_ack_msg);
-        requires_message(_data_msg);
-        requires_message(_quote_req_msg.clone()); // Clone if it's to be used again
-        requires_message(_quote_resp_msg.clone()); // Clone if it's to be used again
-    }
-
-    #[test]
-    fn test_multi_party_message_definitions() {
-        // Test instantiation of multi-party messages
-        let _query_msg = QueryMsg("Need GPUs".to_string());
-        let _quote_msg = QuoteMsg(1000);
-        let _order_msg = OrderMsg("Buy 2".to_string(), 2000);
+        let _quote_request_msg = QuoteRequestMsg { item_id: "item123".to_string() };
+        let _quote_response_msg = QuoteResponseMsg { price: 100 };
+        let _query_msg = QueryMsg("SELECT * FROM users".to_string());
+        let _result_msg = ResultMsg("user_id: 1, name: Alice".to_string());
 
         // Verify messages implement required traits
         fn requires_message<T: MessageTrait>(_: T) {}
-        requires_message(_query_msg);
-        requires_message(_quote_msg);
-        requires_message(_order_msg);
+        requires_message(_login_msg.clone());
+        requires_message(_ack_msg.clone());
+        requires_message(_data_msg.clone());
+        requires_message(_quote_request_msg.clone());
+        requires_message(_quote_response_msg.clone());
+        requires_message(_query_msg.clone());
+        requires_message(_result_msg.clone());
     }
 }
