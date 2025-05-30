@@ -43,6 +43,7 @@ name = "besedarium"
 version = "0.0.0"
 dependencies = [
  "hex",
+ "log",
  "serde",
  "serde_json",
  "thiserror",

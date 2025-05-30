@@ -32,6 +32,12 @@ pub enum RuntimeError {
     #[error("System error: {message}")]
     System { message: String },
     
+    #[error("Execution error: {0}")]
+    Execution(String),
+    
+    #[error("Session already exists: {0}")]
+    SessionAlreadyExists(String),
+    
     #[error("Deadlock detected: {0}")]
     Deadlock(#[from] DeadlockError),
     
