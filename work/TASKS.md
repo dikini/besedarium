@@ -194,6 +194,16 @@ developer experience.
   - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations. (postponed to after release)
   - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime. (postponed to after release)
 - [ ] **Task 3.3**: Explore Macro-Based DSL for Protocol Definition
+  - [x] **Task 3.3.1**: Enhanced Declarative Macros Infrastructure ✅ **COMPLETED**
+  - [x] **Task 3.3.2**: Implement Simple Derive Macros ✅ **COMPLETED** (2025-05-30)
+    - [x] **Task 3.3.2a**: Created separate `besedarium-derive` proc-macro crate with proper workspace configuration
+    - [x] **Task 3.3.2b**: Implemented all core derive macros: `#[derive(Message)]`, `#[derive(Role)]`, `#[derive(MsgLbl)]`, `#[derive(GlobalProtocol)]`
+    - [x] **Task 3.3.2c**: Added comprehensive utility functions for derive macro operations
+    - [x] **Task 3.3.2d**: Created integration tests with all 5 test scenarios passing
+    - [x] **Task 3.3.2e**: Resolved circular dependency issues and optimized for proc-macro best practices
+  - [ ] **Task 3.3.3**: Develop Basic Attribute Macros (`#[protocol]`, `#[role]`, `#[endpoint]`)
+  - [ ] **Task 3.3.4**: Create Advanced DSL Features (choice, branching, loops, recursion)
+  - [ ] **Task 3.3.5**: Implement Dual Protocol Generation Integration
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
 

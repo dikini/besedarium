@@ -1,0 +1,25 @@
+[package]
+name = "besedarium-derive"
+version = "0.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Procedural derive macros for the Besedarium MPST library"
+repository = "https://github.com/dikini/besedarium"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# Procedural macro dependencies
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# For error handling and optional features
+thiserror = "1.0"
+
+# Note: We don't depend on the main crate to avoid circular dependencies.
+# Instead, we generate code that references ::besedarium:: paths at the call site.
+
+[dev-dependencies]
+trybuild = "1.0.85"
