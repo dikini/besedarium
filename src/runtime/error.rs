@@ -9,10 +9,12 @@ use thiserror::Error;
 
 /// Error severity levels for runtime errors
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default)]
 pub enum ErrorSeverity {
     /// Low severity - warnings or recoverable issues
     Low,
     /// Medium severity - errors that may affect functionality but allow continuation
+    #[default]
     Medium,
     /// High severity - critical errors that require immediate attention
     High,
@@ -20,11 +22,6 @@ pub enum ErrorSeverity {
     Critical,
 }
 
-impl Default for ErrorSeverity {
-    fn default() -> Self {
-        ErrorSeverity::Medium
-    }
-}
 
 impl std::fmt::Display for ErrorSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -392,8 +389,8 @@ impl RuntimeError {
     /// Create a formatted diagnostic report
     pub fn diagnostic_report(&self) -> String {
         let mut report = String::new();
-        report.push_str(&format!("Runtime Error Report\n"));
-        report.push_str(&format!("====================\n\n"));
+        report.push_str("Runtime Error Report\n");
+        report.push_str("====================\n\n");
         report.push_str(&format!("Category: {}\n", self.category()));
         report.push_str(&format!("Severity: {}\n", self.severity()));
         report.push_str(&format!("Error: {}\n\n", self));
@@ -799,6 +796,7 @@ pub struct ValidationContext {
 
 /// Different validation modes for different scenarios
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ValidationMode {
     /// Strict validation - all protocol rules must be followed exactly
     Strict,
@@ -807,14 +805,10 @@ pub enum ValidationMode {
     /// Debug validation - extensive checking with detailed reporting
     Debug,
     /// Production validation - optimized for performance with essential checks
+    #[default]
     Production,
 }
 
-impl Default for ValidationMode {
-    fn default() -> Self {
-        ValidationMode::Production
-    }
-}
 
 /// Convenience type alias for runtime results
 pub type RuntimeResult<T> = Result<T, RuntimeError>;

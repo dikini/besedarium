@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime};
 
 use tokio::sync::RwLock;
 
-use crate::protocol::foundation::{BiDirectionalAction, GlobalProtocol, Role};
+use crate::protocol::foundation::{GlobalProtocol, Role};
 use crate::runtime::error::{
     DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion, RuntimeError,
     RuntimeResult, StateValidationError, ValidationContext, ValidationMode,
@@ -274,8 +274,8 @@ impl StateValidator {
                     .with_component("runtime_validation")
                     .with_operation("validate_transition")
                     .with_session_id(state.session_id())
-                    .with_metadata("repeated_count", &repeated_count.to_string())
-                    .with_metadata("threshold", &self.config.livelock_threshold.to_string()),
+                    .with_metadata("repeated_count", repeated_count.to_string())
+                    .with_metadata("threshold", self.config.livelock_threshold.to_string()),
                 recovery_suggestion: RecoverySuggestion::RestartSession,
             });
         }
@@ -345,7 +345,7 @@ impl ResourceAllocationGraph {
     fn add_dependency(&mut self, session_id: String, resource: String) {
         self.waiting_for
             .entry(session_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(resource);
     }
 
@@ -385,7 +385,7 @@ impl TransitionHistory {
         let history = self
             .transitions
             .entry(session_id.to_string())
-            .or_insert_with(VecDeque::new);
+            .or_default();
 
         history.push_back((action.to_string(), timestamp));
 

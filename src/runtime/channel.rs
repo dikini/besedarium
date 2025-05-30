@@ -24,6 +24,12 @@ use crate::runtime::error::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChannelId(String);
 
+impl Default for ChannelId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChannelId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
@@ -47,6 +53,12 @@ impl fmt::Display for ChannelId {
 /// Unique identifier for a session
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SessionId(String);
+
+impl Default for SessionId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SessionId {
     pub fn new() -> Self {
