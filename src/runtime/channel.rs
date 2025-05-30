@@ -551,23 +551,21 @@ where
 
         // Send with timeout if configured
         let send_result = if let Some(timeout_duration) = timeout {
-            tokio::time::timeout(timeout_duration, sender.send(serialized))
-                .await
-                .map_err(|_| {
-                    // Record timeout failure
-                    let health = self.health.clone();
-                    tokio::spawn(async move {
-                        health.record_failure(operation).await;
-                    });
+            match tokio::time::timeout(timeout_duration, sender.send(serialized)).await {
+                Ok(result) => result,
+                Err(_) => {
+                    // Record timeout failure synchronously
+                    self.health.record_failure(operation).await;
 
-                    RuntimeError::Communication(CommunicationError::ChannelTimeout {
+                    return Err(RuntimeError::Communication(CommunicationError::ChannelTimeout {
                         channel_id: self.config.channel_id.to_string(),
                         operation,
                         peer_role: self.config.peer_role.clone(),
                         session_id: self.config.session_id.to_string(),
                         timeout_ms: timeout_duration.as_millis() as u64,
-                    })
-                })?
+                    }));
+                }
+            }
                 .map_err(|_| {
                     RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
                         channel_id: self.config.channel_id.to_string(),
@@ -619,23 +617,21 @@ where
 
         // Receive with timeout if configured
         let serialized = if let Some(timeout_duration) = timeout {
-            tokio::time::timeout(timeout_duration, receiver.recv())
-                .await
-                .map_err(|_| {
-                    // Record timeout failure
-                    let health = self.health.clone();
-                    tokio::spawn(async move {
-                        health.record_failure(operation).await;
-                    });
-
-                    RuntimeError::Communication(CommunicationError::ChannelTimeout {
+            match tokio::time::timeout(timeout_duration, receiver.recv()).await {
+                Ok(result) => result,
+                Err(_) => {
+                    // Record timeout failure synchronously
+                    self.health.record_failure(operation).await;
+                    
+                    return Err(RuntimeError::Communication(CommunicationError::ChannelTimeout {
                         channel_id: self.config.channel_id.to_string(),
                         operation,
                         peer_role: self.config.peer_role.clone(),
                         session_id: self.config.session_id.to_string(),
                         timeout_ms: timeout_duration.as_millis() as u64,
-                    })
-                })?
+                    }));
+                }
+            }
                 .ok_or_else(|| {
                     RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
                         channel_id: self.config.channel_id.to_string(),

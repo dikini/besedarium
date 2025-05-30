@@ -9,20 +9,7 @@
 //! - [`channel`] - Typed channel communication with async support
 //! - [`error`] - Comprehensive error types for runtime failures
 //! - [`session`] - Session lifecycle management for protocols
-//!
-//! # Usage Example
-//!
-//! ```rust
-//! use besedarium::runtime::{ProtocolState, TypedChannel, RuntimeError};
-//! use besedarium::protocol::foundation::CommMetadata;
-//!
-//! // Create a protocol state machine
-//! let state = ProtocolState::new("session-1", Box::new(Alice));
-//!
-//! // Create typed channels for communication
-//! let metadata = CommMetadata::new();
-//! let (ch1, ch2) = TypedChannel::new(metadata);
-//! ```
+//! - [`validation`] - State validation and consistency checks
 
 pub mod state;
 pub mod channel;

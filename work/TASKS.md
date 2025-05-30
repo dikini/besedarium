@@ -167,6 +167,14 @@ developer experience.
     - [x] **Task 3.1.3f**: Enhanced channel methods with serialization trait bounds for type-safe communication.
     - [x] **Task 3.1.3g**: Critical bug fixes: Display implementation for `ChannelOperation`, Copy derive, dyn Role compatibility fixes.
     - [x] **Task 3.1.3h**: Comprehensive test suite verification with 98 foundation tests and channel-specific tests passing.
+    - [x] **Task 3.1.3i**: Async health tracking race condition fix: Fixed timeout tests by making health failure recording synchronous to prevent race conditions between error reporting and health counter verification. (✅ **COMPLETED** - 2025-05-31)
+  - [x] **Task 3.1.4**: Enhance Session Lifecycle Management with Graceful Shutdown and Resource Leak Detection. (✅ **COMPLETED**)
+    - [x] **Task 3.1.4a**: Implement graceful shutdown mechanisms with configurable timeouts and signal-based coordination.
+    - [x] **Task 3.1.4b**: Implement resource tracking and leak detection for channels, tasks, and other session-managed resources.
+    - [x] **Task 3.1.4c**: Implement consistent termination handling with proper status management and cleanup.
+    - [x] **Task 3.1.4d**: Implement comprehensive logging and reporting for lifecycle events and leak detection.
+    - [x] **Task 3.1.4e**: Implement session manager capabilities for multi-session lifecycle management and bulk operations.
+    - [x] **Task 3.1.4f**: Complete test suite with 16 comprehensive tests covering all lifecycle scenarios including timeout handling.
   - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
 - [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities
   - [ ] **Task 3.2.1**: Profile compile times of type-level constructs.
@@ -192,7 +200,7 @@ once the library features are stable and well-tested.
 - [ ] **Task 4.4**: Add Doccomments
   - [ ] **Task 4.4.1**: Add comprehensive doccomments to all public types, traits, and functions in the library.
 - [ ] **Task 4.5**: Review and Update Internal Documentation
-  - [ ] **Task 4.5.1**: Review and update `work/learnings.md` with insights from all phases.
+  - [x] **Task 4.5.1**: Review and update `work/learnings.md` with insights from all phases. ✅ **COMPLETED** (2025-05-31)
 
 ## Ongoing Tasks
 

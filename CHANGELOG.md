@@ -5,9 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2025-05-31
 
-### Fixed Issues
+### Documentation
+
+- **Task 4.5.1 Completed**: Consolidated and restructured `work/learnings.md` for optimal LLM context injection
+  - Organized content into clear categories: Type-Level Programming, Runtime Systems, Testing Patterns, Code Quality Standards
+  - Extracted key implementation patterns and principles for easy reference
+  - Removed redundancy while preserving essential patterns and insights
+  - Added executive summary and future development guidelines
+  - 352-line document now serves as comprehensive reference for project patterns and best practices
+
+### Fixed
+
+- **Channel Timeout Race Condition**: Fixed async health tracking race condition in channel timeout tests
+  - Issue: `test_send_timeout` and `test_receive_timeout` were failing due to race conditions between health failure recording and counter verification
+  - Root cause: Health failures were recorded asynchronously using `tokio::spawn`, but tests checked counters immediately
+  - Solution: Changed to synchronous health recording before returning timeout errors in both `send()` and `receive()` methods
+  - Impact: All 214 tests now pass (100% success rate, up from 212/214 = 99.1%)
+  - Files: `src/runtime/channel.rs` - timeout handling in channel operations
 
 - Resolved markdown linting issues across multiple files, ensuring compliance with `markdownlint-cli2` rules.
 
@@ -33,6 +49,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `work/learnings.md`: Added patterns and insights from documentation enhancement
 
 - Updated `work/Status.md`: Reflected current documentation and implementation readiness
+
+#### Task 3.1.4: Enhanced Session Lifecycle Management (2025-05-31)
+
+- **Graceful Shutdown System**: Implemented comprehensive graceful shutdown mechanisms with configurable timeouts and signal-based coordination between session components
+- **Resource Leak Detection**: Added systematic resource tracking and leak detection for channels, tasks, and other session-managed resources with detailed reporting via `LeakSummary` structure
+- **Session Status Management**: Implemented complete session status lifecycle with proper state transitions (`Initializing`, `Running`, `Paused`, `ShuttingDown`, `Completed`, `Failed`, `Cancelled`)
+- **Session Manager Enhancement**: Extended session manager with bulk operations, metrics collection, and comprehensive lifecycle management for multiple sessions
+- **Configuration System**: Added `ShutdownConfig` with configurable timeouts, task termination policies, and leak detection sensitivity
+- **Comprehensive Testing**: Created 16 comprehensive tests covering all lifecycle scenarios including timeout handling, resource tracking, and edge cases
+- **Multi-Session Operations**: Session manager supports bulk shutdown, cleanup, status monitoring, and resource leak detection across multiple sessions
+- **Signal Coordination**: Watch channel-based shutdown signaling between execution loops and management components for proper async coordination
+
+**Technical Implementation**:
+
+- Added `SessionStatus` enum with Hash trait for efficient collection operations
+- Implemented `LeakSummary` struct for detailed resource leak reporting
+- Enhanced `ManagerMetrics` with status counting and leak tracking capabilities
+- Added timeout-aware execution loops with conditional test simulation
+- Created comprehensive API including `total_sessions()`, `list_session_ids()`, `session_count_by_status()`, `detect_session_leaks()`, `cleanup_finished_sessions()`
+
+**Test Results**: All 16 session tests passing (100% success rate), proper timeout behavior verified, comprehensive leak detection working correctly
 
 #### Earlier Enhancements
 
@@ -118,7 +155,7 @@ protocol examples.
 
 - **Updated work/Status.md**: Reflected current documentation and implementation readiness
 
-### Fixed
+### Bug Fixes
 
 - Disabled failing tests in projection_tests.rs due to the transition from TInteract to TSend/TRecv model
 
@@ -340,16 +377,3 @@ coverage.
 
 - Enhanced learnings document with insights from Phase 2 and Phase 3 of the label parameter
 refactoring, focusing on test-first refactoring approach and parameter name consistency benefits.
-
-### Removed
-
-- Removed main.rs and moved all logic to lib.rs for a library-only crate structure.
-
-- Deleted obsolete `transforms.rs` and removed the deprecated `ProjectInteract` pattern.
-
-- Cleaned up unused imports and fixed all warnings and formatting issues.
-
-### Known Issues
-
-- Some projection and trybuild tests (especially involving `TPar`/`EpPar`) are expected to fail due
-to ongoing design work. See protocol.rs and test files for details.

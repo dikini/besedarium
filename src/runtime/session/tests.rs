@@ -36,13 +36,18 @@ impl Hash for Bob {
     }
 }
 
+// Dummy IO type for tests
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+struct TestIO;
+impl SupportsActionIO<BiDirectionalAction> for TestIO {}
+
 // Define HandshakeLabel for tests
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct HandshakeLabel;
 impl MsgLbl for HandshakeLabel {}
 
 type TestMetadata = CommMetadata<DefaultChan, HandshakeLabel>;
-type TestProtocol = EpChanEnd<BiDirectionalAction, TestMetadata, BiDirectionalAction>;
+type TestProtocol = EpChanEnd<TestIO, TestMetadata, BiDirectionalAction>;
 
 #[tokio::test]
 async fn test_session_creation_with_shutdown_config() {
@@ -104,7 +109,7 @@ async fn test_leak_detection_no_leaks() {
     session.close_resource("task-1").await;
 
     // Perform leak detection
-    let report = session.detect_leaks().await;
+    let report = session.detect_leaks().await.unwrap();
 
     assert_eq!(report.session_id, id);
     assert!(!report.has_leaks());
@@ -127,7 +132,7 @@ async fn test_leak_detection_with_leaks() {
     session.close_resource("channel-1").await;
 
     // Perform leak detection
-    let report = session.detect_leaks().await;
+    let report = session.detect_leaks().await.unwrap();
 
     assert_eq!(report.session_id, id);
     assert!(report.has_leaks());
@@ -159,7 +164,7 @@ async fn test_graceful_shutdown_completed_session() {
     }
 
     // Graceful shutdown should succeed immediately
-    let result = session.shutdown_graceful().await;
+    let result = session.shutdown().await;
     assert!(result.is_ok());
     assert_eq!(session.status().await, SessionStatus::Completed);
 }
@@ -178,7 +183,7 @@ async fn test_graceful_shutdown_running_session() {
     session.track_resource("test-task".to_string(), ResourceType::Task).await;
 
     // Initiate graceful shutdown
-    let result = session.shutdown_graceful().await;
+    let result = session.shutdown().await;
     assert!(result.is_ok());
 
     // Session should be in a final state
@@ -209,8 +214,11 @@ async fn test_shutdown_timeout() {
     // Start the session
     session.start().await.unwrap();
     
+    // Give the execution loop time to start running and begin processing
+    sleep(Duration::from_millis(150)).await;
+    
     // Initiate shutdown - this should timeout and force shutdown
-    let result = session.shutdown_graceful().await;
+    let result = session.shutdown().await;
     assert!(result.is_ok()); // Force shutdown should still succeed
 
     // Session should be cancelled after forced shutdown
@@ -253,7 +261,7 @@ async fn test_session_manager_creation() {
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Bob, ChannelConfig::default())
+        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
@@ -284,7 +292,7 @@ async fn test_session_manager_shutdown_all() {
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Bob, ChannelConfig::default())
+        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
@@ -327,7 +335,7 @@ async fn test_session_manager_leak_detection() {
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Bob, ChannelConfig::default())
+        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
@@ -342,7 +350,7 @@ async fn test_session_manager_leak_detection() {
     session2.close_resource("task-2").await; // Close all, no leaks
 
     // Get leak summary
-    let summary = manager.get_leak_summary().await;
+    let summary = manager.get_leak_summary().await.unwrap();
 
     assert_eq!(summary.total_sessions, 2);
     assert_eq!(summary.sessions_with_leaks, 1); // Only session1 has leaks
@@ -374,7 +382,7 @@ async fn test_session_manager_cleanup() {
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Bob, ChannelConfig::default())
+        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
@@ -424,12 +432,12 @@ async fn test_session_manager_metrics() {
 
     // Create sessions with different states
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice)
+        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Bob)
+        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
         .await
         .unwrap();
 
@@ -473,7 +481,7 @@ async fn test_complex_shutdown_scenario() {
     for i in 0..5 {
         let id = SessionId::new(format!("session-{}", i));
         let (session, _ch) = manager
-            .create_session(id, TestProtocol::new(), Alice)
+            .create_session(id, TestProtocol::new(), Alice, ChannelConfig::default())
             .await
             .unwrap();
         
@@ -501,14 +509,21 @@ async fn test_complex_shutdown_scenario() {
 
     // Check that all sessions are in final states
     let counts = manager.session_count_by_status().await;
-    let total_final = counts.get(&SessionStatus::Completed).unwrap_or(&0)
-        + counts.get(&SessionStatus::Cancelled).unwrap_or(&0)
-        + counts.get(&SessionStatus::Failed("".to_string())).unwrap_or(&0);
+    let completed = counts.get(&SessionStatus::Completed).unwrap_or(&0);
+    let cancelled = counts.get(&SessionStatus::Cancelled).unwrap_or(&0);
+    
+    // Count all failed sessions regardless of error message
+    let failed = counts.iter()
+        .filter(|(status, _)| matches!(status, SessionStatus::Failed(_)))
+        .map(|(_, count)| *count)
+        .sum::<usize>();
+    
+    let total_final = completed + cancelled + failed;
 
     assert_eq!(total_final, 5);
 
     // Check for resource leaks
-    let leak_summary = manager.get_leak_summary().await;
+    let leak_summary = manager.get_leak_summary().await.unwrap();
     if leak_summary.has_leaks() {
         println!("Warning: {} sessions have resource leaks", leak_summary.sessions_with_leaks);
         println!("Total leaked resources: {}", leak_summary.total_leaked_resources);
