@@ -4,15 +4,9 @@
 //! into logical sub-modules for different aspects of protocol definition.
 
 pub mod label;
-pub mod role;
 pub mod message;
 pub mod protocol;
-
-// Re-export all macros for convenience
-pub use label::*;
-pub use role::*;
-pub use message::*;
-pub use protocol::*;
+pub mod role;
 
 #[cfg(test)]
 mod tests;

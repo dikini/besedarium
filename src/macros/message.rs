@@ -11,7 +11,7 @@
 /// # Simple Message (No Fields)
 /// ```rust
 /// use besedarium::define_message;
-/// 
+///
 /// define_message!(Ping);
 /// define_message!(Pong);
 /// ```
@@ -19,7 +19,7 @@
 /// # Message with Fields
 /// ```rust
 /// use besedarium::define_message;
-/// 
+///
 /// define_message!(Login {
 ///     username: String,
 ///     password: String,
@@ -29,7 +29,7 @@
 /// # Message with Optional Fields
 /// ```rust
 /// use besedarium::define_message;
-/// 
+///
 /// define_message!(UserInfo {
 ///     id: u64,
 ///     name: String,
@@ -42,31 +42,31 @@ macro_rules! define_message {
     ($message:ident) => {
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
         pub struct $message;
-        
+
         impl $crate::protocol::foundation::Message for $message {}
-        
+
         impl ::std::fmt::Display for $message {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}", stringify!($message))
             }
         }
-        
+
         impl ::std::default::Default for $message {
             fn default() -> Self {
                 $message
             }
         }
     };
-    
+
     // Message with fields
     ($message:ident { $($field:ident: $field_type:ty),* $(,)? }) => {
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
         pub struct $message {
             $(pub $field: $field_type,)*
         }
-        
+
         impl $crate::protocol::foundation::Message for $message {}
-        
+
         impl ::std::fmt::Display for $message {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}", stringify!($message))
@@ -83,7 +83,7 @@ macro_rules! define_message {
 /// # Simple Messages
 /// ```rust
 /// use besedarium::messages;
-/// 
+///
 /// messages!(
 ///     Start,
 ///     Stop,
@@ -94,7 +94,7 @@ macro_rules! define_message {
 /// # Mixed Messages
 /// ```rust
 /// use besedarium::messages;
-/// 
+///
 /// messages!(
 ///     Ping,
 ///     Pong,
