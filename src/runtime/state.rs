@@ -5,18 +5,21 @@
 //! protocol operations.
 
 use std::collections::HashMap;
-use std::fmt;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
-use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::protocol::foundation::{Role, GlobalProtocol, LocalProtocol};
-use crate::runtime::error::{RuntimeError, ProtocolViolation, RuntimeResult};
+use crate::protocol::foundation::{GlobalProtocol, Role};
+use crate::runtime::error::{
+    runtime_error, ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion,
+    RuntimeError, RuntimeResult,
+};
+use crate::runtime::validation::{StateValidator, ValidationConfig, ValidationResult};
 
 /// Core protocol state machine tracking execution progress
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProtocolState<P> {
     session_id: String,
     current_protocol: P,
@@ -25,6 +28,7 @@ pub struct ProtocolState<P> {
     start_time: Instant,
     last_activity: SystemTime,
     execution_context: ExecutionContext,
+    validator: Option<Arc<StateValidator>>,
     _protocol: PhantomData<P>,
 }
 
@@ -33,17 +37,53 @@ where
     P: GlobalProtocol + Clone,
 {
     /// Create a new protocol state machine
-    pub fn new(session_id: impl Into<String>, role: Box<dyn Role>, protocol: P) -> Self {
+    pub fn new<R>(session_id: impl Into<String>, role: R, protocol: P) -> Self
+    where
+        R: Role,
+    {
+        let session_id_str = session_id.into();
+        let role_str = format!("{:?}", role);
         Self {
-            session_id: session_id.into(),
+            session_id: session_id_str.clone(),
             current_protocol: protocol,
             is_complete: false,
             step_count: 0,
             start_time: Instant::now(),
             last_activity: SystemTime::now(),
-            execution_context: ExecutionContext::new(session_id.into(), role),
+            execution_context: ExecutionContext::new(session_id_str, role_str),
+            validator: None,
             _protocol: PhantomData,
         }
+    }
+
+    /// Create a new protocol state machine with validation enabled
+    pub fn with_validation<R>(
+        session_id: impl Into<String>,
+        role: R,
+        protocol: P,
+        validator: Arc<StateValidator>,
+    ) -> Self
+    where
+        R: Role,
+    {
+        let session_id_str = session_id.into();
+        let role_str = format!("{:?}", role);
+        Self {
+            session_id: session_id_str.clone(),
+            current_protocol: protocol,
+            is_complete: false,
+            step_count: 0,
+            start_time: Instant::now(),
+            last_activity: SystemTime::now(),
+            execution_context: ExecutionContext::new(session_id_str, role_str),
+            validator: Some(validator),
+            _protocol: PhantomData,
+        }
+    }
+
+    /// Enable validation with custom configuration
+    pub fn enable_validation(&mut self, config: ValidationConfig) {
+        self.validator = Some(Arc::new(StateValidator::with_config(config)));
     }
 
     /// Get the current session ID
@@ -85,32 +125,41 @@ where
     /// Mark protocol as complete
     pub fn mark_complete(&mut self) -> RuntimeResult<()> {
         if self.is_complete {
-            return Err(RuntimeError::Protocol(
-                ProtocolViolation::SessionTerminated {
+            return Err(runtime_error(RuntimeError::Protocol {
+                violation: ProtocolViolation::SessionTerminated {
                     session_id: self.session_id.clone(),
-                }
-            ));
+                },
+                severity: ErrorSeverity::Critical,
+                context: ErrorContext::new()
+                    .with_session_id(&self.session_id)
+                    .with_component("state_machine")
+                    .with_operation("mark_complete"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            }));
         }
-        
+
         self.is_complete = true;
         self.update_activity();
         Ok(())
     }
 
     /// Transition to a new protocol state
-    pub fn transition<NewP>(
-        self,
-        new_protocol: NewP,
-    ) -> RuntimeResult<ProtocolState<NewP>>
+    pub fn transition<NewP>(self, new_protocol: NewP) -> RuntimeResult<ProtocolState<NewP>>
     where
         NewP: GlobalProtocol + Clone,
     {
         if self.is_complete {
-            return Err(RuntimeError::Protocol(
-                ProtocolViolation::SessionTerminated {
+            return Err(runtime_error(RuntimeError::Protocol {
+                violation: ProtocolViolation::SessionTerminated {
                     session_id: self.session_id.clone(),
-                }
-            ));
+                },
+                severity: ErrorSeverity::Critical,
+                context: ErrorContext::new()
+                    .with_session_id(&self.session_id)
+                    .with_component("state_machine")
+                    .with_operation("transition"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            }));
         }
 
         Ok(ProtocolState {
@@ -121,6 +170,88 @@ where
             start_time: self.start_time,
             last_activity: SystemTime::now(),
             execution_context: self.execution_context,
+            validator: self.validator.clone(),
+            _protocol: PhantomData,
+        })
+    }
+
+    /// Transition to a new protocol state with validation
+    pub async fn validated_transition<NewP, R>(
+        self,
+        new_protocol: NewP,
+        action: &str,
+        role: &R,
+    ) -> RuntimeResult<ProtocolState<NewP>>
+    where
+        NewP: GlobalProtocol + Clone,
+        R: Role,
+    {
+        if self.is_complete {
+            return Err(runtime_error(RuntimeError::Protocol {
+                violation: ProtocolViolation::SessionTerminated {
+                    session_id: self.session_id.clone(),
+                },
+                severity: ErrorSeverity::Critical,
+                context: ErrorContext::new()
+                    .with_session_id(&self.session_id)
+                    .with_component("state_machine")
+                    .with_operation("transition"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            }));
+        }
+
+        // Perform validation if validator is available
+        if let Some(validator) = &self.validator {
+            match validator
+                .validate_transition(&self, &new_protocol, action, role)
+                .await
+            {
+                Ok(ValidationResult::Valid { .. }) => {
+                    // Validation passed, proceed with transition
+                }
+                Ok(ValidationResult::Warning { warnings, .. }) => {
+                    // Log warnings but continue
+                    for warning in warnings {
+                        eprintln!("VALIDATION WARNING: {}", warning);
+                    }
+                }
+                Ok(ValidationResult::Invalid { errors, .. }) => {
+                    // Validation failed, log all errors and return the first one
+                    let error_vec: Vec<_> = errors.into_iter().collect();
+
+                    // Log all validation errors for comprehensive debugging
+                    for error in &error_vec {
+                        eprintln!("VALIDATION ERROR: {}", error);
+                    }
+
+                    if let Some(first_error) = error_vec.into_iter().next() {
+                        return Err(runtime_error(RuntimeError::StateValidation {
+                            error: first_error,
+                            severity: ErrorSeverity::High,
+                            context: ErrorContext::new()
+                                .with_session_id(&self.session_id)
+                                .with_component("state_machine")
+                                .with_operation("validation"),
+                            recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+                        }));
+                    }
+                }
+                Err(e) => {
+                    // Validation system error
+                    return Err(e);
+                }
+            }
+        }
+
+        Ok(ProtocolState {
+            session_id: self.session_id,
+            current_protocol: new_protocol,
+            is_complete: false,
+            step_count: self.step_count + 1,
+            start_time: self.start_time,
+            last_activity: SystemTime::now(),
+            execution_context: self.execution_context,
+            validator: self.validator.clone(),
             _protocol: PhantomData,
         })
     }
@@ -146,10 +277,10 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub fn new(session_id: String, role: Box<dyn Role>) -> Self {
+    pub fn new(session_id: String, role: String) -> Self {
         Self {
             session_id,
-            role: format!("{:?}", role),
+            role,
             start_time: Instant::now(),
             metadata: HashMap::new(),
             recursion_depth: 0,
@@ -192,12 +323,18 @@ impl ExecutionContext {
     pub fn enter_recursion(&mut self) -> RuntimeResult<()> {
         self.recursion_depth += 1;
         if self.recursion_depth > self.max_recursion_depth {
-            Err(RuntimeError::Protocol(
-                ProtocolViolation::RecursionDepthExceeded {
+            Err(runtime_error(RuntimeError::Protocol {
+                violation: ProtocolViolation::RecursionDepthExceeded {
                     depth: self.recursion_depth,
                     max_depth: self.max_recursion_depth,
-                }
-            ))
+                },
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_session_id(&self.session_id)
+                    .with_component("state_machine")
+                    .with_operation("enter_recursion"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            }))
         } else {
             Ok(())
         }
@@ -292,7 +429,8 @@ impl StateManager {
         P: GlobalProtocol + Clone + Send + Sync + 'static,
     {
         let sessions = self.sessions.read().await;
-        sessions.get(session_id)?
+        sessions
+            .get(session_id)?
             .downcast_ref::<ProtocolState<P>>()
             .cloned()
     }
@@ -325,13 +463,26 @@ impl Default for StateManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::foundation::{Alice, Bob, TChanEnd};
+    use crate::protocol::foundation::{BiDirectionalAction, DefaultChan, RequestLbl};
+    use crate::TChanEnd;
+
+    // Test roles for validation testing
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    struct Alice;
+
+    impl Role for Alice {}
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
+    struct Bob;
+
+    impl Role for Bob {}
 
     #[test]
     fn test_protocol_state_creation() {
-        let protocol = TChanEnd::new();
-        let state = ProtocolState::new("test-session", Box::new(Alice), protocol);
-        
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let state = ProtocolState::new("test-session", Alice, protocol);
+
         assert_eq!(state.session_id(), "test-session");
         assert!(!state.is_complete());
         assert_eq!(state.step_count(), 0);
@@ -339,36 +490,36 @@ mod tests {
 
     #[test]
     fn test_protocol_state_completion() {
-        let protocol = TChanEnd::new();
-        let mut state = ProtocolState::new("test-session", Box::new(Alice), protocol);
-        
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let mut state = ProtocolState::new("test-session", Alice, protocol);
+
         assert!(state.mark_complete().is_ok());
         assert!(state.is_complete());
         assert_eq!(state.step_count(), 1);
-        
+
         // Second completion should fail
         assert!(state.mark_complete().is_err());
     }
 
     #[test]
     fn test_execution_context() {
-        let mut context = ExecutionContext::new("test".to_string(), Box::new(Bob));
-        
+        let mut context = ExecutionContext::new("test".to_string(), "Alice".to_string());
+
         assert_eq!(context.session_id(), "test");
         assert_eq!(context.recursion_depth(), 0);
-        
+
         assert!(context.enter_recursion().is_ok());
         assert_eq!(context.recursion_depth(), 1);
-        
+
         context.exit_recursion();
         assert_eq!(context.recursion_depth(), 0);
     }
 
     #[test]
     fn test_recursion_depth_limit() {
-        let mut context = ExecutionContext::new("test".to_string(), Box::new(Alice));
+        let mut context = ExecutionContext::new("test".to_string(), "Alice".to_string());
         context.set_max_recursion_depth(2);
-        
+
         assert!(context.enter_recursion().is_ok()); // depth 1
         assert!(context.enter_recursion().is_ok()); // depth 2
         assert!(context.enter_recursion().is_err()); // depth 3 - should fail
@@ -377,17 +528,17 @@ mod tests {
     #[tokio::test]
     async fn test_state_manager() {
         let manager = StateManager::new();
-        let protocol = TChanEnd::new();
-        let state = ProtocolState::new("test-session", Box::new(Alice), protocol);
-        
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let state = ProtocolState::new("test-session", Alice, protocol);
+
         assert_eq!(manager.session_count().await, 0);
-        
+
         manager.add_session("test-session".to_string(), state).await;
         assert_eq!(manager.session_count().await, 1);
-        
+
         let sessions = manager.list_sessions().await;
         assert_eq!(sessions, vec!["test-session"]);
-        
+
         assert!(manager.remove_session("test-session").await);
         assert_eq!(manager.session_count().await, 0);
     }

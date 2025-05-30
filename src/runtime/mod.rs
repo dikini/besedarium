@@ -9,28 +9,20 @@
 //! - [`channel`] - Typed channel communication with async support
 //! - [`error`] - Comprehensive error types for runtime failures
 //! - [`session`] - Session lifecycle management for protocols
-//!
-//! # Usage Example
-//!
-//! ```rust
-//! use besedarium::runtime::{ProtocolState, TypedChannel, RuntimeError};
-//! use besedarium::protocol::foundation::CommMetadata;
-//!
-//! // Create a protocol state machine
-//! let state = ProtocolState::new("session-1", Box::new(Alice));
-//!
-//! // Create typed channels for communication
-//! let metadata = CommMetadata::new();
-//! let (ch1, ch2) = TypedChannel::new(metadata);
-//! ```
+//! - [`validation`] - State validation and consistency checks
 
-pub mod state;
 pub mod channel;
 pub mod error;
 pub mod session;
+pub mod state;
+pub mod validation;
 
-// Re-export main types
-pub use state::{ProtocolState, StateTransition, ExecutionContext};
-pub use channel::{TypedChannel, ChannelMessage, ChannelConfig};
-pub use error::{RuntimeError, ProtocolViolation, CommunicationError};
-pub use session::{Session, SessionManager};
+// Re-export common types for convenience
+pub use channel::{ChannelConfig, TypedChannel};
+pub use error::{
+    CommunicationError, DeadlockError, LivelockError, ProtocolViolation, RuntimeError,
+    RuntimeResult, StateValidationError, ValidationMode,
+};
+pub use state::{ExecutionContext, ProtocolState, StateTransition};
+// pub use session::{Session, SessionConfig, SessionManager}; // TODO: Implement session module
+pub use validation::{StateValidator, ValidationConfig, ValidationResult};

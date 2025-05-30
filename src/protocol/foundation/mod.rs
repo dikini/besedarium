@@ -41,20 +41,20 @@ pub trait ChanId: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash 
 pub trait MsgLbl: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash {}
 
 // Example concrete channel types
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 pub struct DefaultChan;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 pub struct HandshakeChan;
 
 impl ChanId for DefaultChan {}
 impl ChanId for HandshakeChan {}
 
 // Example concrete message label types
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 pub struct RequestLbl;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResponseLbl;
 
 impl MsgLbl for RequestLbl {}
@@ -101,6 +101,96 @@ impl<C: ChanId, L: MsgLbl> Metadata for CommMetadata<C, L> {
 
     fn msg_lbl(&self) -> &Self::MsgLbl {
         &self.msg_lbl
+    }
+}
+
+// Manual serde implementations for CommMetadata
+impl<C, L> serde::Serialize for CommMetadata<C, L>
+where
+    C: ChanId + serde::Serialize,
+    L: MsgLbl + serde::Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("CommMetadata", 2)?;
+        state.serialize_field("chan_id", &self.chan_id)?;
+        state.serialize_field("msg_lbl", &self.msg_lbl)?;
+        state.end()
+    }
+}
+
+impl<'de, C, L> serde::Deserialize<'de> for CommMetadata<C, L>
+where
+    C: ChanId + serde::Deserialize<'de>,
+    L: MsgLbl + serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{self, MapAccess, Visitor};
+        use std::fmt;
+
+        #[derive(serde::Deserialize)]
+        #[serde(field_identifier, rename_all = "snake_case")]
+        enum Field {
+            ChanId,
+            MsgLbl,
+        }
+
+        struct CommMetadataVisitor<C, L>(std::marker::PhantomData<(C, L)>);
+
+        impl<'de, C, L> Visitor<'de> for CommMetadataVisitor<C, L>
+        where
+            C: ChanId + serde::Deserialize<'de>,
+            L: MsgLbl + serde::Deserialize<'de>,
+        {
+            type Value = CommMetadata<C, L>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct CommMetadata")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<CommMetadata<C, L>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut chan_id = None;
+                let mut msg_lbl = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::ChanId => {
+                            if chan_id.is_some() {
+                                return Err(de::Error::duplicate_field("chan_id"));
+                            }
+                            chan_id = Some(map.next_value()?);
+                        }
+                        Field::MsgLbl => {
+                            if msg_lbl.is_some() {
+                                return Err(de::Error::duplicate_field("msg_lbl"));
+                            }
+                            msg_lbl = Some(map.next_value()?);
+                        }
+                    }
+                }
+
+                let chan_id = chan_id.ok_or_else(|| de::Error::missing_field("chan_id"))?;
+                let msg_lbl = msg_lbl.ok_or_else(|| de::Error::missing_field("msg_lbl"))?;
+
+                Ok(CommMetadata { chan_id, msg_lbl })
+            }
+        }
+
+        const FIELDS: &[&str] = &["chan_id", "msg_lbl"];
+        deserializer.deserialize_struct(
+            "CommMetadata",
+            FIELDS,
+            CommMetadataVisitor(std::marker::PhantomData),
+        )
     }
 }
 

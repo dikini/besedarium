@@ -650,20 +650,24 @@ fn test_comprehensive_capability_matrix() {
     };
     const _TCP_OUTPUT: () = {
         // assert!(<() as HasCapability<TcpOnlySessionIO, OutputAction>>::HAS_CAPABILITY);
-        let _ = [(); <() as HasCapability<TcpOnlySessionIO, OutputAction>>::HAS_CAPABILITY as usize];
+        let _ =
+            [(); <() as HasCapability<TcpOnlySessionIO, OutputAction>>::HAS_CAPABILITY as usize];
     };
     const _TCP_BIDIRECTIONAL: () = {
         // assert!(<() as HasCapability<TcpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
-        let _ = [(); <() as HasCapability<TcpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY as usize];
+        let _ = [(); <() as HasCapability<TcpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY
+            as usize];
     };
 
     const _HTTP_OUTPUT: () = {
         // assert!(<() as HasCapability<HttpOnlySessionIO, OutputAction>>::HAS_CAPABILITY);
-        let _ = [(); <() as HasCapability<HttpOnlySessionIO, OutputAction>>::HAS_CAPABILITY as usize];
+        let _ =
+            [(); <() as HasCapability<HttpOnlySessionIO, OutputAction>>::HAS_CAPABILITY as usize];
     };
     const _HTTP_BIDIRECTIONAL: () = {
         // assert!(<() as HasCapability<HttpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY);
-        let _ = [(); <() as HasCapability<HttpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY as usize];
+        let _ = [(); <() as HasCapability<HttpOnlySessionIO, BiDirectionalAction>>::HAS_CAPABILITY
+            as usize];
     };
 
     const _MQTT_PUBLISHER: () = {

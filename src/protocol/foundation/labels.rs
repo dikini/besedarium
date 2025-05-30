@@ -538,7 +538,6 @@ mod tests {
     }
     impl ProtocolLabel for L3 {}
 
-
     // Renaming TestLabel1, TestLabel2, TestLabel3 to L1, L2, L3 for brevity in tests
     // and correcting their usage throughout the tests.
 
@@ -605,7 +604,6 @@ mod tests {
         type Equal = False;
     }
 
-
     // ========================================================================
     // Core Label Trait Tests
     // ========================================================================
@@ -637,7 +635,9 @@ mod tests {
     fn test_label_nil() {
         let nil = LabelNil;
         assert_eq!(LabelNil::LENGTH, 0);
-        const _NIL_IS_EMPTY: () = { let _ = [(); LabelNil::IS_EMPTY as usize]; };
+        const _NIL_IS_EMPTY: () = {
+            let _ = [(); LabelNil::IS_EMPTY as usize];
+        };
         assert_eq!(nil.to_ids().len(), 0);
     }
 
@@ -778,8 +778,7 @@ mod tests {
     #[test]
     fn test_tfilter_mixed_elements() {
         // Create a three-element list: L1, L2, L1
-        type MixedList =
-            LabelCons<L1, LabelCons<L2, LabelCons<L1, LabelNil>>>;
+        type MixedList = LabelCons<L1, LabelCons<L2, LabelCons<L1, LabelNil>>>;
         let mixed = MixedList::new();
         let predicate = IsL1;
 
@@ -965,8 +964,7 @@ mod tests {
     #[test]
     fn test_complex_nested_transformations() {
         // Test complex scenario with multiple transformations
-        type ComplexList =
-            LabelCons<L1, LabelCons<L2, LabelCons<L1, LabelNil>>>;
+        type ComplexList = LabelCons<L1, LabelCons<L2, LabelCons<L1, LabelNil>>>;
         let complex = ComplexList::new();
 
         // First filter to get only L1 elements
@@ -1001,5 +999,4 @@ mod tests {
     // Then in tests: assert_same_type(TypeA::default(), TypeB::default()); // This would fail if TypeA != TypeB
 
     // Consider using `static_assertions` crate for more robust compile-time assertions if needed.
-
 }
