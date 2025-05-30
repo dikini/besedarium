@@ -13,7 +13,8 @@ use tokio::sync::RwLock;
 
 use crate::protocol::foundation::{GlobalProtocol, Role};
 use crate::runtime::error::{
-    runtime_error, ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion, RuntimeError, RuntimeResult,
+    runtime_error, ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion,
+    RuntimeError, RuntimeResult,
 };
 use crate::runtime::validation::{StateValidator, ValidationConfig, ValidationResult};
 
@@ -217,12 +218,12 @@ where
                 Ok(ValidationResult::Invalid { errors, .. }) => {
                     // Validation failed, log all errors and return the first one
                     let error_vec: Vec<_> = errors.into_iter().collect();
-                    
+
                     // Log all validation errors for comprehensive debugging
                     for error in &error_vec {
                         eprintln!("VALIDATION ERROR: {}", error);
                     }
-                    
+
                     if let Some(first_error) = error_vec.into_iter().next() {
                         return Err(runtime_error(RuntimeError::StateValidation {
                             error: first_error,

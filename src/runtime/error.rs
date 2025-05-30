@@ -8,8 +8,7 @@ use std::time::{Duration, SystemTime};
 use thiserror::Error;
 
 /// Error severity levels for runtime errors
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum ErrorSeverity {
     /// Low severity - warnings or recoverable issues
     Low,
@@ -21,7 +20,6 @@ pub enum ErrorSeverity {
     /// Critical severity - fatal errors that require shutdown or termination
     Critical,
 }
-
 
 impl std::fmt::Display for ErrorSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -795,8 +793,7 @@ pub struct ValidationContext {
 }
 
 /// Different validation modes for different scenarios
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ValidationMode {
     /// Strict validation - all protocol rules must be followed exactly
     Strict,
@@ -808,7 +805,6 @@ pub enum ValidationMode {
     #[default]
     Production,
 }
-
 
 /// Convenience type alias for runtime results
 /// Uses boxed RuntimeError to reduce stack size of large error variants

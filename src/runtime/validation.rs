@@ -12,8 +12,8 @@ use tokio::sync::RwLock;
 
 use crate::protocol::foundation::{GlobalProtocol, Role};
 use crate::runtime::error::{
-    runtime_error, DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion, RuntimeError,
-    RuntimeResult, StateValidationError, ValidationContext, ValidationMode,
+    runtime_error, DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion,
+    RuntimeError, RuntimeResult, StateValidationError, ValidationContext, ValidationMode,
 };
 use crate::runtime::state::ProtocolState;
 
@@ -387,10 +387,7 @@ impl TransitionHistory {
 
     /// Record a new transition
     fn record_transition(&mut self, session_id: &str, action: &str, timestamp: SystemTime) {
-        let history = self
-            .transitions
-            .entry(session_id.to_string())
-            .or_default();
+        let history = self.transitions.entry(session_id.to_string()).or_default();
 
         history.push_back((action.to_string(), timestamp));
 
@@ -496,7 +493,9 @@ impl Default for StateValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::foundation::{BiDirectionalAction, CommMetadata, DefaultChan, RequestLbl, Role};
+    use crate::protocol::foundation::{
+        BiDirectionalAction, CommMetadata, DefaultChan, RequestLbl, Role,
+    };
     use crate::protocol::global::TChanEnd;
 
     // Test role implementations
