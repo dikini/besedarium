@@ -12,7 +12,17 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! Add this to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! besedarium = "0.1"
+//! besedarium-derive = "0.1"
+//! ```
+//!
+//! Then use the derive macros:
+//!
+//! ```rust,ignore
 //! use besedarium::Message;
 //! use besedarium_derive::Message;
 //!
@@ -41,7 +51,7 @@ mod utils;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use besedarium_derive::Message;
 ///
 /// #[derive(Message)]
@@ -62,7 +72,7 @@ pub fn derive_message(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use besedarium_derive::Role;
 ///
 /// #[derive(Role)]
@@ -84,7 +94,7 @@ pub fn derive_role(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use besedarium_derive::MsgLbl;
 ///
 /// #[derive(MsgLbl)]
@@ -105,7 +115,7 @@ pub fn derive_msg_lbl(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use besedarium_derive::GlobalProtocol;
 ///
 /// #[derive(GlobalProtocol)]
