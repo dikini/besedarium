@@ -6,9 +6,8 @@
 /// Define a message type with automatic trait implementations.
 ///
 /// This macro creates a message type and implements the necessary traits for
-/// use in the session type system. Simple messages (without fields) automatically
-/// implement `Default`, while field-based messages require manual Default implementation
-/// if needed.
+/// use in the session type system. All messages (including those with fields)
+/// automatically implement `Default` if all fields implement `Default`.
 ///
 /// # Simple Message (No Fields)
 /// ```rust
