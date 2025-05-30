@@ -49,6 +49,29 @@ pub trait IsDual<P>: GlobalProtocol {
 - Apply comprehensive error reporting with operation context
 - Maintain graceful degradation under failure conditions
 
+**Enhanced Error System Architecture (Task 3.1.5 - Completed)**
+
+- **Structured Error Hierarchy**: Convert from simple tuple variants to rich structured variants with severity, context, and recovery guidance
+- **Error Context Builder Pattern**: Use fluent builder API (`ErrorContext::new().with_component().with_operation()`) for contextual information
+- **Severity-Based Classification**: Implement ErrorSeverity enum (Low/Medium/High/Critical) for error prioritization
+- **Recovery Guidance**: Provide actionable RecoverySuggestion enum with specific recovery strategies
+- **Comprehensive Error Testing**: Cover error display, categorization, severity ordering, and diagnostic reporting
+
+**Error System Implementation Pattern:**
+
+```rust
+// Enhanced RuntimeError with rich context
+RuntimeError::Communication {
+    error: CommunicationError::ChannelTimeout { /* details */ },
+    severity: ErrorSeverity::High,
+    context: ErrorContext::new()
+        .with_component("channel_manager")
+        .with_operation("send_message")
+        .with_session_id("session_123"),
+    recovery_suggestion: RecoverySuggestion::RetryWithBackoff,
+}
+```
+
 **Session Lifecycle Management:**
 
 - Implement configurable shutdown timeouts and signal coordination
@@ -115,6 +138,34 @@ match tokio::time::timeout(timeout_duration, operation).await {
 - Provide "Production" mode that disables expensive checks
 - Use efficient data structures (HashMap-based adjacency lists)
 - Apply async validation methods that don't block protocol execution
+
+### API Migration and Breaking Changes
+
+**Structured Error Migration (Task 3.1.5):**
+
+- Convert tuple variants to structured variants systematically
+- Update pattern matching from `RuntimeError::Communication(error)` to `RuntimeError::Communication { error, .. }`
+- Maintain backward compatibility where possible using `From` trait implementations
+- Add structured context incrementally to minimize disruption
+
+**Migration Pattern for RuntimeError Updates:**
+
+```rust
+// Before: RuntimeError::Protocol(ProtocolViolation::InvalidTransition { ... })
+// After: RuntimeError::Protocol { 
+//     error: ProtocolViolation::InvalidTransition { ... },
+//     severity: ErrorSeverity::High,
+//     context: ErrorContext::new().with_component("state_manager"),
+//     recovery_suggestion: RecoverySuggestion::CheckConfiguration
+// }
+```
+
+**Breaking Change Management:**
+
+- Update all error creation sites consistently across modules
+- Fix pattern matching systematically (state.rs, channel.rs, session/mod.rs, validation.rs)
+- Ensure imports include new error types (ErrorSeverity, ErrorContext, RecoverySuggestion)
+- Run comprehensive tests after each module migration
 
 ## Testing Strategies
 
@@ -241,3 +292,28 @@ match tokio::time::timeout(timeout_duration, operation).await {
 The Besedarium session type library demonstrates successful implementation of advanced type-level programming patterns in Rust, combined with robust runtime systems and comprehensive error handling. The key to success was maintaining a balance between type safety, performance, and maintainability while applying consistent architectural patterns throughout the codebase.
 
 The 100% test success rate and zero clippy warnings demonstrate the effectiveness of the applied patterns and architectural decisions. The modular structure and comprehensive documentation ensure the library is well-positioned for future development and maintenance.
+
+## Task 3.1.5 Learnings: Enhanced Error System Implementation
+
+### Enhanced Error System Architecture (Task 3.1.5):
+
+- **Structured Error Hierarchy**: Convert from simple tuple variants to rich structured variants with severity, context, and recovery guidance
+- **Error Context Builder Pattern**: Use fluent builder API (`ErrorContext::new().with_component().with_operation()`) for contextual information
+- **Severity-Based Classification**: Implement ErrorSeverity enum (Low/Medium/High/Critical) for error prioritization
+- **Recovery Guidance**: Provide actionable RecoverySuggestion enum with specific recovery strategies
+- **Comprehensive Error Testing**: Cover error display, categorization, severity ordering, and diagnostic reporting
+
+**Error System Implementation Pattern:**
+
+```rust
+// Enhanced RuntimeError with rich context
+RuntimeError::Communication {
+    error: CommunicationError::ChannelTimeout { /* details */ },
+    severity: ErrorSeverity::High,
+    context: ErrorContext::new()
+        .with_component("channel_manager")
+        .with_operation("send_message")
+        .with_session_id("session_123"),
+    recovery_suggestion: RecoverySuggestion::RetryWithBackoff,
+}
+```

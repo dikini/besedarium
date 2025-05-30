@@ -7,16 +7,16 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::sync::{RwLock, Mutex, watch};
+use tokio::sync::{watch, Mutex, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use uuid::Uuid;
 
 use crate::protocol::foundation::{ActionIOTMarker, LocalProtocol, Role, SupportsActionIO};
 use crate::runtime::{
-    error::RuntimeError,
+    channel::{ChannelConfig, ChannelId, TypedChannel},
+    error::{ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion, RuntimeError},
     state::ExecutionContext,
-    channel::{TypedChannel, ChannelConfig, ChannelId},
 };
 
 #[cfg(test)]
@@ -188,17 +188,17 @@ where
     context: Arc<RwLock<ExecutionContext>>,
     channel: Arc<TypedChannel<P, R, AIO>>,
     task_handle: Arc<Mutex<Option<JoinHandle<Result<(), RuntimeError>>>>>,
-    
+
     // Enhanced lifecycle management
     shutdown_config: ShutdownConfig,
     shutdown_signal: Arc<watch::Sender<bool>>,
     shutdown_receiver: watch::Receiver<bool>,
-    
+
     // Resource tracking for leak detection
     tracked_resources: Arc<RwLock<HashMap<String, TrackedResource>>>,
     task_handles: Arc<RwLock<HashMap<String, JoinHandle<()>>>>,
     channel_handles: Arc<RwLock<HashMap<ChannelId, Arc<TypedChannel<P, R, AIO>>>>>,
-    
+
     // Logging and metrics
     created_at: SystemTime,
     last_activity: Arc<RwLock<SystemTime>>,
@@ -218,7 +218,13 @@ where
         role: R,
         channel_config: ChannelConfig,
     ) -> (Self, TypedChannel<P, R, AIO>) {
-        Self::new_with_config(id, protocol, role, channel_config, ShutdownConfig::default())
+        Self::new_with_config(
+            id,
+            protocol,
+            role,
+            channel_config,
+            ShutdownConfig::default(),
+        )
     }
 
     /// Create a new session with custom shutdown configuration
@@ -284,9 +290,13 @@ where
 
         let mut resources = self.tracked_resources.write().await;
         resources.insert(resource_id.clone(), resource);
-        
-        log::debug!("Session {}: Tracking new resource: {} ({})", 
-                   self.id, resource_id, resource_type);
+
+        log::debug!(
+            "Session {}: Tracking new resource: {} ({})",
+            self.id,
+            resource_id,
+            resource_type
+        );
     }
 
     /// Mark a resource as closed
@@ -294,23 +304,33 @@ where
         let mut resources = self.tracked_resources.write().await;
         if let Some(resource) = resources.get_mut(resource_id) {
             resource.is_closed = true;
-            log::debug!("Session {}: Closed resource: {} ({})", 
-                       self.id, resource_id, resource.resource_type);
+            log::debug!(
+                "Session {}: Closed resource: {} ({})",
+                self.id,
+                resource_id,
+                resource.resource_type
+            );
         }
     }
 
     /// Track a Tokio task
     pub async fn track_task(&self, task_name: String, handle: JoinHandle<()>) {
-        self.track_resource(task_name.clone(), ResourceType::Task).await;
-        
+        self.track_resource(task_name.clone(), ResourceType::Task)
+            .await;
+
         let mut tasks = self.task_handles.write().await;
         tasks.insert(task_name, handle);
     }
 
     /// Track a channel
-    pub async fn track_channel(&self, channel_id: ChannelId, channel: Arc<TypedChannel<P, R, AIO>>) {
-        self.track_resource(channel_id.to_string(), ResourceType::Channel).await;
-        
+    pub async fn track_channel(
+        &self,
+        channel_id: ChannelId,
+        channel: Arc<TypedChannel<P, R, AIO>>,
+    ) {
+        self.track_resource(channel_id.to_string(), ResourceType::Channel)
+            .await;
+
         let mut channels = self.channel_handles.write().await;
         channels.insert(channel_id, channel);
     }
@@ -319,13 +339,18 @@ where
     pub async fn start(&self) -> Result<(), RuntimeError> {
         let mut status = self.status.write().await;
         if *status != SessionStatus::Initializing {
-            return Err(RuntimeError::Protocol(
-                crate::runtime::error::ProtocolViolation::InvalidTransition {
+            return Err(RuntimeError::Protocol {
+                violation: ProtocolViolation::InvalidTransition {
                     current_state: status.to_string(),
                     action_taken: "start".to_string(),
                     expected_actions_or_states: "Initializing".to_string(),
-                }
-            ));
+                },
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("session")
+                    .with_operation("start"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            });
         }
 
         log::info!("Session {}: Starting execution", self.id);
@@ -336,9 +361,7 @@ where
 
         // Start the execution loop
         let session_clone = self.clone_for_task();
-        let handle = tokio::spawn(async move {
-            session_clone.execution_loop().await
-        });
+        let handle = tokio::spawn(async move { session_clone.execution_loop().await });
 
         let mut task_handle = self.task_handle.lock().await;
         *task_handle = Some(handle);
@@ -374,8 +397,15 @@ where
         // Set status to shutting down
         {
             let mut status = self.status.write().await;
-            if matches!(*status, SessionStatus::Completed | SessionStatus::Failed(_) | SessionStatus::Cancelled) {
-                log::warn!("Session {}: Already terminated with status: {}", self.id, *status);
+            if matches!(
+                *status,
+                SessionStatus::Completed | SessionStatus::Failed(_) | SessionStatus::Cancelled
+            ) {
+                log::warn!(
+                    "Session {}: Already terminated with status: {}",
+                    self.id,
+                    *status
+                );
                 return self.detect_leaks().await;
             }
             *status = SessionStatus::ShuttingDown;
@@ -391,22 +421,39 @@ where
             match timeout(self.shutdown_config.graceful_shutdown_timeout, task_handle).await {
                 Ok(result) => {
                     log::info!("Session {}: Graceful shutdown completed", self.id);
-                    result.map_err(|e| RuntimeError::Execution(format!("Task join error: {}", e)))?
+                    result.map_err(|e| RuntimeError::Execution {
+                        message: format!("Task join error: {}", e),
+                        severity: ErrorSeverity::High,
+                        context: ErrorContext::new()
+                            .with_component("session")
+                            .with_operation("shutdown"),
+                        recovery_suggestion: RecoverySuggestion::Terminate,
+                    })?
                 }
                 Err(_) => {
-                    log::warn!("Session {}: Graceful shutdown timeout, performing force shutdown", self.id);
+                    log::warn!(
+                        "Session {}: Graceful shutdown timeout, performing force shutdown",
+                        self.id
+                    );
                     if self.shutdown_config.force_task_termination {
                         // Force terminate all tracked tasks
                         self.force_terminate_tasks().await;
                     }
-                    
+
                     // Set status to cancelled due to timeout
                     {
                         let mut status = self.status.write().await;
                         *status = SessionStatus::Cancelled;
                     }
-                    
-                    Err(RuntimeError::Execution("Shutdown timeout".to_string()))
+
+                    Err(RuntimeError::Execution {
+                        message: "Shutdown timeout".to_string(),
+                        severity: ErrorSeverity::High,
+                        context: ErrorContext::new()
+                            .with_component("session")
+                            .with_operation("shutdown"),
+                        recovery_suggestion: RecoverySuggestion::Terminate,
+                    })
                 }
             }
         } else {
@@ -429,9 +476,13 @@ where
 
         // Perform leak detection
         let leak_report = self.detect_leaks().await?;
-        
+
         if leak_report.has_leaks() {
-            log::warn!("Session {}: Detected {} resource leaks", self.id, leak_report.leak_count());
+            log::warn!(
+                "Session {}: Detected {} resource leaks",
+                self.id,
+                leak_report.leak_count()
+            );
         } else {
             log::info!("Session {}: No resource leaks detected", self.id);
         }
@@ -459,7 +510,11 @@ where
         for (task_name, handle) in tasks.drain() {
             if !handle.is_finished() {
                 handle.abort();
-                log::debug!("Session {}: Aborted task during cleanup: {}", self.id, task_name);
+                log::debug!(
+                    "Session {}: Aborted task during cleanup: {}",
+                    self.id,
+                    task_name
+                );
             }
         }
     }
@@ -467,7 +522,7 @@ where
     /// Detect resource leaks
     pub async fn detect_leaks(&self) -> Result<LeakDetectionReport, RuntimeError> {
         let resources = self.tracked_resources.read().await;
-        
+
         let leaked_resources: Vec<TrackedResource> = resources
             .values()
             .filter(|resource| !resource.is_closed)
@@ -486,8 +541,11 @@ where
         };
 
         if self.shutdown_config.strict_leak_detection && report.has_leaks() {
-            log::error!("Session {}: Strict leak detection enabled, found {} leaks", 
-                       self.id, report.leak_count());
+            log::error!(
+                "Session {}: Strict leak detection enabled, found {} leaks",
+                self.id,
+                report.leak_count()
+            );
         }
 
         Ok(report)
@@ -502,13 +560,18 @@ where
                 log::info!("Session {}: Paused", self.id);
                 Ok(())
             }
-            _ => Err(RuntimeError::Protocol(
-                crate::runtime::error::ProtocolViolation::InvalidTransition {
+            _ => Err(RuntimeError::Protocol {
+                violation: ProtocolViolation::InvalidTransition {
                     current_state: status.to_string(),
                     action_taken: "pause".to_string(),
                     expected_actions_or_states: "Running".to_string(),
-                }
-            ))
+                },
+                severity: ErrorSeverity::Medium,
+                context: ErrorContext::new()
+                    .with_component("session")
+                    .with_operation("pause"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            }),
         }
     }
 
@@ -522,13 +585,18 @@ where
                 self.update_activity().await;
                 Ok(())
             }
-            _ => Err(RuntimeError::Protocol(
-                crate::runtime::error::ProtocolViolation::InvalidTransition {
+            _ => Err(RuntimeError::Protocol {
+                violation: ProtocolViolation::InvalidTransition {
                     current_state: status.to_string(),
                     action_taken: "resume".to_string(),
                     expected_actions_or_states: "Paused".to_string(),
-                }
-            ))
+                },
+                severity: ErrorSeverity::Medium,
+                context: ErrorContext::new()
+                    .with_component("session")
+                    .with_operation("resume"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            }),
         }
     }
 
@@ -543,7 +611,7 @@ where
 
         // Signal shutdown and force terminate
         let _ = self.shutdown_signal.send(true);
-        
+
         if let Some(task_handle) = self.task_handle.lock().await.take() {
             task_handle.abort();
         }
@@ -624,8 +692,9 @@ where
             // Execute protocol step with timeout
             let step_result = timeout(
                 self.shutdown_config.critical_operations_timeout,
-                self.execute_protocol_step()
-            ).await;
+                self.execute_protocol_step(),
+            )
+            .await;
 
             match step_result {
                 Ok(Ok(should_continue)) => {
@@ -652,15 +721,18 @@ where
 
             // Check for shutdown signal again
             if shutdown_rx.has_changed().is_ok() && *shutdown_rx.borrow() {
-                log::info!("Session {}: Shutdown signal detected during execution", self.id);
-                
+                log::info!(
+                    "Session {}: Shutdown signal detected during execution",
+                    self.id
+                );
+
                 // Simulate slow shutdown cleanup for testing timeout scenarios
                 // In practice, this would be cleanup operations that might take time
                 if self.shutdown_config.graceful_shutdown_timeout.as_millis() <= 100 {
                     log::debug!("Session {}: Simulating slow shutdown cleanup", self.id);
                     tokio::time::sleep(Duration::from_millis(200)).await;
                 }
-                
+
                 break;
             }
         }
@@ -673,15 +745,15 @@ where
     async fn execute_protocol_step(&self) -> Result<bool, RuntimeError> {
         // This is a simplified implementation
         // In practice, this would execute the actual protocol logic
-        
+
         let is_completed = self.is_completed.read().await;
         if *is_completed {
             return Ok(false); // Protocol completed
         }
-        
+
         // Simulate protocol step execution with longer delay to allow timeout testing
         tokio::time::sleep(Duration::from_millis(200)).await;
-        
+
         Ok(true) // Continue execution
     }
 
@@ -769,11 +841,20 @@ where
         );
 
         let session_arc = Arc::new(session);
-        
+
         {
             let mut sessions = self.sessions.write().await;
             if sessions.contains_key(&id) {
-                return Err(RuntimeError::SessionAlreadyExists(id.to_string()));
+                return Err(RuntimeError::SessionAlreadyExists {
+                    session_id: id.to_string(),
+                    severity: ErrorSeverity::Medium,
+                    context: ErrorContext::new()
+                        .with_component("session_manager")
+                        .with_operation("create_session"),
+                    recovery_suggestion: RecoverySuggestion::Custom(
+                        "Use a different session ID".to_string(),
+                    ),
+                });
             }
             sessions.insert(id.clone(), Arc::clone(&session_arc));
         }
@@ -843,11 +924,21 @@ where
     }
 
     /// Detect resource leaks for a specific session
-    pub async fn detect_session_leaks(&self, id: &SessionId) -> Result<LeakDetectionReport, RuntimeError> {
+    pub async fn detect_session_leaks(
+        &self,
+        id: &SessionId,
+    ) -> Result<LeakDetectionReport, RuntimeError> {
         if let Some(session) = self.get_session(id).await {
             session.detect_leaks().await
         } else {
-            Err(RuntimeError::Execution(format!("Session {} not found", id)))
+            Err(RuntimeError::Execution {
+                message: format!("Session {} not found", id),
+                severity: ErrorSeverity::Medium,
+                context: ErrorContext::new()
+                    .with_component("session_manager")
+                    .with_operation("detect_session_leaks"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            })
         }
     }
 
@@ -884,7 +975,7 @@ where
         }
 
         let total_cleaned = to_remove.len();
-        
+
         log::info!("SessionManager: Cleaned up {} finished sessions ({} completed, {} failed, {} cancelled)", 
                   total_cleaned, completed, failed, cancelled);
 
@@ -914,7 +1005,11 @@ where
             match session.shutdown().await {
                 Ok(report) => reports.push(report),
                 Err(e) => {
-                    log::error!("SessionManager: Failed to shutdown session {}: {}", session.id(), e);
+                    log::error!(
+                        "SessionManager: Failed to shutdown session {}: {}",
+                        session.id(),
+                        e
+                    );
                     errors.push(e);
                 }
             }
@@ -922,11 +1017,16 @@ where
 
         // Don't clear the sessions map immediately - let cleanup_finished_sessions handle it
         // This allows status checks after shutdown
-        
+
         if !errors.is_empty() {
-            return Err(RuntimeError::Execution(format!(
-                "Failed to shutdown {} sessions", errors.len()
-            )));
+            return Err(RuntimeError::Execution {
+                message: format!("Failed to shutdown {} sessions", errors.len()),
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("session_manager")
+                    .with_operation("shutdown_all_sessions"),
+                recovery_suggestion: RecoverySuggestion::Terminate,
+            });
         }
 
         log::info!("SessionManager: All sessions shut down successfully");
@@ -952,12 +1052,12 @@ where
     /// Get a summary of resource leaks across all sessions
     pub async fn get_leak_summary(&self) -> Result<LeakSummary, RuntimeError> {
         let reports = self.detect_all_leaks().await?;
-        
+
         let total_sessions = reports.len();
         let sessions_with_leaks = reports.iter().filter(|r| r.has_leaks()).count();
         let total_leaked_resources = reports.iter().map(|r| r.leak_count()).sum();
         let total_resources_created = reports.iter().map(|r| r.total_resources_created).sum();
-        
+
         Ok(LeakSummary {
             total_sessions,
             sessions_with_leaks,
@@ -987,7 +1087,7 @@ where
     pub async fn get_manager_metrics(&self) -> ManagerMetrics {
         let sessions = self.sessions.read().await;
         let total_sessions = sessions.len();
-        
+
         let mut active_sessions = 0;
         let mut failed_sessions = 0;
         let mut completed_sessions = 0;
@@ -1007,14 +1107,17 @@ where
             failed_sessions,
             completed_sessions,
             status_counts: self.session_count_by_status().await,
-            leak_summary: self.get_leak_summary().await.unwrap_or_else(|_| LeakSummary {
-                total_sessions: 0,
-                sessions_with_leaks: 0,
-                total_leaked_resources: 0,
-                total_resources_created: 0,
-                detection_time: SystemTime::now(),
-                session_reports: vec![],
-            }),
+            leak_summary: self
+                .get_leak_summary()
+                .await
+                .unwrap_or_else(|_| LeakSummary {
+                    total_sessions: 0,
+                    sessions_with_leaks: 0,
+                    total_leaked_resources: 0,
+                    total_resources_created: 0,
+                    detection_time: SystemTime::now(),
+                    session_reports: vec![],
+                }),
         }
     }
 }

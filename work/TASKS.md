@@ -107,7 +107,7 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
   - [x] **Task 1.3.3**: Implement session lifecycle management for protocol execution coordination. ✅ **COMPLETED** - implemented in `src/runtime/session.rs`
   - [x] **Task 1.3.4**: Define comprehensive error types for runtime failures and communication errors. ✅ **COMPLETED** - implemented in `src/runtime/error.rs`
   - [x] **Task 1.3.5**: Implement integration testing for runtime components validation. ✅ **COMPLETED** - implemented in `src/runtime/integration_tests.rs`
-- [ ] **Task 1.4**: Research and Formalize Duality Concepts
+- [x] **Task 1.4**: Research and Formalize Duality Concepts
   - [x] **Task 1.4.1**: Further research formal definitions of duality for all implemented primitives. (**COMPLETED** - enhanced in `duality.md`)
   - [x] **Task 1.4.2**: Investigate and document how duality is checked at the type level within the Rust implementation. (**COMPLETED** - documented in `duality.md`)
   - [x] **Task 1.4.3**: Explore and document potential for generating dual protocols or verifying compatibility automatically. ✅ **COMPLETED**
@@ -149,7 +149,7 @@ Phase 1 tasks.
 With a tested core library, this phase focuses on enhancements, performance, and
 developer experience.
 
-- [ ] **Task 3.1**: Enhance Runtime Checks and Error Handling
+- [x] **Task 3.1**: Enhance Runtime Checks and Error Handling (✅ **COMPLETED**)
   - [x] **Task 3.1.1**: Improve `RuntimeError::Serialization` to include an optional `source` field for better debugging of serialization issues. (✅ **COMPLETED**)
   - [x] **Task 3.1.2**: Implement Advanced State Transition Validation and Deadlock/Livelock Detection. (✅ **COMPLETED**)
     - [x] **Task 3.1.2a**: Enhanced error system with `DeadlockError`, `LivelockError`, and `StateValidationError` types.
@@ -175,13 +175,21 @@ developer experience.
     - [x] **Task 3.1.4d**: Implement comprehensive logging and reporting for lifecycle events and leak detection.
     - [x] **Task 3.1.4e**: Implement session manager capabilities for multi-session lifecycle management and bulk operations.
     - [x] **Task 3.1.4f**: Complete test suite with 16 comprehensive tests covering all lifecycle scenarios including timeout handling.
-  - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
-- [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities
-  - [ ] **Task 3.2.1**: Profile compile times of type-level constructs.
-  - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations.
-  - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime.
+  - [x] **Task 3.1.5**: Refine Runtime Error Hierarchy and Contextual Information (✅ **COMPLETED**)
+    - [x] **Task 3.1.5a**: Add error severity levels and categorization system for better error handling. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5b**: Enhance RuntimeError variants with more detailed contextual information. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5c**: Improve error display and debug formatting with structured output. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5d**: Add error recovery suggestions to error types. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5e**: Enhance source error chaining and causality tracking. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5f**: Update error creation patterns throughout runtime module for consistency. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5g**: Add comprehensive error tests covering all scenarios. (✅ **COMPLETED**)
+    - [x] **Task 3.1.5h**: Update error documentation and usage examples. (✅ **COMPLETED**)
+- [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities (postponed)
+  - [ ] **Task 3.2.1**: Profile compile times of type-level constructs. (postponed)
+  - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations. (postponed)
+  - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime. (postponed)
 - [ ] **Task 3.3**: Explore Macro-Based DSL for Protocol Definition
-- [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks
+- [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
 
 ## Phase 4: Comprehensive Documentation

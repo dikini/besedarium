@@ -15,7 +15,10 @@ use uuid::Uuid;
 use crate::protocol::foundation::{
     ActionIOTMarker, CommMetadataTrait, LocalProtocol, Message, Role, SupportsActionIO,
 };
-use crate::runtime::error::{ChannelOperation, CommunicationError, RuntimeError};
+use crate::runtime::error::{
+    ChannelOperation, CommunicationError, ErrorContext, ErrorSeverity, RecoverySuggestion,
+    RuntimeError,
+};
 
 /// Unique identifier for a channel
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -94,16 +97,20 @@ impl TimeoutConfig {
     /// Get the effective timeout for a specific operation
     pub fn effective_timeout(&self, operation: ChannelOperation) -> Option<Duration> {
         let timeout_ms = match operation {
-            ChannelOperation::Send => self.send_timeout_ms
+            ChannelOperation::Send => self
+                .send_timeout_ms
                 .or(self.session_timeout_ms)
                 .or(self.global_timeout_ms),
-            ChannelOperation::Receive => self.receive_timeout_ms
+            ChannelOperation::Receive => self
+                .receive_timeout_ms
                 .or(self.session_timeout_ms)
                 .or(self.global_timeout_ms),
-            ChannelOperation::Connect => self.connect_timeout_ms
+            ChannelOperation::Connect => self
+                .connect_timeout_ms
                 .or(self.session_timeout_ms)
                 .or(self.global_timeout_ms),
-            ChannelOperation::Close => self.close_timeout_ms
+            ChannelOperation::Close => self
+                .close_timeout_ms
                 .or(self.session_timeout_ms)
                 .or(self.global_timeout_ms),
         };
@@ -162,7 +169,7 @@ impl ChannelHealth {
     /// Record a failed operation
     pub async fn record_failure(&self, operation: ChannelOperation) {
         self.failed_operations.fetch_add(1, Ordering::Relaxed);
-        
+
         match operation {
             ChannelOperation::Send | ChannelOperation::Receive => {
                 self.timeout_failures.fetch_add(1, Ordering::Relaxed);
@@ -172,7 +179,7 @@ impl ChannelHealth {
 
         let mut last_failure = self.last_failure_time.lock().await;
         *last_failure = Some(SystemTime::now());
-        
+
         self.update_health_status().await;
     }
 
@@ -180,21 +187,22 @@ impl ChannelHealth {
     pub async fn record_serialization_failure(&self) {
         self.failed_operations.fetch_add(1, Ordering::Relaxed);
         self.serialization_failures.fetch_add(1, Ordering::Relaxed);
-        
+
         let mut last_failure = self.last_failure_time.lock().await;
         *last_failure = Some(SystemTime::now());
-        
+
         self.update_health_status().await;
     }
 
     /// Record a deserialization failure
     pub async fn record_deserialization_failure(&self) {
         self.failed_operations.fetch_add(1, Ordering::Relaxed);
-        self.deserialization_failures.fetch_add(1, Ordering::Relaxed);
-        
+        self.deserialization_failures
+            .fetch_add(1, Ordering::Relaxed);
+
         let mut last_failure = self.last_failure_time.lock().await;
         *last_failure = Some(SystemTime::now());
-        
+
         self.update_health_status().await;
     }
 
@@ -312,12 +320,7 @@ where
     M: CommMetadataTrait,
     Msg: Message,
 {
-    pub fn new(
-        metadata: M,
-        payload: Msg,
-        sender_id: String,
-        sequence_number: u64,
-    ) -> Self {
+    pub fn new(metadata: M, payload: Msg, sender_id: String, sequence_number: u64) -> Self {
         Self {
             metadata,
             payload,
@@ -442,9 +445,11 @@ where
                 let metadata = metadata.ok_or_else(|| de::Error::missing_field("metadata"))?;
                 let payload = payload.ok_or_else(|| de::Error::missing_field("payload"))?;
                 let sender_id = sender_id.ok_or_else(|| de::Error::missing_field("sender_id"))?;
-                let sequence_number = sequence_number.ok_or_else(|| de::Error::missing_field("sequence_number"))?;
+                let sequence_number =
+                    sequence_number.ok_or_else(|| de::Error::missing_field("sequence_number"))?;
                 let timestamp = timestamp.ok_or_else(|| de::Error::missing_field("timestamp"))?;
-                let operation_id = operation_id.ok_or_else(|| de::Error::missing_field("operation_id"))?;
+                let operation_id =
+                    operation_id.ok_or_else(|| de::Error::missing_field("operation_id"))?;
 
                 Ok(ChannelMessage {
                     metadata,
@@ -457,8 +462,19 @@ where
             }
         }
 
-        const FIELDS: &[&str] = &["metadata", "payload", "sender_id", "sequence_number", "timestamp", "operation_id"];
-        deserializer.deserialize_struct("ChannelMessage", FIELDS, ChannelMessageVisitor(PhantomData))
+        const FIELDS: &[&str] = &[
+            "metadata",
+            "payload",
+            "sender_id",
+            "sequence_number",
+            "timestamp",
+            "operation_id",
+        ];
+        deserializer.deserialize_struct(
+            "ChannelMessage",
+            FIELDS,
+            ChannelMessageVisitor(PhantomData),
+        )
     }
 }
 
@@ -529,9 +545,16 @@ where
         let timeout = self.config.timeout_config.effective_timeout(operation);
 
         let mut sender_guard = self.sender.lock().await;
-        let sender = sender_guard.as_mut().ok_or_else(|| {
-            RuntimeError::Communication(CommunicationError::ChannelClosed)
-        })?;
+        let sender = sender_guard
+            .as_mut()
+            .ok_or_else(|| RuntimeError::Communication {
+                error: CommunicationError::ChannelClosed,
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("channel")
+                    .with_operation("send"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            })?;
 
         // Serialize the message with enhanced error handling
         let serialized = serde_json::to_vec(&message).map_err(|e| {
@@ -541,12 +564,19 @@ where
                 health.record_serialization_failure().await;
             });
 
-            RuntimeError::Communication(CommunicationError::SerializationFailed {
-                channel_id: self.config.channel_id.to_string(),
-                message_type: std::any::type_name::<Msg>().to_string(),
-                session_id: self.config.session_id.to_string(),
-                underlying_error: e.to_string(),
-            })
+            RuntimeError::Communication {
+                error: CommunicationError::SerializationFailed {
+                    channel_id: self.config.channel_id.to_string(),
+                    message_type: std::any::type_name::<Msg>().to_string(),
+                    session_id: self.config.session_id.to_string(),
+                    underlying_error: e.to_string(),
+                },
+                severity: ErrorSeverity::Medium,
+                context: ErrorContext::new()
+                    .with_component("channel")
+                    .with_operation("serialize"),
+                recovery_suggestion: RecoverySuggestion::CheckConfiguration,
+            }
         })?;
 
         // Send with timeout if configured
@@ -557,36 +587,56 @@ where
                     // Record timeout failure synchronously
                     self.health.record_failure(operation).await;
 
-                    return Err(RuntimeError::Communication(CommunicationError::ChannelTimeout {
-                        channel_id: self.config.channel_id.to_string(),
-                        operation,
-                        peer_role: self.config.peer_role.clone(),
-                        session_id: self.config.session_id.to_string(),
-                        timeout_ms: timeout_duration.as_millis() as u64,
-                    }));
+                    return Err(RuntimeError::Communication {
+                        error: CommunicationError::ChannelTimeout {
+                            channel_id: self.config.channel_id.to_string(),
+                            operation,
+                            peer_role: self.config.peer_role.clone(),
+                            session_id: self.config.session_id.to_string(),
+                            timeout_ms: timeout_duration.as_millis() as u64,
+                        },
+                        severity: ErrorSeverity::High,
+                        context: ErrorContext::new()
+                            .with_component("channel")
+                            .with_operation("send"),
+                        recovery_suggestion: RecoverySuggestion::RetryWithBackoff,
+                    });
                 }
             }
-                .map_err(|_| {
-                    RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
-                        channel_id: self.config.channel_id.to_string(),
-                        operation,
-                        peer_role: self.config.peer_role.clone(),
-                        session_id: self.config.session_id.to_string(),
-                        details: "Channel closed during send operation".to_string(),
-                        underlying_error: None,
-                    })
-                })
-        } else {
-            sender.send(serialized).await.map_err(|_| {
-                RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
+            .map_err(|_| RuntimeError::Communication {
+                error: CommunicationError::ChannelOperationFailed {
                     channel_id: self.config.channel_id.to_string(),
                     operation,
                     peer_role: self.config.peer_role.clone(),
                     session_id: self.config.session_id.to_string(),
                     details: "Channel closed during send operation".to_string(),
                     underlying_error: None,
-                })
+                },
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("channel")
+                    .with_operation("send"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
             })
+        } else {
+            sender
+                .send(serialized)
+                .await
+                .map_err(|_| RuntimeError::Communication {
+                    error: CommunicationError::ChannelOperationFailed {
+                        channel_id: self.config.channel_id.to_string(),
+                        operation,
+                        peer_role: self.config.peer_role.clone(),
+                        session_id: self.config.session_id.to_string(),
+                        details: "Channel closed during send operation".to_string(),
+                        underlying_error: None,
+                    },
+                    severity: ErrorSeverity::High,
+                    context: ErrorContext::new()
+                        .with_component("channel")
+                        .with_operation("send"),
+                    recovery_suggestion: RecoverySuggestion::RestartSession,
+                })
         };
 
         match send_result {
@@ -611,9 +661,16 @@ where
         let timeout = self.config.timeout_config.effective_timeout(operation);
 
         let mut receiver_guard = self.receiver.lock().await;
-        let receiver = receiver_guard.as_mut().ok_or_else(|| {
-            RuntimeError::Communication(CommunicationError::ChannelClosed)
-        })?;
+        let receiver = receiver_guard
+            .as_mut()
+            .ok_or_else(|| RuntimeError::Communication {
+                error: CommunicationError::ChannelClosed,
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("channel")
+                    .with_operation("receive"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            })?;
 
         // Receive with timeout if configured
         let serialized = if let Some(timeout_duration) = timeout {
@@ -622,42 +679,62 @@ where
                 Err(_) => {
                     // Record timeout failure synchronously
                     self.health.record_failure(operation).await;
-                    
-                    return Err(RuntimeError::Communication(CommunicationError::ChannelTimeout {
-                        channel_id: self.config.channel_id.to_string(),
-                        operation,
-                        peer_role: self.config.peer_role.clone(),
-                        session_id: self.config.session_id.to_string(),
-                        timeout_ms: timeout_duration.as_millis() as u64,
-                    }));
+
+                    return Err(RuntimeError::Communication {
+                        error: CommunicationError::ChannelTimeout {
+                            channel_id: self.config.channel_id.to_string(),
+                            operation,
+                            peer_role: self.config.peer_role.clone(),
+                            session_id: self.config.session_id.to_string(),
+                            timeout_ms: timeout_duration.as_millis() as u64,
+                        },
+                        severity: ErrorSeverity::High,
+                        context: ErrorContext::new()
+                            .with_component("channel")
+                            .with_operation("receive"),
+                        recovery_suggestion: RecoverySuggestion::RetryWithBackoff,
+                    });
                 }
             }
-                .ok_or_else(|| {
-                    RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
-                        channel_id: self.config.channel_id.to_string(),
-                        operation,
-                        peer_role: self.config.peer_role.clone(),
-                        session_id: self.config.session_id.to_string(),
-                        details: "Channel closed during receive operation".to_string(),
-                        underlying_error: None,
-                    })
-                })?
-        } else {
-            receiver.recv().await.ok_or_else(|| {
-                RuntimeError::Communication(CommunicationError::ChannelOperationFailed {
+            .ok_or_else(|| RuntimeError::Communication {
+                error: CommunicationError::ChannelOperationFailed {
                     channel_id: self.config.channel_id.to_string(),
                     operation,
                     peer_role: self.config.peer_role.clone(),
                     session_id: self.config.session_id.to_string(),
                     details: "Channel closed during receive operation".to_string(),
                     underlying_error: None,
-                })
+                },
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("channel")
+                    .with_operation("receive"),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
             })?
+        } else {
+            receiver
+                .recv()
+                .await
+                .ok_or_else(|| RuntimeError::Communication {
+                    error: CommunicationError::ChannelOperationFailed {
+                        channel_id: self.config.channel_id.to_string(),
+                        operation,
+                        peer_role: self.config.peer_role.clone(),
+                        session_id: self.config.session_id.to_string(),
+                        details: "Channel closed during receive operation".to_string(),
+                        underlying_error: None,
+                    },
+                    severity: ErrorSeverity::High,
+                    context: ErrorContext::new()
+                        .with_component("channel")
+                        .with_operation("receive"),
+                    recovery_suggestion: RecoverySuggestion::RestartSession,
+                })?
         };
 
         // Deserialize the message with enhanced error handling
-        let message_result: Result<ChannelMessage<M, Msg>, _> = 
-            serde_json::from_slice(&serialized).map_err(|e| {
+        let message_result: Result<ChannelMessage<M, Msg>, _> = serde_json::from_slice(&serialized)
+            .map_err(|e| {
                 // Record deserialization failure
                 let health = self.health.clone();
                 tokio::spawn(async move {
@@ -671,14 +748,21 @@ where
                     Some(hex::encode(&serialized))
                 };
 
-                RuntimeError::Communication(CommunicationError::DeserializationFailed {
-                    channel_id: self.config.channel_id.to_string(),
-                    expected_type: std::any::type_name::<ChannelMessage<M, Msg>>().to_string(),
-                    actual_data_length: serialized.len(),
-                    raw_data_preview,
-                    session_id: self.config.session_id.to_string(),
-                    underlying_error: e.to_string(),
-                })
+                RuntimeError::Communication {
+                    error: CommunicationError::DeserializationFailed {
+                        channel_id: self.config.channel_id.to_string(),
+                        expected_type: std::any::type_name::<ChannelMessage<M, Msg>>().to_string(),
+                        actual_data_length: serialized.len(),
+                        raw_data_preview,
+                        session_id: self.config.session_id.to_string(),
+                        underlying_error: e.to_string(),
+                    },
+                    severity: ErrorSeverity::Medium,
+                    context: ErrorContext::new()
+                        .with_component("channel")
+                        .with_operation("deserialize"),
+                    recovery_suggestion: RecoverySuggestion::Retry,
+                }
             });
 
         match message_result {
@@ -707,14 +791,19 @@ where
         if let Some(timeout_duration) = timeout {
             tokio::time::timeout(timeout_duration, close_operation)
                 .await
-                .map_err(|_| {
-                    RuntimeError::Communication(CommunicationError::ChannelTimeout {
+                .map_err(|_| RuntimeError::Communication {
+                    error: CommunicationError::ChannelTimeout {
                         channel_id: self.config.channel_id.to_string(),
                         operation,
                         peer_role: self.config.peer_role.clone(),
                         session_id: self.config.session_id.to_string(),
                         timeout_ms: timeout_duration.as_millis() as u64,
-                    })
+                    },
+                    severity: ErrorSeverity::Medium,
+                    context: ErrorContext::new()
+                        .with_component("channel")
+                        .with_operation("close_sender"),
+                    recovery_suggestion: RecoverySuggestion::Retry,
                 })?
         } else {
             close_operation.await
@@ -735,14 +824,19 @@ where
         if let Some(timeout_duration) = timeout {
             tokio::time::timeout(timeout_duration, close_operation)
                 .await
-                .map_err(|_| {
-                    RuntimeError::Communication(CommunicationError::ChannelTimeout {
+                .map_err(|_| RuntimeError::Communication {
+                    error: CommunicationError::ChannelTimeout {
                         channel_id: self.config.channel_id.to_string(),
                         operation,
                         peer_role: self.config.peer_role.clone(),
                         session_id: self.config.session_id.to_string(),
                         timeout_ms: timeout_duration.as_millis() as u64,
-                    })
+                    },
+                    severity: ErrorSeverity::Medium,
+                    context: ErrorContext::new()
+                        .with_component("channel")
+                        .with_operation("close_receiver"),
+                    recovery_suggestion: RecoverySuggestion::Retry,
                 })?
         } else {
             close_operation.await
@@ -864,7 +958,7 @@ where
 mod tests {
     use super::*;
     use crate::protocol::foundation::{
-        BiDirectionalAction, CommMetadata, DefaultChan, RequestLbl, InputAction, OutputAction,
+        BiDirectionalAction, CommMetadata, DefaultChan, InputAction, OutputAction, RequestLbl,
     };
     use crate::protocol::local::EpChanEnd;
     use serde::{Deserialize, Serialize};
@@ -924,12 +1018,13 @@ mod tests {
             ..TimeoutConfig::default()
         };
 
-        let (ch1, ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id.clone())
-            .buffer_size(64)
-            .timeout_config(timeout_config.clone())
-            .peer_role("Bob".to_string())
-            .ordered(true)
-            .build();
+        let (ch1, _ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id.clone())
+                .buffer_size(64)
+                .timeout_config(timeout_config.clone())
+                .peer_role("Bob".to_string())
+                .ordered(true)
+                .build();
 
         assert_eq!(ch1.config().buffer_size, 64);
         assert_eq!(ch1.config().peer_role, Some("Bob".to_string()));
@@ -937,18 +1032,24 @@ mod tests {
         assert!(ch1.config().ordered);
 
         // Test timeout configuration
-        let effective_send_timeout = ch1.config().timeout_config.effective_timeout(ChannelOperation::Send);
+        let effective_send_timeout = ch1
+            .config()
+            .timeout_config
+            .effective_timeout(ChannelOperation::Send);
         assert_eq!(effective_send_timeout, Some(Duration::from_millis(500)));
 
-        let effective_receive_timeout = ch1.config().timeout_config.effective_timeout(ChannelOperation::Receive);
+        let effective_receive_timeout = ch1
+            .config()
+            .timeout_config
+            .effective_timeout(ChannelOperation::Receive);
         assert_eq!(effective_receive_timeout, Some(Duration::from_millis(750)));
     }
 
     #[tokio::test]
     async fn test_message_send_receive_with_metadata() {
         let session_id = test_session_id();
-        let (ch1, ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .build();
+        let (ch1, ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id).build();
 
         let metadata = TestMetadata::new(DefaultChan, RequestLbl);
         let payload = TestMessage {
@@ -956,7 +1057,12 @@ mod tests {
             number: 42,
         };
         let seq_num = ch1.next_sequence_number();
-        let message = ChannelMessage::new(metadata.clone(), payload.clone(), "alice".to_string(), seq_num);
+        let message = ChannelMessage::new(
+            metadata.clone(),
+            payload.clone(),
+            "alice".to_string(),
+            seq_num,
+        );
 
         // Send from ch1
         ch1.send(message.clone()).await.unwrap();
@@ -985,10 +1091,11 @@ mod tests {
             ..TimeoutConfig::default()
         };
 
-        let (ch1, _ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .buffer_size(1) // Small buffer to force blocking
-            .timeout_config(timeout_config)
-            .build();
+        let (ch1, _ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
+                .buffer_size(1) // Small buffer to force blocking
+                .timeout_config(timeout_config)
+                .build();
 
         let metadata = TestMetadata::new(DefaultChan, RequestLbl);
         let payload = TestMessage {
@@ -997,7 +1104,8 @@ mod tests {
         };
 
         // Fill the buffer
-        let message1 = ChannelMessage::new(metadata.clone(), payload.clone(), "alice".to_string(), 1);
+        let message1 =
+            ChannelMessage::new(metadata.clone(), payload.clone(), "alice".to_string(), 1);
         ch1.send(message1).await.unwrap();
 
         // This should timeout because buffer is full and no one is receiving
@@ -1006,9 +1114,15 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            RuntimeError::Communication(CommunicationError::ChannelTimeout { 
-                operation, timeout_ms, .. 
-            }) => {
+            RuntimeError::Communication {
+                error:
+                    CommunicationError::ChannelTimeout {
+                        operation,
+                        timeout_ms,
+                        ..
+                    },
+                ..
+            } => {
                 assert_eq!(operation, ChannelOperation::Send);
                 assert_eq!(timeout_ms, 50);
             }
@@ -1029,18 +1143,25 @@ mod tests {
             ..TimeoutConfig::default()
         };
 
-        let (_ch1, ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .timeout_config(timeout_config)
-            .build();
+        let (_ch1, ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
+                .timeout_config(timeout_config)
+                .build();
 
         // Try to receive when no message is available
         let result: Result<ChannelMessage<TestMetadata, TestMessage>, _> = ch2.receive().await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            RuntimeError::Communication(CommunicationError::ChannelTimeout { 
-                operation, timeout_ms, .. 
-            }) => {
+            RuntimeError::Communication {
+                error:
+                    CommunicationError::ChannelTimeout {
+                        operation,
+                        timeout_ms,
+                        ..
+                    },
+                ..
+            } => {
                 assert_eq!(operation, ChannelOperation::Receive);
                 assert_eq!(timeout_ms, 50);
             }
@@ -1056,8 +1177,8 @@ mod tests {
     #[tokio::test]
     async fn test_channel_close_operations() {
         let session_id = test_session_id();
-        let (ch1, ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .build();
+        let (ch1, ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id).build();
 
         // Initially open
         assert!(ch1.is_send_open().await);
@@ -1080,9 +1201,10 @@ mod tests {
             ..TimeoutConfig::default()
         };
 
-        let (ch1, _ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .timeout_config(timeout_config)
-            .build();
+        let (ch1, _ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
+                .timeout_config(timeout_config)
+                .build();
 
         // Close should succeed within timeout
         let result = ch1.close_sender().await;
@@ -1092,8 +1214,8 @@ mod tests {
     #[tokio::test]
     async fn test_sequence_numbers() {
         let session_id = test_session_id();
-        let (ch, _) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .build();
+        let (ch, _) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id).build();
 
         let seq1 = ch.next_sequence_number();
         let seq2 = ch.next_sequence_number();
@@ -1107,7 +1229,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitoring() {
         let health = ChannelHealth::new();
-        
+
         // Initially healthy
         assert!(health.is_healthy().await);
         assert_eq!(health.failure_rate(), 0.0);
@@ -1174,9 +1296,10 @@ mod tests {
     #[tokio::test]
     async fn test_error_context_preservation() {
         let session_id = SessionId::from_string("error-test-session".to_string());
-        let (ch1, _ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id.clone())
-            .peer_role("Bob".to_string())
-            .build();
+        let (ch1, _ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id.clone())
+                .peer_role("Bob".to_string())
+                .build();
 
         // Close the channel to trigger an error
         ch1.close_sender().await.unwrap();
@@ -1194,7 +1317,10 @@ mod tests {
 
         // The error should contain detailed context
         match result.unwrap_err() {
-            RuntimeError::Communication(CommunicationError::ChannelClosed) => {
+            RuntimeError::Communication {
+                error: CommunicationError::ChannelClosed,
+                ..
+            } => {
                 // This is the expected error for a closed channel
             }
             _ => panic!("Expected ChannelClosed error"),
@@ -1218,11 +1344,11 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_operations_health_tracking() {
         let session_id = test_session_id();
-        let (ch1, ch2) = ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id)
-            .build();
+        let (ch1, ch2) =
+            ChannelBuilder::<TestProtocol, Alice, BiDirectionalAction>::new(session_id).build();
 
         let metadata = TestMetadata::new(DefaultChan, RequestLbl);
-        
+
         // Perform several successful operations
         for i in 0..5 {
             let payload = TestMessage {
@@ -1230,12 +1356,12 @@ mod tests {
                 number: i,
             };
             let message = ChannelMessage::new(
-                metadata.clone(), 
-                payload, 
-                "alice".to_string(), 
-                ch1.next_sequence_number()
+                metadata.clone(),
+                payload,
+                "alice".to_string(),
+                ch1.next_sequence_number(),
             );
-            
+
             ch1.send(message).await.unwrap();
             let _: ChannelMessage<TestMetadata, TestMessage> = ch2.receive().await.unwrap();
         }
@@ -1243,12 +1369,12 @@ mod tests {
         // Check health metrics
         let ch1_health = ch1.health().await;
         let ch2_health = ch2.health().await;
-        
+
         assert_eq!(ch1_health.successful_operations.load(Ordering::Relaxed), 5);
         assert_eq!(ch2_health.successful_operations.load(Ordering::Relaxed), 5);
         assert_eq!(ch1_health.failed_operations.load(Ordering::Relaxed), 0);
         assert_eq!(ch2_health.failed_operations.load(Ordering::Relaxed), 0);
-        
+
         assert!(ch1.is_healthy().await);
         assert!(ch2.is_healthy().await);
     }

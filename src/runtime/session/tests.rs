@@ -3,14 +3,12 @@
 //! This module contains comprehensive tests for graceful shutdown, resource leak detection,
 //! and enhanced session lifecycle management features.
 
+use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::time::sleep;
-use std::hash::{Hash, Hasher};
 
 use super::*;
-use crate::protocol::foundation::{
-    BiDirectionalAction, CommMetadata, DefaultChan, MsgLbl,
-};
+use crate::protocol::foundation::{BiDirectionalAction, CommMetadata, DefaultChan, MsgLbl};
 use crate::protocol::local::EpChanEnd;
 
 // Test types
@@ -62,23 +60,34 @@ async fn test_session_creation_with_shutdown_config() {
         strict_leak_detection: false,
     };
 
-    let (session, _channel) = Session::new_with_config(id.clone(), protocol, role, config, shutdown_config);
+    let (session, _channel) =
+        Session::new_with_config(id.clone(), protocol, role, config, shutdown_config);
 
     assert_eq!(session.id(), &id);
     assert_eq!(session.status().await, SessionStatus::Initializing);
-    assert_eq!(session.shutdown_config.graceful_shutdown_timeout, Duration::from_secs(10));
+    assert_eq!(
+        session.shutdown_config.graceful_shutdown_timeout,
+        Duration::from_secs(10)
+    );
     assert_eq!(session.shutdown_config.force_task_termination, true);
 }
 
 #[tokio::test]
 async fn test_resource_tracking() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) =
+        Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
 
     // Track some resources
-    session.track_resource("channel-1".to_string(), ResourceType::Channel).await;
-    session.track_resource("task-1".to_string(), ResourceType::Task).await;
-    session.track_resource("connection-1".to_string(), ResourceType::Connection).await;
+    session
+        .track_resource("channel-1".to_string(), ResourceType::Channel)
+        .await;
+    session
+        .track_resource("task-1".to_string(), ResourceType::Task)
+        .await;
+    session
+        .track_resource("connection-1".to_string(), ResourceType::Connection)
+        .await;
 
     // Check that resources are tracked
     let resources = session.tracked_resources.read().await;
@@ -100,11 +109,20 @@ async fn test_resource_tracking() {
 #[tokio::test]
 async fn test_leak_detection_no_leaks() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id.clone(), TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) = Session::new(
+        id.clone(),
+        TestProtocol::new(),
+        Alice,
+        ChannelConfig::default(),
+    );
 
     // Track and close resources properly
-    session.track_resource("channel-1".to_string(), ResourceType::Channel).await;
-    session.track_resource("task-1".to_string(), ResourceType::Task).await;
+    session
+        .track_resource("channel-1".to_string(), ResourceType::Channel)
+        .await;
+    session
+        .track_resource("task-1".to_string(), ResourceType::Task)
+        .await;
     session.close_resource("channel-1").await;
     session.close_resource("task-1").await;
 
@@ -121,13 +139,24 @@ async fn test_leak_detection_no_leaks() {
 #[tokio::test]
 async fn test_leak_detection_with_leaks() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id.clone(), TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) = Session::new(
+        id.clone(),
+        TestProtocol::new(),
+        Alice,
+        ChannelConfig::default(),
+    );
 
     // Track resources but don't close them all
-    session.track_resource("channel-1".to_string(), ResourceType::Channel).await;
-    session.track_resource("task-1".to_string(), ResourceType::Task).await;
-    session.track_resource("connection-1".to_string(), ResourceType::Connection).await;
-    
+    session
+        .track_resource("channel-1".to_string(), ResourceType::Channel)
+        .await;
+    session
+        .track_resource("task-1".to_string(), ResourceType::Task)
+        .await;
+    session
+        .track_resource("connection-1".to_string(), ResourceType::Connection)
+        .await;
+
     // Only close one resource
     session.close_resource("channel-1").await;
 
@@ -141,7 +170,9 @@ async fn test_leak_detection_with_leaks() {
     assert_eq!(report.total_resources_closed, 1);
 
     // Check that the correct resources are reported as leaked
-    let leaked_ids: Vec<&String> = report.leaked_resources.iter()
+    let leaked_ids: Vec<&String> = report
+        .leaked_resources
+        .iter()
         .map(|r| &r.resource_id)
         .collect();
     assert!(leaked_ids.contains(&&"task-1".to_string()));
@@ -152,11 +183,12 @@ async fn test_leak_detection_with_leaks() {
 #[tokio::test]
 async fn test_graceful_shutdown_completed_session() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) =
+        Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
 
     // Start and immediately simulate completion
     session.start().await.unwrap();
-    
+
     // Manually set status to completed for testing
     {
         let mut status = session.status.write().await;
@@ -172,15 +204,20 @@ async fn test_graceful_shutdown_completed_session() {
 #[tokio::test]
 async fn test_graceful_shutdown_running_session() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) =
+        Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
 
     // Start the session
     session.start().await.unwrap();
     assert_eq!(session.status().await, SessionStatus::Running);
 
     // Track some resources
-    session.track_resource("test-channel".to_string(), ResourceType::Channel).await;
-    session.track_resource("test-task".to_string(), ResourceType::Task).await;
+    session
+        .track_resource("test-channel".to_string(), ResourceType::Channel)
+        .await;
+    session
+        .track_resource("test-task".to_string(), ResourceType::Task)
+        .await;
 
     // Initiate graceful shutdown
     let result = session.shutdown().await;
@@ -188,7 +225,8 @@ async fn test_graceful_shutdown_running_session() {
 
     // Session should be in a final state
     let final_status = session.status().await;
-    assert!(matches!(final_status, 
+    assert!(matches!(
+        final_status,
         SessionStatus::Completed | SessionStatus::Cancelled | SessionStatus::Failed(_)
     ));
 }
@@ -204,19 +242,19 @@ async fn test_shutdown_timeout() {
     };
 
     let (session, _channel) = Session::new_with_config(
-        id, 
-        TestProtocol::new(), 
-        Alice, 
+        id,
+        TestProtocol::new(),
+        Alice,
         ChannelConfig::default(),
-        shutdown_config
+        shutdown_config,
     );
 
     // Start the session
     session.start().await.unwrap();
-    
+
     // Give the execution loop time to start running and begin processing
     sleep(Duration::from_millis(150)).await;
-    
+
     // Initiate shutdown - this should timeout and force shutdown
     let result = session.shutdown().await;
     assert!(result.is_ok()); // Force shutdown should still succeed
@@ -228,11 +266,20 @@ async fn test_shutdown_timeout() {
 #[tokio::test]
 async fn test_session_metrics() {
     let id = SessionId::new("test-session");
-    let (session, _channel) = Session::new(id.clone(), TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) = Session::new(
+        id.clone(),
+        TestProtocol::new(),
+        Alice,
+        ChannelConfig::default(),
+    );
 
     // Track some resources
-    session.track_resource("channel-1".to_string(), ResourceType::Channel).await;
-    session.track_resource("task-1".to_string(), ResourceType::Task).await;
+    session
+        .track_resource("channel-1".to_string(), ResourceType::Channel)
+        .await;
+    session
+        .track_resource("task-1".to_string(), ResourceType::Task)
+        .await;
 
     // Simulate some activity
     session.update_activity().await;
@@ -256,12 +303,22 @@ async fn test_session_manager_creation() {
 
     // Create sessions
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id2.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
@@ -274,7 +331,14 @@ async fn test_session_manager_creation() {
     assert!(session_ids.contains(&id2));
 
     // Try to create duplicate session
-    let result = manager.create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default()).await;
+    let result = manager
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
+        .await;
     assert!(result.is_err());
 }
 
@@ -287,12 +351,22 @@ async fn test_session_manager_shutdown_all() {
 
     // Create and start sessions
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id2.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
@@ -313,10 +387,12 @@ async fn test_session_manager_shutdown_all() {
     let status1 = manager.get_session_status(&id1).await.unwrap();
     let status2 = manager.get_session_status(&id2).await.unwrap();
 
-    assert!(matches!(status1, 
+    assert!(matches!(
+        status1,
         SessionStatus::Completed | SessionStatus::Cancelled | SessionStatus::Failed(_)
     ));
-    assert!(matches!(status2, 
+    assert!(matches!(
+        status2,
         SessionStatus::Completed | SessionStatus::Cancelled | SessionStatus::Failed(_)
     ));
 }
@@ -330,22 +406,40 @@ async fn test_session_manager_leak_detection() {
 
     // Create sessions
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id2.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     // Add resources to sessions with different leak patterns
-    session1.track_resource("channel-1".to_string(), ResourceType::Channel).await;
-    session1.track_resource("task-1".to_string(), ResourceType::Task).await;
+    session1
+        .track_resource("channel-1".to_string(), ResourceType::Channel)
+        .await;
+    session1
+        .track_resource("task-1".to_string(), ResourceType::Task)
+        .await;
     session1.close_resource("channel-1").await; // Close one, leak one
 
-    session2.track_resource("channel-2".to_string(), ResourceType::Channel).await;
-    session2.track_resource("task-2".to_string(), ResourceType::Task).await;
+    session2
+        .track_resource("channel-2".to_string(), ResourceType::Channel)
+        .await;
+    session2
+        .track_resource("task-2".to_string(), ResourceType::Task)
+        .await;
     session2.close_resource("channel-2").await;
     session2.close_resource("task-2").await; // Close all, no leaks
 
@@ -377,17 +471,32 @@ async fn test_session_manager_cleanup() {
 
     // Create sessions
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id2.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session3, _ch3) = manager
-        .create_session(id3.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id3.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
@@ -432,12 +541,22 @@ async fn test_session_manager_metrics() {
 
     // Create sessions with different states
     let (session1, _ch1) = manager
-        .create_session(id1.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id1.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
     let (session2, _ch2) = manager
-        .create_session(id2.clone(), TestProtocol::new(), Alice, ChannelConfig::default())
+        .create_session(
+            id2.clone(),
+            TestProtocol::new(),
+            Alice,
+            ChannelConfig::default(),
+        )
         .await
         .unwrap();
 
@@ -445,15 +564,22 @@ async fn test_session_manager_metrics() {
     // Leave session2 in initializing state
 
     // Add some resources with leaks
-    session1.track_resource("leaked-channel".to_string(), ResourceType::Channel).await;
-    session2.track_resource("clean-channel".to_string(), ResourceType::Channel).await;
+    session1
+        .track_resource("leaked-channel".to_string(), ResourceType::Channel)
+        .await;
+    session2
+        .track_resource("clean-channel".to_string(), ResourceType::Channel)
+        .await;
     session2.close_resource("clean-channel").await;
 
     let metrics = manager.get_manager_metrics().await;
 
     assert_eq!(metrics.total_sessions, 2);
     assert_eq!(metrics.status_counts.get(&SessionStatus::Running), Some(&1));
-    assert_eq!(metrics.status_counts.get(&SessionStatus::Initializing), Some(&1));
+    assert_eq!(
+        metrics.status_counts.get(&SessionStatus::Initializing),
+        Some(&1)
+    );
     assert_eq!(metrics.leak_summary.total_sessions, 2);
     assert_eq!(metrics.leak_summary.sessions_with_leaks, 1);
     assert_eq!(metrics.leak_summary.total_leaked_resources, 1);
@@ -468,13 +594,11 @@ async fn test_complex_shutdown_scenario() {
         strict_leak_detection: true,
     };
 
-    let manager = SessionManager::new_with_config(
-        SessionConfig {
-            shutdown_config,
-            enable_resource_tracking: true,
-            enable_metrics: true,
-        }
-    );
+    let manager = SessionManager::new_with_config(SessionConfig {
+        shutdown_config,
+        enable_resource_tracking: true,
+        enable_metrics: true,
+    });
 
     // Create multiple sessions
     let mut sessions = Vec::new();
@@ -484,13 +608,17 @@ async fn test_complex_shutdown_scenario() {
             .create_session(id, TestProtocol::new(), Alice, ChannelConfig::default())
             .await
             .unwrap();
-        
+
         session.start().await.unwrap();
-        
+
         // Add some resources to each session
-        session.track_resource(format!("channel-{}", i), ResourceType::Channel).await;
-        session.track_resource(format!("task-{}", i), ResourceType::Task).await;
-        
+        session
+            .track_resource(format!("channel-{}", i), ResourceType::Channel)
+            .await;
+        session
+            .track_resource(format!("task-{}", i), ResourceType::Task)
+            .await;
+
         sessions.push(session);
     }
 
@@ -511,13 +639,14 @@ async fn test_complex_shutdown_scenario() {
     let counts = manager.session_count_by_status().await;
     let completed = counts.get(&SessionStatus::Completed).unwrap_or(&0);
     let cancelled = counts.get(&SessionStatus::Cancelled).unwrap_or(&0);
-    
+
     // Count all failed sessions regardless of error message
-    let failed = counts.iter()
+    let failed = counts
+        .iter()
         .filter(|(status, _)| matches!(status, SessionStatus::Failed(_)))
         .map(|(_, count)| *count)
         .sum::<usize>();
-    
+
     let total_final = completed + cancelled + failed;
 
     assert_eq!(total_final, 5);
@@ -525,15 +654,22 @@ async fn test_complex_shutdown_scenario() {
     // Check for resource leaks
     let leak_summary = manager.get_leak_summary().await.unwrap();
     if leak_summary.has_leaks() {
-        println!("Warning: {} sessions have resource leaks", leak_summary.sessions_with_leaks);
-        println!("Total leaked resources: {}", leak_summary.total_leaked_resources);
+        println!(
+            "Warning: {} sessions have resource leaks",
+            leak_summary.sessions_with_leaks
+        );
+        println!(
+            "Total leaked resources: {}",
+            leak_summary.total_leaked_resources
+        );
     }
 }
 
 #[tokio::test]
 async fn test_session_pause_resume_with_shutdown() {
     let id = SessionId::new("pause-resume-session");
-    let (session, _channel) = Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) =
+        Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
 
     // Start session
     session.start().await.unwrap();
@@ -543,7 +679,7 @@ async fn test_session_pause_resume_with_shutdown() {
     session.pause().await.unwrap();
     assert_eq!(session.status().await, SessionStatus::Paused);
 
-    // Resume session  
+    // Resume session
     session.resume().await.unwrap();
     assert_eq!(session.status().await, SessionStatus::Running);
 
@@ -552,22 +688,26 @@ async fn test_session_pause_resume_with_shutdown() {
 
     // Should be in final state
     let final_status = session.status().await;
-    assert!(matches!(final_status, 
+    assert!(matches!(
+        final_status,
         SessionStatus::Completed | SessionStatus::Cancelled | SessionStatus::Failed(_)
     ));
 }
 
-#[tokio::test] 
+#[tokio::test]
 async fn test_resource_tracking_with_tasks() {
     let id = SessionId::new("task-tracking-session");
-    let (session, _channel) = Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
+    let (session, _channel) =
+        Session::new(id, TestProtocol::new(), Alice, ChannelConfig::default());
 
     // Track a mock task
     let task_handle = tokio::spawn(async {
         sleep(Duration::from_millis(100)).await;
     });
 
-    session.track_task("background-task".to_string(), task_handle).await;
+    session
+        .track_task("background-task".to_string(), task_handle)
+        .await;
 
     // Check that task is tracked
     let tasks = session.task_handles.read().await;
@@ -576,5 +716,8 @@ async fn test_resource_tracking_with_tasks() {
 
     let resources = session.tracked_resources.read().await;
     assert!(resources.contains_key("background-task"));
-    assert_eq!(resources.get("background-task").unwrap().resource_type, ResourceType::Task);
+    assert_eq!(
+        resources.get("background-task").unwrap().resource_type,
+        ResourceType::Task
+    );
 }

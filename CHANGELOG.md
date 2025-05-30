@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-05-31
 
+### Added
+
+- **Task 3.1.5 Completed**: Enhanced Runtime Error Hierarchy and Contextual Information
+  - Added comprehensive error system with ErrorSeverity enum (Low, Medium, High, Critical) for error prioritization
+  - Added ErrorCategory enum for systematic error classification
+  - Added RecoverySuggestion enum with actionable recovery guidance
+  - Added ErrorContext struct with rich contextual information (component, operation, session_id, metadata)
+  - Enhanced RuntimeError variants with structured format including severity, context, and recovery suggestions
+  - Added diagnostic_report() method for detailed error analysis
+  - Added 12 comprehensive test functions covering error display, categorization, severity ordering, and diagnostic reporting
+
+### Changed
+
+- **Breaking Change**: RuntimeError variants converted from tuple format to structured format
+  - Pattern matching updated from `RuntimeError::Communication(error)` to `RuntimeError::Communication { error, severity, context, recovery_suggestion }`
+  - All error creation sites updated to include contextual information
+  - Enhanced From trait implementations with intelligent severity assignment
+
 ### Documentation
 
 - **Task 4.5.1 Completed**: Consolidated and restructured `work/learnings.md` for optimal LLM context injection

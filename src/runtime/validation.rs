@@ -10,10 +10,10 @@ use std::time::{Duration, SystemTime};
 
 use tokio::sync::RwLock;
 
-use crate::protocol::foundation::{Role, GlobalProtocol, BiDirectionalAction};
+use crate::protocol::foundation::{BiDirectionalAction, GlobalProtocol, Role};
 use crate::runtime::error::{
-    DeadlockError, LivelockError, RuntimeError, RuntimeResult, StateValidationError,
-    ValidationContext, ValidationMode,
+    DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion, RuntimeError,
+    RuntimeResult, StateValidationError, ValidationContext, ValidationMode,
 };
 use crate::runtime::state::ProtocolState;
 
@@ -95,8 +95,9 @@ impl StateValidator {
             timestamp: SystemTime::now(),
             session_metadata: HashMap::new(), // Could be populated from state
             role_context: format!("{:?}", role),
-            protocol_position: format!("transition from {} to {}", 
-                std::any::type_name::<FromP>(), 
+            protocol_position: format!(
+                "transition from {} to {}",
+                std::any::type_name::<FromP>(),
                 std::any::type_name::<ToP>()
             ),
             validation_mode: self.config.validation_mode,
@@ -107,7 +108,8 @@ impl StateValidator {
 
         // 2. Check for potential deadlocks
         if self.config.enable_resource_analysis {
-            self.check_deadlock_potential(from_state.session_id(), role).await?;
+            self.check_deadlock_potential(from_state.session_id(), role)
+                .await?;
         }
 
         // 3. Check for livelock patterns
@@ -116,7 +118,8 @@ impl StateValidator {
         }
 
         // 4. Record the transition for future analysis
-        self.record_transition(from_state.session_id(), action, &validation_context).await;
+        self.record_transition(from_state.session_id(), action, &validation_context)
+            .await;
 
         Ok(ValidationResult::Valid {
             session_id: from_state.session_id().to_string(),
@@ -191,7 +194,10 @@ impl StateValidator {
         ToP: GlobalProtocol + Clone,
     {
         // Log detailed information for debugging
-        println!("DEBUG: Validating transition '{}' at {:?}", action, context.timestamp);
+        println!(
+            "DEBUG: Validating transition '{}' at {:?}",
+            action, context.timestamp
+        );
         Ok(())
     }
 
@@ -211,24 +217,27 @@ impl StateValidator {
     }
 
     /// Check for potential deadlock situations
-    async fn check_deadlock_potential<R>(
-        &self,
-        session_id: &str,
-        role: &R,
-    ) -> RuntimeResult<()>
+    async fn check_deadlock_potential<R>(&self, session_id: &str, role: &R) -> RuntimeResult<()>
     where
         R: Role,
     {
         let resource_graph = self.resource_graph.read().await;
-        
+
         // Check if adding this role/session would create a cycle
         if let Some(cycle) = resource_graph.detect_cycle(session_id, &format!("{:?}", role)) {
-            return Err(RuntimeError::Deadlock(DeadlockError::CircularDependency {
-                session_id: session_id.to_string(),
-                involved_roles: cycle.roles,
-                resource_chain: cycle.resources,
-                detection_time: SystemTime::now(),
-            }));
+            return Err(RuntimeError::Deadlock {
+                error: DeadlockError::CircularDependency {
+                    session_id: session_id.to_string(),
+                    involved_roles: cycle.roles,
+                    resource_chain: cycle.resources,
+                    detection_time: SystemTime::now(),
+                },
+                severity: ErrorSeverity::Critical,
+                context: ErrorContext::new()
+                    .with_component("validation")
+                    .with_operation("deadlock_detection"),
+                recovery_suggestion: RecoverySuggestion::Terminate,
+            });
         }
 
         Ok(())
@@ -244,7 +253,7 @@ impl StateValidator {
         P: GlobalProtocol + Clone,
     {
         let history = self.transition_history.write().await;
-        
+
         // Check for repeated transitions
         if let Some(repeated_count) = history.check_repeated_transitions(
             state.session_id(),
@@ -252,25 +261,30 @@ impl StateValidator {
             self.config.livelock_threshold,
             self.config.livelock_window,
         ) {
-            return Err(RuntimeError::Livelock(LivelockError::RepeatedTransitions {
-                session_id: state.session_id().to_string(),
-                transition_count: repeated_count,
-                repeated_transition: action.to_string(),
-                duration: self.config.livelock_window,
-                state_history: history.get_recent_states(state.session_id(), 10),
-            }));
+            return Err(RuntimeError::Livelock {
+                error: LivelockError::RepeatedTransitions {
+                    session_id: state.session_id().to_string(),
+                    transition_count: repeated_count,
+                    repeated_transition: action.to_string(),
+                    duration: self.config.livelock_window,
+                    state_history: history.get_recent_states(state.session_id(), 10),
+                },
+                severity: ErrorSeverity::High,
+                context: ErrorContext::new()
+                    .with_component("runtime_validation")
+                    .with_operation("validate_transition")
+                    .with_session_id(state.session_id())
+                    .with_metadata("repeated_count", &repeated_count.to_string())
+                    .with_metadata("threshold", &self.config.livelock_threshold.to_string()),
+                recovery_suggestion: RecoverySuggestion::RestartSession,
+            });
         }
 
         Ok(())
     }
 
     /// Record a transition for future analysis
-    async fn record_transition(
-        &self,
-        session_id: &str,
-        action: &str,
-        context: &ValidationContext,
-    ) {
+    async fn record_transition(&self, session_id: &str, action: &str, context: &ValidationContext) {
         let mut history = self.transition_history.write().await;
         history.record_transition(session_id, action, context.timestamp);
 
@@ -329,7 +343,10 @@ impl ResourceAllocationGraph {
 
     /// Add a resource dependency
     fn add_dependency(&mut self, session_id: String, resource: String) {
-        self.waiting_for.entry(session_id).or_insert_with(HashSet::new).insert(resource);
+        self.waiting_for
+            .entry(session_id)
+            .or_insert_with(HashSet::new)
+            .insert(resource);
     }
 
     /// Remove a resource dependency
@@ -365,10 +382,13 @@ impl TransitionHistory {
 
     /// Record a new transition
     fn record_transition(&mut self, session_id: &str, action: &str, timestamp: SystemTime) {
-        let history = self.transitions.entry(session_id.to_string()).or_insert_with(VecDeque::new);
-        
+        let history = self
+            .transitions
+            .entry(session_id.to_string())
+            .or_insert_with(VecDeque::new);
+
         history.push_back((action.to_string(), timestamp));
-        
+
         // Keep history size manageable
         while history.len() > self.max_history_size {
             history.pop_front();
@@ -386,14 +406,14 @@ impl TransitionHistory {
         if let Some(history) = self.transitions.get(session_id) {
             let now = SystemTime::now();
             let cutoff = now - window;
-            
+
             let recent_count = history
                 .iter()
                 .rev()
                 .take_while(|(_, timestamp)| *timestamp > cutoff)
                 .filter(|(a, _)| a == action)
                 .count();
-                
+
             if recent_count >= threshold {
                 Some(recent_count)
             } else {
@@ -442,15 +462,21 @@ impl ProgressTracker {
     /// Update activity for a session
     fn update_activity(&mut self, session_id: &str, timestamp: SystemTime) {
         self.last_activity.insert(session_id.to_string(), timestamp);
-        
-        let count = self.activity_counts.entry(session_id.to_string()).or_insert(0);
+
+        let count = self
+            .activity_counts
+            .entry(session_id.to_string())
+            .or_insert(0);
         *count += 1;
     }
 
     /// Calculate progress metric for a session
     fn calculate_progress(&self, session_id: &str) -> f64 {
         // Simple implementation - in reality this would be more sophisticated
-        self.progress_metrics.get(session_id).copied().unwrap_or(0.0)
+        self.progress_metrics
+            .get(session_id)
+            .copied()
+            .unwrap_or(0.0)
     }
 }
 
@@ -496,17 +522,14 @@ mod tests {
         let metadata = CommMetadata::new(DefaultChan, RequestLbl);
         let from_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
         let to_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
-        
+
         let from_state = ProtocolState::new("test_session", TestRoleA, from_protocol);
         let role = TestRoleA;
-        
-        let result = validator.validate_transition(
-            &from_state,
-            &to_protocol,
-            "test_action",
-            &role,
-        ).await;
-        
+
+        let result = validator
+            .validate_transition(&from_state, &to_protocol, "test_action", &role)
+            .await;
+
         assert!(result.is_ok());
         if let Ok(ValidationResult::Valid { session_id, .. }) = result {
             assert_eq!(session_id, "test_session");
@@ -517,7 +540,7 @@ mod tests {
     fn test_resource_allocation_graph() {
         let mut graph = ResourceAllocationGraph::new();
         graph.add_dependency("session1".to_string(), "resource1".to_string());
-        
+
         assert!(graph.waiting_for.contains_key("session1"));
         assert!(graph.waiting_for["session1"].contains("resource1"));
     }
@@ -526,9 +549,9 @@ mod tests {
     fn test_transition_history() {
         let mut history = TransitionHistory::new();
         let now = SystemTime::now();
-        
+
         history.record_transition("session1", "action1", now);
-        
+
         assert!(history.transitions.contains_key("session1"));
         assert_eq!(history.transitions["session1"].len(), 1);
     }
@@ -537,19 +560,19 @@ mod tests {
     fn test_repeated_transition_detection() {
         let mut history = TransitionHistory::new();
         let now = SystemTime::now();
-        
+
         // Add multiple instances of the same action
         for _ in 0..5 {
             history.record_transition("session1", "repeated_action", now);
         }
-        
+
         let result = history.check_repeated_transitions(
             "session1",
             "repeated_action",
             3,
             Duration::from_secs(60),
         );
-        
+
         assert!(result.is_some());
         assert_eq!(result.unwrap(), 5);
     }

@@ -11,16 +11,18 @@
 //! - [`session`] - Session lifecycle management for protocols
 //! - [`validation`] - State validation and consistency checks
 
-pub mod state;
 pub mod channel;
 pub mod error;
 pub mod session;
+pub mod state;
 pub mod validation;
 
 // Re-export common types for convenience
-pub use state::{ProtocolState, ExecutionContext, StateTransition};
-pub use channel::{TypedChannel, ChannelConfig};
-pub use error::{RuntimeError, RuntimeResult, ProtocolViolation, CommunicationError, 
-               DeadlockError, LivelockError, StateValidationError, ValidationMode};
+pub use channel::{ChannelConfig, TypedChannel};
+pub use error::{
+    CommunicationError, DeadlockError, LivelockError, ProtocolViolation, RuntimeError,
+    RuntimeResult, StateValidationError, ValidationMode,
+};
+pub use state::{ExecutionContext, ProtocolState, StateTransition};
 // pub use session::{Session, SessionConfig, SessionManager}; // TODO: Implement session module
 pub use validation::{StateValidator, ValidationConfig, ValidationResult};

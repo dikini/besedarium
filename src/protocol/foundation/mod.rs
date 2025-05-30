@@ -186,7 +186,11 @@ where
         }
 
         const FIELDS: &[&str] = &["chan_id", "msg_lbl"];
-        deserializer.deserialize_struct("CommMetadata", FIELDS, CommMetadataVisitor(std::marker::PhantomData))
+        deserializer.deserialize_struct(
+            "CommMetadata",
+            FIELDS,
+            CommMetadataVisitor(std::marker::PhantomData),
+        )
     }
 }
 
