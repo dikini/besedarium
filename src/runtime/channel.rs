@@ -985,6 +985,7 @@ mod tests {
     impl SupportsActionIO<BiDirectionalAction> for Alice {}
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
     struct Bob;
     impl Role for Bob {}
     impl SupportsActionIO<InputAction> for Bob {}

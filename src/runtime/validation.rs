@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 use crate::protocol::foundation::{GlobalProtocol, Role};
 use crate::runtime::error::{
-    DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion, RuntimeError,
+    runtime_error, DeadlockError, ErrorContext, ErrorSeverity, LivelockError, RecoverySuggestion, RuntimeError,
     RuntimeResult, StateValidationError, ValidationContext, ValidationMode,
 };
 use crate::runtime::state::ProtocolState;
@@ -225,7 +225,7 @@ impl StateValidator {
 
         // Check if adding this role/session would create a cycle
         if let Some(cycle) = resource_graph.detect_cycle(session_id, &format!("{:?}", role)) {
-            return Err(RuntimeError::Deadlock {
+            return Err(runtime_error(RuntimeError::Deadlock {
                 error: DeadlockError::CircularDependency {
                     session_id: session_id.to_string(),
                     involved_roles: cycle.roles,
@@ -237,7 +237,7 @@ impl StateValidator {
                     .with_component("validation")
                     .with_operation("deadlock_detection"),
                 recovery_suggestion: RecoverySuggestion::Terminate,
-            });
+            }));
         }
 
         Ok(())
@@ -261,7 +261,7 @@ impl StateValidator {
             self.config.livelock_threshold,
             self.config.livelock_window,
         ) {
-            return Err(RuntimeError::Livelock {
+            return Err(runtime_error(RuntimeError::Livelock {
                 error: LivelockError::RepeatedTransitions {
                     session_id: state.session_id().to_string(),
                     transition_count: repeated_count,
@@ -277,7 +277,7 @@ impl StateValidator {
                     .with_metadata("repeated_count", repeated_count.to_string())
                     .with_metadata("threshold", self.config.livelock_threshold.to_string()),
                 recovery_suggestion: RecoverySuggestion::RestartSession,
-            });
+            }));
         }
 
         Ok(())
@@ -317,10 +317,13 @@ pub enum ValidationResult {
 #[derive(Debug)]
 struct ResourceAllocationGraph {
     // Session -> Set of resources it's waiting for
+    #[allow(dead_code)] // Reserved for future deadlock detection implementation
     waiting_for: HashMap<String, HashSet<String>>,
     // Resource -> Session that owns it
+    #[allow(dead_code)] // Reserved for future deadlock detection implementation
     owned_by: HashMap<String, String>,
     // Session -> Set of resources it owns
+    #[allow(dead_code)] // Reserved for future deadlock detection implementation
     owns: HashMap<String, HashSet<String>>,
 }
 
@@ -342,6 +345,7 @@ impl ResourceAllocationGraph {
     }
 
     /// Add a resource dependency
+    #[allow(dead_code)] // Reserved for future deadlock detection implementation
     fn add_dependency(&mut self, session_id: String, resource: String) {
         self.waiting_for
             .entry(session_id)
@@ -350,6 +354,7 @@ impl ResourceAllocationGraph {
     }
 
     /// Remove a resource dependency
+    #[allow(dead_code)] // Reserved for future deadlock detection implementation
     fn remove_dependency(&mut self, session_id: &str, resource: &str) {
         if let Some(resources) = self.waiting_for.get_mut(session_id) {
             resources.remove(resource);
@@ -447,6 +452,7 @@ struct ProgressTracker {
     // Session -> Activity count in current time window
     activity_counts: HashMap<String, usize>,
     // Session -> Progress metric (0.0 to 1.0)
+    #[allow(dead_code)] // Reserved for future livelock detection implementation
     progress_metrics: HashMap<String, f64>,
 }
 
@@ -471,6 +477,7 @@ impl ProgressTracker {
     }
 
     /// Calculate progress metric for a session
+    #[allow(dead_code)] // Reserved for future livelock detection implementation
     fn calculate_progress(&self, session_id: &str) -> f64 {
         // Simple implementation - in reality this would be more sophisticated
         self.progress_metrics
@@ -489,7 +496,7 @@ impl Default for StateValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::foundation::{CommMetadata, DefaultChan, RequestLbl, Role};
+    use crate::protocol::foundation::{BiDirectionalAction, CommMetadata, DefaultChan, RequestLbl, Role};
     use crate::protocol::global::TChanEnd;
 
     // Test role implementations
@@ -498,6 +505,7 @@ mod tests {
     impl Role for TestRoleA {}
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
     struct TestRoleB;
     impl Role for TestRoleB {}
 
@@ -519,7 +527,7 @@ mod tests {
     #[tokio::test]
     async fn test_basic_transition_validation() {
         let validator = StateValidator::new();
-        let metadata = CommMetadata::new(DefaultChan, RequestLbl);
+        let _metadata = CommMetadata::new(DefaultChan, RequestLbl);
         let from_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
         let to_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
 

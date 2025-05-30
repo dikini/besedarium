@@ -24,6 +24,7 @@ impl Hash for Alice {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 struct Bob;
 impl Role for Bob {}
 impl SupportsActionIO<BiDirectionalAction> for Bob {}
@@ -69,7 +70,7 @@ async fn test_session_creation_with_shutdown_config() {
         session.shutdown_config.graceful_shutdown_timeout,
         Duration::from_secs(10)
     );
-    assert_eq!(session.shutdown_config.force_task_termination, true);
+    assert!(session.shutdown_config.force_task_termination);
 }
 
 #[tokio::test]
@@ -302,7 +303,7 @@ async fn test_session_manager_creation() {
     let id2 = SessionId::new("session-2");
 
     // Create sessions
-    let (session1, _ch1) = manager
+    let (_session1, _ch1) = manager
         .create_session(
             id1.clone(),
             TestProtocol::new(),
@@ -312,7 +313,7 @@ async fn test_session_manager_creation() {
         .await
         .unwrap();
 
-    let (session2, _ch2) = manager
+    let (_session2, _ch2) = manager
         .create_session(
             id2.clone(),
             TestProtocol::new(),

@@ -22,6 +22,11 @@ use crate::runtime::{
 #[cfg(test)]
 mod tests;
 
+// Type aliases to simplify complex generic types and reduce clippy warnings
+type TaskJoinHandle = Arc<Mutex<Option<JoinHandle<Result<(), RuntimeError>>>>>;
+type ChannelHandleMap<P, R, AIO> = Arc<RwLock<HashMap<ChannelId, Arc<TypedChannel<P, R, AIO>>>>>;
+type SessionMap<P, R, AIO> = Arc<RwLock<HashMap<SessionId, Arc<Session<P, R, AIO>>>>>;
+
 /// Unique identifier for a session
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SessionId(pub String);
@@ -187,7 +192,7 @@ where
     role: R,
     context: Arc<RwLock<ExecutionContext>>,
     channel: Arc<TypedChannel<P, R, AIO>>,
-    task_handle: Arc<Mutex<Option<JoinHandle<Result<(), RuntimeError>>>>>,
+    task_handle: TaskJoinHandle,
 
     // Enhanced lifecycle management
     shutdown_config: ShutdownConfig,
@@ -197,7 +202,7 @@ where
     // Resource tracking for leak detection
     tracked_resources: Arc<RwLock<HashMap<String, TrackedResource>>>,
     task_handles: Arc<RwLock<HashMap<String, JoinHandle<()>>>>,
-    channel_handles: Arc<RwLock<HashMap<ChannelId, Arc<TypedChannel<P, R, AIO>>>>>,
+    channel_handles: ChannelHandleMap<P, R, AIO>,
 
     // Logging and metrics
     created_at: SystemTime,
@@ -653,9 +658,13 @@ where
 {
     id: SessionId,
     status: Arc<RwLock<SessionStatus>>,
+    #[allow(dead_code)] // Reserved for future execution loop implementation
     protocol: P,
+    #[allow(dead_code)] // Reserved for future execution loop implementation
     role: R,
+    #[allow(dead_code)] // Reserved for future execution loop implementation
     context: Arc<RwLock<ExecutionContext>>,
+    #[allow(dead_code)] // Reserved for future execution loop implementation
     channel: Arc<TypedChannel<P, R, AIO>>,
     shutdown_receiver: watch::Receiver<bool>,
     shutdown_config: ShutdownConfig,
@@ -795,9 +804,11 @@ where
     R: Role + SupportsActionIO<AIO> + Clone,
     AIO: ActionIOTMarker,
 {
-    sessions: Arc<RwLock<HashMap<SessionId, Arc<Session<P, R, AIO>>>>>,
+    sessions: SessionMap<P, R, AIO>,
     default_config: SessionConfig,
+    #[allow(dead_code)] // Reserved for future graceful shutdown implementation
     shutdown_signal: Arc<watch::Sender<bool>>,
+    #[allow(dead_code)] // Reserved for future graceful shutdown implementation
     shutdown_receiver: watch::Receiver<bool>,
 }
 

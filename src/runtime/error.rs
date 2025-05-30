@@ -811,7 +811,13 @@ pub enum ValidationMode {
 
 
 /// Convenience type alias for runtime results
-pub type RuntimeResult<T> = Result<T, RuntimeError>;
+/// Uses boxed RuntimeError to reduce stack size of large error variants
+pub type RuntimeResult<T> = Result<T, Box<RuntimeError>>;
+
+/// Helper function to box RuntimeError for easier error handling
+pub fn runtime_error(error: RuntimeError) -> Box<RuntimeError> {
+    Box::new(error)
+}
 
 /// Extension trait for converting standard errors to runtime errors
 pub trait IntoRuntimeError {

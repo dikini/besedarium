@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 
 use crate::protocol::foundation::{GlobalProtocol, Role};
 use crate::runtime::error::{
-    ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion, RuntimeError, RuntimeResult,
+    runtime_error, ErrorContext, ErrorSeverity, ProtocolViolation, RecoverySuggestion, RuntimeError, RuntimeResult,
 };
 use crate::runtime::validation::{StateValidator, ValidationConfig, ValidationResult};
 
@@ -124,7 +124,7 @@ where
     /// Mark protocol as complete
     pub fn mark_complete(&mut self) -> RuntimeResult<()> {
         if self.is_complete {
-            return Err(RuntimeError::Protocol {
+            return Err(runtime_error(RuntimeError::Protocol {
                 violation: ProtocolViolation::SessionTerminated {
                     session_id: self.session_id.clone(),
                 },
@@ -134,7 +134,7 @@ where
                     .with_component("state_machine")
                     .with_operation("mark_complete"),
                 recovery_suggestion: RecoverySuggestion::RestartSession,
-            });
+            }));
         }
 
         self.is_complete = true;
@@ -148,7 +148,7 @@ where
         NewP: GlobalProtocol + Clone,
     {
         if self.is_complete {
-            return Err(RuntimeError::Protocol {
+            return Err(runtime_error(RuntimeError::Protocol {
                 violation: ProtocolViolation::SessionTerminated {
                     session_id: self.session_id.clone(),
                 },
@@ -158,7 +158,7 @@ where
                     .with_component("state_machine")
                     .with_operation("transition"),
                 recovery_suggestion: RecoverySuggestion::RestartSession,
-            });
+            }));
         }
 
         Ok(ProtocolState {
@@ -186,7 +186,7 @@ where
         R: Role,
     {
         if self.is_complete {
-            return Err(RuntimeError::Protocol {
+            return Err(runtime_error(RuntimeError::Protocol {
                 violation: ProtocolViolation::SessionTerminated {
                     session_id: self.session_id.clone(),
                 },
@@ -196,7 +196,7 @@ where
                     .with_component("state_machine")
                     .with_operation("transition"),
                 recovery_suggestion: RecoverySuggestion::RestartSession,
-            });
+            }));
         }
 
         // Perform validation if validator is available
@@ -217,7 +217,7 @@ where
                 Ok(ValidationResult::Invalid { errors, .. }) => {
                     // Validation failed, return the first error
                     if let Some(error) = errors.into_iter().next() {
-                        return Err(RuntimeError::StateValidation {
+                        return Err(runtime_error(RuntimeError::StateValidation {
                             error,
                             severity: ErrorSeverity::High,
                             context: ErrorContext::new()
@@ -225,7 +225,7 @@ where
                                 .with_component("state_machine")
                                 .with_operation("validation"),
                             recovery_suggestion: RecoverySuggestion::CheckConfiguration,
-                        });
+                        }));
                     }
                 }
                 Err(e) => {
@@ -315,7 +315,7 @@ impl ExecutionContext {
     pub fn enter_recursion(&mut self) -> RuntimeResult<()> {
         self.recursion_depth += 1;
         if self.recursion_depth > self.max_recursion_depth {
-            Err(RuntimeError::Protocol {
+            Err(runtime_error(RuntimeError::Protocol {
                 violation: ProtocolViolation::RecursionDepthExceeded {
                     depth: self.recursion_depth,
                     max_depth: self.max_recursion_depth,
@@ -326,7 +326,7 @@ impl ExecutionContext {
                     .with_component("state_machine")
                     .with_operation("enter_recursion"),
                 recovery_suggestion: RecoverySuggestion::CheckConfiguration,
-            })
+            }))
         } else {
             Ok(())
         }
@@ -465,6 +465,7 @@ mod tests {
     impl Role for Alice {}
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
     struct Bob;
 
     impl Role for Bob {}
