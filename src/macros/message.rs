@@ -1,12 +1,14 @@
 //! Message definition declarative macros
 //!
 //! This module provides macros for defining message types with automatic
-//! trait implementations and serialization support.
+//! trait implementations.
 
 /// Define a message type with automatic trait implementations.
 ///
 /// This macro creates a message type and implements the necessary traits for
-/// use in the session type system, including serialization support.
+/// use in the session type system. Simple messages (without fields) automatically
+/// implement `Default`, while field-based messages require manual Default implementation
+/// if needed.
 ///
 /// # Simple Message (No Fields)
 /// ```rust
@@ -70,6 +72,14 @@ macro_rules! define_message {
         impl ::std::fmt::Display for $message {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}", stringify!($message))
+            }
+        }
+
+        impl ::std::default::Default for $message {
+            fn default() -> Self {
+                $message {
+                    $($field: ::std::default::Default::default(),)*
+                }
             }
         }
     };

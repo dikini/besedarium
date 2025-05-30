@@ -30,8 +30,8 @@ mod label_tests {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         struct ResponseLabel;
 
-        impl_traits_for_label!(RequestLabel, ResponseLabel);
-        impl_traits_for_label!(ResponseLabel, RequestLabel);
+        impl_traits_for_label!(RequestLabel);
+        impl_traits_for_label!(ResponseLabel);
 
         let request = RequestLabel;
         let response = ResponseLabel;

@@ -3,50 +3,35 @@
 //! This module provides macros for implementing traits on message label types,
 //! which are core to the session type system's message identification.
 
-/// Enhanced macro for implementing standard traits on message label types.
-///
-/// This macro provides automatic implementations of the core traits required
-/// for message labels in the session type system.
-///
-/// # Basic Usage
-/// ```rust
-/// use besedarium::impl_traits_for_label;
-///
-/// struct MyLabel;
-/// impl_traits_for_label!(MyLabel);
-/// ```
-///
-/// # Custom Dual Usage
-/// ```rust
-/// use besedarium::impl_traits_for_label;
-///
-/// struct RequestLabel;
-/// struct ResponseLabel;
-///
-/// impl_traits_for_label!(RequestLabel, ResponseLabel);
-/// impl_traits_for_label!(ResponseLabel, RequestLabel);
-/// ```
+/// Helper macro for implementing Display trait on label types.
 #[macro_export]
-macro_rules! impl_traits_for_label {
-    // Standard implementation - label is its own dual
+macro_rules! impl_label_display {
     ($label:ident) => {
-        impl $crate::protocol::foundation::MsgLbl for $label {}
-
         impl ::std::fmt::Display for $label {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}", stringify!($label))
             }
         }
     };
+}
 
-    // Custom dual implementation
-    ($label:ident, $dual:ident) => {
+/// Enhanced macro for implementing standard traits on message label types.
+///
+/// This macro provides automatic implementations of the core traits required
+/// for message labels in the session type system.
+///
+/// # Usage
+/// ```rust
+/// use besedarium::impl_traits_for_label;
+///
+/// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// struct MyLabel;
+/// impl_traits_for_label!(MyLabel);
+/// ```
+#[macro_export]
+macro_rules! impl_traits_for_label {
+    ($label:ident) => {
         impl $crate::protocol::foundation::MsgLbl for $label {}
-
-        impl ::std::fmt::Display for $label {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                write!(f, "{}", stringify!($label))
-            }
-        }
+        $crate::impl_label_display!($label);
     };
 }
