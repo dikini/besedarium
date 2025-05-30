@@ -42,7 +42,7 @@ fn generate_message_impl(type_name: &syn::Ident) -> TokenStream2 {
     // Message is a marker trait with no required methods
     // It requires: Send + Sync + 'static + Debug + Clone
     let trait_path = quote! { ::besedarium::protocol::foundation::Message };
-    
+
     basic_trait_impl(type_name, trait_path, None)
 }
 

@@ -42,7 +42,7 @@ fn generate_global_protocol_impl(type_name: &syn::Ident) -> TokenStream2 {
     // GlobalProtocol is a marker trait with no required methods
     // It requires: Send + Sync + 'static + Debug
     let trait_path = quote! { ::besedarium::protocol::foundation::GlobalProtocol };
-    
+
     basic_trait_impl(type_name, trait_path, None)
 }
 

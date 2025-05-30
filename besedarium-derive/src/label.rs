@@ -42,7 +42,7 @@ fn generate_msg_lbl_impl(type_name: &syn::Ident) -> TokenStream2 {
     // MsgLbl is a marker trait with no required methods
     // It requires: Send + Sync + 'static + Debug + Clone + PartialEq + Eq + Hash
     let trait_path = quote! { ::besedarium::protocol::foundation::MsgLbl };
-    
+
     basic_trait_impl(type_name, trait_path, None)
 }
 

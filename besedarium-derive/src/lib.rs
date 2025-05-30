@@ -27,10 +27,10 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
-mod message;
-mod role;
 mod label;
+mod message;
 mod protocol;
+mod role;
 mod utils;
 
 /// Derive macro for the `Message` trait

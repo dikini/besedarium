@@ -68,7 +68,7 @@ pub fn basic_trait_impl(
     additional_items: Option<TokenStream2>,
 ) -> TokenStream2 {
     let items = additional_items.unwrap_or_else(|| quote! {});
-    
+
     quote! {
         impl #trait_path for #type_name {
             #items
