@@ -215,10 +215,14 @@ where
                     }
                 }
                 Ok(ValidationResult::Invalid { errors, .. }) => {
-                    // Validation failed, return the first error
-                    if let Some(error) = errors.into_iter().next() {
+                    // Validation failed, log all errors and return the first one
+                    let mut error_iter = errors.into_iter();
+                    while let Some(error) = error_iter.next() {
+                        eprintln!("VALIDATION ERROR: {}", error);
+                    }
+                    if let Some(first_error) = error_iter.next() {
                         return Err(runtime_error(RuntimeError::StateValidation {
-                            error,
+                            error: first_error,
                             severity: ErrorSeverity::High,
                             context: ErrorContext::new()
                                 .with_session_id(&self.session_id)
