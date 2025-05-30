@@ -189,12 +189,12 @@ developer experience.
     - **Fix Details**: Changed error handling logic to collect errors into Vec first, log all errors comprehensively, then return first error while preserving error data.
     - **Impact**: Ensures validation failures are both logged AND properly propagated as errors, making validation system effective.
     - **Testing**: All 221 tests continue passing with fix applied.
-- [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities (postponed)
-  - [ ] **Task 3.2.1**: Profile compile times of type-level constructs. (postponed)
-  - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations. (postponed)
-  - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime. (postponed)
+- [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities (postponed to after release)
+  - [ ] **Task 3.2.1**: Profile compile times of type-level constructs. (postponed to after release)
+  - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations. (postponed to after release)
+  - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime. (postponed to after release)
 - [ ] **Task 3.3**: Explore Macro-Based DSL for Protocol Definition
-- [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed)
+- [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
 
 ## Phase 4: Comprehensive Documentation
