@@ -32,6 +32,9 @@ pub mod macros; // Added module declaration
 // Core module containing the new MPST implementation
 pub mod protocol;
 
+// Runtime components for session type execution
+pub mod runtime;
+
 // Type-level programming types and utilities
 pub mod types;
 

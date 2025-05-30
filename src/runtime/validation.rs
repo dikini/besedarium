@@ -6,11 +6,11 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 
 use tokio::sync::RwLock;
 
-use crate::protocol::foundation::{Role, GlobalProtocol, LocalProtocol};
+use crate::protocol::foundation::{Role, GlobalProtocol, BiDirectionalAction};
 use crate::runtime::error::{
     DeadlockError, LivelockError, RuntimeError, RuntimeResult, StateValidationError,
     ValidationContext, ValidationMode,
@@ -79,16 +79,17 @@ impl StateValidator {
     }
 
     /// Validate a state transition before allowing it to proceed
-    pub async fn validate_transition<FromP, ToP>(
+    pub async fn validate_transition<FromP, ToP, R>(
         &self,
         from_state: &ProtocolState<FromP>,
         to_protocol: &ToP,
         action: &str,
-        role: &dyn Role,
+        role: &R,
     ) -> RuntimeResult<ValidationResult>
     where
         FromP: GlobalProtocol + Clone,
         ToP: GlobalProtocol + Clone,
+        R: Role,
     {
         let validation_context = ValidationContext {
             timestamp: SystemTime::now(),
@@ -210,11 +211,14 @@ impl StateValidator {
     }
 
     /// Check for potential deadlock situations
-    async fn check_deadlock_potential(
+    async fn check_deadlock_potential<R>(
         &self,
         session_id: &str,
-        role: &dyn Role,
-    ) -> RuntimeResult<()> {
+        role: &R,
+    ) -> RuntimeResult<()>
+    where
+        R: Role,
+    {
         let resource_graph = self.resource_graph.read().await;
         
         // Check if adding this role/session would create a cycle
@@ -239,7 +243,7 @@ impl StateValidator {
     where
         P: GlobalProtocol + Clone,
     {
-        let mut history = self.transition_history.write().await;
+        let history = self.transition_history.write().await;
         
         // Check for repeated transitions
         if let Some(repeated_count) = history.check_repeated_transitions(
@@ -316,7 +320,7 @@ impl ResourceAllocationGraph {
     }
 
     /// Detect if adding a new dependency would create a cycle
-    fn detect_cycle(&self, session_id: &str, resource: &str) -> Option<CycleInfo> {
+    fn detect_cycle(&self, _session_id: &str, _resource: &str) -> Option<CycleInfo> {
         // Implement cycle detection algorithm (e.g., DFS)
         // For now, return None (no cycle detected)
         // In a real implementation, this would perform graph traversal
@@ -459,9 +463,17 @@ impl Default for StateValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::foundation::{CommMetadata, DefaultChan, DefaultMsgLbl};
+    use crate::protocol::foundation::{CommMetadata, DefaultChan, RequestLbl, Role};
     use crate::protocol::global::TChanEnd;
-    use crate::types::{Alice, Bob};
+
+    // Test role implementations
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    struct TestRoleA;
+    impl Role for TestRoleA {}
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    struct TestRoleB;
+    impl Role for TestRoleB {}
 
     #[tokio::test]
     async fn test_state_validator_creation() {
@@ -481,12 +493,12 @@ mod tests {
     #[tokio::test]
     async fn test_basic_transition_validation() {
         let validator = StateValidator::new();
-        let metadata = CommMetadata::new(DefaultChan, DefaultMsgLbl);
-        let from_protocol = TChanEnd::new(metadata.clone());
-        let to_protocol = TChanEnd::new(metadata);
+        let metadata = CommMetadata::new(DefaultChan, RequestLbl);
+        let from_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
+        let to_protocol: TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction> = TChanEnd::new();
         
-        let from_state = ProtocolState::new("test_session", Box::new(Alice), from_protocol);
-        let role = Alice;
+        let from_state = ProtocolState::new("test_session", TestRoleA, from_protocol);
+        let role = TestRoleA;
         
         let result = validator.validate_transition(
             &from_state,
@@ -542,6 +554,3 @@ mod tests {
         assert_eq!(result.unwrap(), 5);
     }
 }
-
-#[cfg(test)]
-mod tests;

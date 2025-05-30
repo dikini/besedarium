@@ -5,20 +5,18 @@
 //! protocol operations.
 
 use std::collections::HashMap;
-use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
-use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::protocol::foundation::{Role, GlobalProtocol, LocalProtocol};
+use crate::protocol::foundation::{Role, GlobalProtocol};
 use crate::runtime::error::{RuntimeError, ProtocolViolation, RuntimeResult};
 use crate::runtime::validation::{StateValidator, ValidationConfig, ValidationResult};
 
 /// Core protocol state machine tracking execution progress
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProtocolState<P> {
     session_id: String,
     current_protocol: P,
@@ -36,35 +34,45 @@ where
     P: GlobalProtocol + Clone,
 {
     /// Create a new protocol state machine
-    pub fn new(session_id: impl Into<String>, role: Box<dyn Role>, protocol: P) -> Self {
+    pub fn new<R>(session_id: impl Into<String>, role: R, protocol: P) -> Self 
+    where
+        R: Role,
+    {
+        let session_id_str = session_id.into();
+        let role_str = format!("{:?}", role);
         Self {
-            session_id: session_id.into(),
+            session_id: session_id_str.clone(),
             current_protocol: protocol,
             is_complete: false,
             step_count: 0,
             start_time: Instant::now(),
             last_activity: SystemTime::now(),
-            execution_context: ExecutionContext::new(session_id.into(), role),
+            execution_context: ExecutionContext::new(session_id_str, role_str),
             validator: None,
             _protocol: PhantomData,
         }
     }
 
     /// Create a new protocol state machine with validation enabled
-    pub fn with_validation(
+    pub fn with_validation<R>(
         session_id: impl Into<String>, 
-        role: Box<dyn Role>, 
+        role: R, 
         protocol: P,
         validator: Arc<StateValidator>
-    ) -> Self {
+    ) -> Self 
+    where
+        R: Role,
+    {
+        let session_id_str = session_id.into();
+        let role_str = format!("{:?}", role);
         Self {
-            session_id: session_id.into(),
+            session_id: session_id_str.clone(),
             current_protocol: protocol,
             is_complete: false,
             step_count: 0,
             start_time: Instant::now(),
             last_activity: SystemTime::now(),
-            execution_context: ExecutionContext::new(session_id.into(), role),
+            execution_context: ExecutionContext::new(session_id_str, role_str),
             validator: Some(validator),
             _protocol: PhantomData,
         }
@@ -156,14 +164,15 @@ where
     }
 
     /// Transition to a new protocol state with validation
-    pub async fn validated_transition<NewP>(
+    pub async fn validated_transition<NewP, R>(
         self,
         new_protocol: NewP,
         action: &str,
-        role: &dyn Role,
+        role: &R,
     ) -> RuntimeResult<ProtocolState<NewP>>
     where
         NewP: GlobalProtocol + Clone,
+        R: Role,
     {
         if self.is_complete {
             return Err(RuntimeError::Protocol(
@@ -232,10 +241,10 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub fn new(session_id: String, role: Box<dyn Role>) -> Self {
+    pub fn new(session_id: String, role: String) -> Self {
         Self {
             session_id,
-            role: format!("{:?}", role),
+            role,
             start_time: Instant::now(),
             metadata: HashMap::new(),
             recursion_depth: 0,
@@ -411,12 +420,24 @@ impl Default for StateManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::foundation::{Alice, Bob, TChanEnd};
+    use crate::TChanEnd;
+    use crate::protocol::foundation::{DefaultChan, RequestLbl, BiDirectionalAction};
+
+    // Test roles for validation testing
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    struct Alice;
+    
+    impl Role for Alice {}
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    struct Bob;
+    
+    impl Role for Bob {}
 
     #[test]
     fn test_protocol_state_creation() {
-        let protocol = TChanEnd::new();
-        let state = ProtocolState::new("test-session", Box::new(Alice), protocol);
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let state = ProtocolState::new("test-session", Alice, protocol);
         
         assert_eq!(state.session_id(), "test-session");
         assert!(!state.is_complete());
@@ -425,8 +446,8 @@ mod tests {
 
     #[test]
     fn test_protocol_state_completion() {
-        let protocol = TChanEnd::new();
-        let mut state = ProtocolState::new("test-session", Box::new(Alice), protocol);
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let mut state = ProtocolState::new("test-session", Alice, protocol);
         
         assert!(state.mark_complete().is_ok());
         assert!(state.is_complete());
@@ -438,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_execution_context() {
-        let mut context = ExecutionContext::new("test".to_string(), Box::new(Bob));
+        let mut context = ExecutionContext::new("test".to_string(), "Alice".to_string());
         
         assert_eq!(context.session_id(), "test");
         assert_eq!(context.recursion_depth(), 0);
@@ -452,7 +473,7 @@ mod tests {
 
     #[test]
     fn test_recursion_depth_limit() {
-        let mut context = ExecutionContext::new("test".to_string(), Box::new(Alice));
+        let mut context = ExecutionContext::new("test".to_string(), "Alice".to_string());
         context.set_max_recursion_depth(2);
         
         assert!(context.enter_recursion().is_ok()); // depth 1
@@ -463,8 +484,8 @@ mod tests {
     #[tokio::test]
     async fn test_state_manager() {
         let manager = StateManager::new();
-        let protocol = TChanEnd::new();
-        let state = ProtocolState::new("test-session", Box::new(Alice), protocol);
+        let protocol = TChanEnd::<DefaultChan, RequestLbl, BiDirectionalAction>::new();
+        let state = ProtocolState::new("test-session", Alice, protocol);
         
         assert_eq!(manager.session_count().await, 0);
         

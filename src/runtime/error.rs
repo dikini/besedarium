@@ -4,7 +4,6 @@
 //! that can occur during protocol execution, including protocol violations,
 //! communication errors, and system-level failures.
 
-use std::fmt;
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
 
@@ -123,6 +122,68 @@ pub enum CommunicationError {
     
     #[error("Message decoding failed: {details}")]
     DecodingFailed { details: String },
+    
+    /// Enhanced communication error with detailed context
+    #[error("Channel {operation} failed on channel '{channel_id}' in session '{session_id}': {details}")]
+    ChannelOperationFailed {
+        channel_id: String,
+        operation: ChannelOperation,
+        peer_role: Option<String>,
+        session_id: String,
+        details: String,
+        #[source]
+        underlying_error: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+    
+    /// Enhanced timeout error with context
+    #[error("Channel {operation} timeout after {timeout_ms}ms on channel '{channel_id}' in session '{session_id}'")]
+    ChannelTimeout {
+        channel_id: String,
+        operation: ChannelOperation,
+        peer_role: Option<String>,
+        session_id: String,
+        timeout_ms: u64,
+    },
+    
+    /// Enhanced deserialization error with type information
+    #[error("Message deserialization failed on channel '{channel_id}': expected '{expected_type}', got data of length {actual_data_length} bytes")]
+    DeserializationFailed {
+        channel_id: String,
+        expected_type: String,
+        actual_data_length: usize,
+        raw_data_preview: Option<String>, // First few bytes as hex, for debugging
+        session_id: String,
+        underlying_error: String,
+    },
+    
+    /// Enhanced serialization error
+    #[error("Message serialization failed on channel '{channel_id}' for type '{message_type}' in session '{session_id}': {underlying_error}")]
+    SerializationFailed {
+        channel_id: String,
+        message_type: String,
+        session_id: String,
+        underlying_error: String,
+    },
+}
+
+/// Channel operation types for error reporting
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChannelOperation {
+    Send,
+    Receive,
+    Close,
+    Connect,
+}
+
+impl std::fmt::Display for ChannelOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelOperation::Send => write!(f, "send"),
+            ChannelOperation::Receive => write!(f, "receive"),
+            ChannelOperation::Close => write!(f, "close"),
+            ChannelOperation::Connect => write!(f, "connect"),
+        }
+    }
 }
 
 /// Deadlock detection and reporting

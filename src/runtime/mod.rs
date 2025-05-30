@@ -35,5 +35,5 @@ pub use state::{ProtocolState, ExecutionContext, StateTransition};
 pub use channel::{TypedChannel, ChannelConfig};
 pub use error::{RuntimeError, RuntimeResult, ProtocolViolation, CommunicationError, 
                DeadlockError, LivelockError, StateValidationError, ValidationMode};
-pub use session::{Session, SessionConfig, SessionManager};
+// pub use session::{Session, SessionConfig, SessionManager}; // TODO: Implement session module
 pub use validation::{StateValidator, ValidationConfig, ValidationResult};
