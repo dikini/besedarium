@@ -92,6 +92,136 @@ fn yet_another_example() {}
 fn final_example() {}
 ```
 
+## Advanced State Transition Validation and Detection Systems
+
+### Error System Enhancement Patterns
+
+- **Problem**: Runtime error types need to support complex validation scenarios
+- **Solution**: Create hierarchical error enums with detailed context information
+- **Pattern**: Use nested error types (`DeadlockError`, `LivelockError`, `StateValidationError`) with specific variants for different failure modes
+
+```rust
+#[derive(Debug, Clone, PartialEq)]
+pub enum DeadlockError {
+    CircularDependency {
+        cycle: Vec<String>,
+        context: ValidationContext,
+    },
+    ResourceDeadlock {
+        resources: Vec<String>,
+        blocking_sessions: Vec<String>,
+    },
+    ProtocolDeadlock {
+        protocol_id: String,
+        waiting_roles: Vec<String>,
+    },
+}
+```
+
+### Validation Framework Architecture
+
+- **Problem**: Need configurable validation that doesn't impact performance in production
+- **Solution**: Implement validation modes (Debug, Strict, Lenient, Production) with different detection thresholds
+- **Pattern**: Use configuration structs to encapsulate validation parameters and enable runtime customization
+
+```rust
+#[derive(Debug, Clone)]
+pub struct ValidationConfig {
+    pub deadlock_detection_enabled: bool,
+    pub livelock_detection_enabled: bool,
+    pub validation_mode: ValidationMode,
+    pub deadlock_timeout: Duration,
+    pub max_repeated_transitions: u32,
+    pub transition_window: Duration,
+}
+```
+
+### Resource Allocation Graph Design
+
+- **Problem**: Need to detect circular dependencies in session resource allocation
+- **Solution**: Implement graph-based tracking with efficient cycle detection algorithms
+- **Pattern**: Use HashMap-based adjacency lists for resource dependencies and DFS for cycle detection
+
+```rust
+#[derive(Debug, Clone)]
+pub struct ResourceAllocationGraph {
+    resources: HashMap<String, ResourceInfo>,
+    dependencies: HashMap<String, Vec<String>>,
+    waiters: HashMap<String, Vec<String>>,
+}
+```
+
+### Progress Tracking and Livelock Detection
+
+- **Problem**: Detect when sessions make no meaningful progress despite activity
+- **Solution**: Track transition patterns and frequencies within time windows
+- **Pattern**: Combine timestamp tracking with transition counting to identify repeated state loops
+
+```rust
+#[derive(Debug, Clone)]
+pub struct ProgressTracker {
+    session_progress: HashMap<String, SessionProgress>,
+    global_metrics: GlobalProgressMetrics,
+}
+```
+
+### State Machine Integration Patterns
+
+- **Problem**: Existing state machines need optional validation without breaking changes
+- **Solution**: Add optional validator field and new constructor methods for backward compatibility
+- **Pattern**: Provide multiple construction paths (`new()`, `with_validation()`, `enable_validation()`)
+
+```rust
+impl<P: GlobalProtocol> ProtocolState<P> {
+    pub fn with_validation(protocol: P, config: ValidationConfig) -> Self {
+        Self {
+            protocol,
+            validator: Some(StateValidator::new(config)),
+        }
+    }
+}
+```
+
+### Async Validation Architecture
+
+- **Problem**: Validation operations may be expensive and should not block protocol execution
+- **Solution**: Implement async validation methods that can be awaited when needed
+- **Pattern**: Use `async fn` with `Result` types for validation operations that may involve I/O or complex computation
+
+```rust
+pub async fn validated_transition<F, T, E>(&mut self, operation: F) -> Result<T, RuntimeError>
+where
+    F: FnOnce() -> Result<T, E> + Send,
+    E: Into<RuntimeError>,
+{
+    // Async validation logic
+}
+```
+
+### Test Strategy for Complex Validation Systems
+
+- **Problem**: Validation systems require testing of error conditions and edge cases
+- **Solution**: Create comprehensive test suites covering all error scenarios and performance characteristics
+- **Pattern**: Use separate test modules for different validation aspects and mock complex dependencies
+
+```rust
+#[cfg(test)]
+mod tests {
+    // 18 comprehensive tests covering:
+    // - Basic validation functionality
+    // - Error condition handling
+    // - Performance characteristics
+    // - Concurrent validation scenarios
+    // - Configuration validation
+}
+```
+
+### Performance Considerations
+
+- **Problem**: Validation should not significantly impact protocol execution performance
+- **Solution**: Use configurable validation levels and efficient data structures
+- **Pattern**: Provide "Production" mode that disables expensive checks while maintaining essential validation
+
 ## Markdown Linting Insights
 
 - Ensured all lists are surrounded by blank lines to comply with `MD032`.

@@ -500,7 +500,6 @@ impl HasDual for ResultMsg {
     type Dual = ResultMsg;
 }
 
-
 // --- Test Utility Functions (Optional) ---
 
 // Helper function to create a UserProfile for tests
@@ -634,7 +633,7 @@ mod common_type_sanity_tests {
         let ack_msg_ok = AckMsg(true, Some("token".to_string()));
         assert!(ack_msg_ok.0);
         assert_eq!(ack_msg_ok.1, Some("token".to_string()));
-        
+
         let ack_msg_fail = AckMsg(false, None);
         assert!(!ack_msg_fail.0);
         assert_eq!(ack_msg_fail.1, None);

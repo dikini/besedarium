@@ -1,5 +1,22 @@
 # Status
 
+## Recent Status Update (2025-05-30)
+
+### Task 3.1.2 Completed: Advanced State Transition Validation and Deadlock/Livelock Detection
+
+**✅ Advanced State Validation System - COMPLETED:**
+
+- **Enhanced Error System**: Extended `RuntimeError` with comprehensive error hierarchies (`DeadlockError`, `LivelockError`, `StateValidationError`)
+- **Validation Framework**: Implemented configurable validation system with multiple detection modes (Debug, Strict, Lenient, Production)
+- **State Machine Integration**: Enhanced `ProtocolState<P>` with optional validation support and async validation methods
+- **Resource Tracking**: Implemented resource allocation graph for deadlock detection with cycle detection algorithms
+- **Progress Monitoring**: Added transition history tracking and progress monitoring for livelock detection
+- **Comprehensive Testing**: Created 18 comprehensive tests covering all validation scenarios, error conditions, and performance characteristics
+- **Performance Optimization**: Designed with configurable validation levels to minimize production overhead
+- **Module Organization**: Added new validation module (`src/runtime/validation.rs`) with proper test separation
+
+**Test Results**: All 197 tests passing (171 unit + 20 integration + 6 common), 0 clippy warnings, all formatting checks passed
+
 ## Recent Status Update (2025-05-29)
 
 ### Completed Tasks

@@ -151,6 +151,13 @@ developer experience.
 
 - [ ] **Task 3.1**: Enhance Runtime Checks and Error Handling
   - [x] **Task 3.1.1**: Improve `RuntimeError::Serialization` to include an optional `source` field for better debugging of serialization issues. (✅ **COMPLETED**)
+  - [x] **Task 3.1.2**: Implement Advanced State Transition Validation and Deadlock/Livelock Detection. (✅ **COMPLETED**)
+    - [x] **Task 3.1.2a**: Enhanced error system with `DeadlockError`, `LivelockError`, and `StateValidationError` types.
+    - [x] **Task 3.1.2b**: Comprehensive validation framework with configurable detection mechanisms.
+    - [x] **Task 3.1.2c**: State machine integration with optional validation support.
+    - [x] **Task 3.1.2d**: Resource allocation graph for deadlock detection.
+    - [x] **Task 3.1.2e**: Progress tracking for livelock detection.
+    - [x] **Task 3.1.2f**: Comprehensive test suite with 18 tests covering all validation scenarios.
   - (Further develop tasks from 1.3, adding more sophisticated mechanisms)
 - [ ] **Task 3.2**: Investigate Performance and Optimization Opportunities
   - [ ] **Task 3.2.1**: Profile compile times of type-level constructs.

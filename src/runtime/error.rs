@@ -5,6 +5,7 @@
 //! communication errors, and system-level failures.
 
 use std::fmt;
+use std::time::{Duration, SystemTime};
 use thiserror::Error;
 
 /// Main runtime error type encompassing all possible runtime failures
@@ -31,6 +32,15 @@ pub enum RuntimeError {
     
     #[error("System error: {message}")]
     System { message: String },
+    
+    #[error("Deadlock detected: {0}")]
+    Deadlock(#[from] DeadlockError),
+    
+    #[error("Livelock detected: {0}")]
+    Livelock(#[from] LivelockError),
+    
+    #[error("State validation failed: {0}")]
+    StateValidation(#[from] StateValidationError),
     
     #[error("Unknown error: {message}")]
     Unknown { message: String },
@@ -113,6 +123,140 @@ pub enum CommunicationError {
     
     #[error("Message decoding failed: {details}")]
     DecodingFailed { details: String },
+}
+
+/// Deadlock detection and reporting
+#[derive(Error, Debug, Clone)]
+pub enum DeadlockError {
+    #[error("Circular dependency detected in session '{session_id}': {involved_roles:?} are waiting for each other")]
+    CircularDependency {
+        session_id: String,
+        involved_roles: Vec<String>,
+        resource_chain: Vec<String>,
+        detection_time: SystemTime,
+    },
+    
+    #[error("Resource deadlock detected: {resource_count} resources involved across {session_count} sessions")]
+    ResourceDeadlock {
+        session_count: usize,
+        resource_count: usize,
+        waiting_graph: String, // Serialized representation of the wait graph
+        detection_algorithm: String,
+    },
+    
+    #[error("Protocol deadlock in session '{session_id}': roles {roles:?} are in mutual wait state")]
+    ProtocolDeadlock {
+        session_id: String,
+        roles: Vec<String>,
+        current_states: Vec<String>,
+        expected_actions: Vec<String>,
+        wait_duration: Duration,
+    },
+}
+
+/// Livelock detection and reporting
+#[derive(Error, Debug, Clone)]
+pub enum LivelockError {
+    #[error("Repeated state transitions without progress in session '{session_id}': {transition_count} identical transitions in {duration:?}")]
+    RepeatedTransitions {
+        session_id: String,
+        transition_count: usize,
+        repeated_transition: String,
+        duration: Duration,
+        state_history: Vec<String>,
+    },
+    
+    #[error("Protocol livelock detected: roles are active but making no progress towards completion")]
+    ProtocolLivelock {
+        session_id: String,
+        involved_roles: Vec<String>,
+        activity_count: usize,
+        progress_metric: f64, // Measure of actual progress (0.0 = no progress, 1.0 = full progress)
+        detection_threshold: f64,
+    },
+    
+    #[error("Resource contention livelock: {contention_count} attempts to acquire resource '{resource_name}' without success")]
+    ResourceContention {
+        resource_name: String,
+        contention_count: usize,
+        involved_sessions: Vec<String>,
+        average_wait_time: Duration,
+    },
+}
+
+/// State validation errors with detailed context
+#[derive(Error, Debug, Clone)]
+pub enum StateValidationError {
+    #[error("Invalid state transition in session '{session_id}': cannot transition from '{from_state}' to '{to_state}' via action '{action}'")]
+    InvalidTransition {
+        session_id: String,
+        from_state: String,
+        to_state: String,
+        action: String,
+        allowed_transitions: Vec<String>,
+        validation_context: ValidationContext,
+    },
+    
+    #[error("Protocol specification violation: {violation_type} in session '{session_id}'")]
+    ProtocolSpecViolation {
+        session_id: String,
+        violation_type: String,
+        current_state: String,
+        protocol_constraints: Vec<String>,
+        suggested_actions: Vec<String>,
+    },
+    
+    #[error("Role validation failed: role '{role}' not authorized for action '{action}' in current state")]
+    RoleValidationFailed {
+        role: String,
+        action: String,
+        current_state: String,
+        authorized_roles: Vec<String>,
+    },
+    
+    #[error("Message type validation failed: expected {expected_types:?}, received '{actual_type}' in state '{current_state}'")]
+    MessageTypeValidation {
+        expected_types: Vec<String>,
+        actual_type: String,
+        current_state: String,
+        message_context: String,
+    },
+    
+    #[error("Protocol consistency check failed: {inconsistency_details}")]
+    ProtocolConsistency {
+        inconsistency_details: String,
+        affected_states: Vec<String>,
+        repair_suggestions: Vec<String>,
+    },
+}
+
+/// Context information for state validation
+#[derive(Debug, Clone)]
+pub struct ValidationContext {
+    pub timestamp: SystemTime,
+    pub session_metadata: std::collections::HashMap<String, String>,
+    pub role_context: String,
+    pub protocol_position: String,
+    pub validation_mode: ValidationMode,
+}
+
+/// Different validation modes for different scenarios
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidationMode {
+    /// Strict validation - all protocol rules must be followed exactly
+    Strict,
+    /// Lenient validation - some minor violations may be warnings
+    Lenient,
+    /// Debug validation - extensive checking with detailed reporting
+    Debug,
+    /// Production validation - optimized for performance with essential checks
+    Production,
+}
+
+impl Default for ValidationMode {
+    fn default() -> Self {
+        ValidationMode::Production
+    }
 }
 
 /// Convenience type alias for runtime results

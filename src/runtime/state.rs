@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,7 @@ use tokio::sync::RwLock;
 
 use crate::protocol::foundation::{Role, GlobalProtocol, LocalProtocol};
 use crate::runtime::error::{RuntimeError, ProtocolViolation, RuntimeResult};
+use crate::runtime::validation::{StateValidator, ValidationConfig, ValidationResult};
 
 /// Core protocol state machine tracking execution progress
 #[derive(Debug)]
@@ -25,6 +27,7 @@ pub struct ProtocolState<P> {
     start_time: Instant,
     last_activity: SystemTime,
     execution_context: ExecutionContext,
+    validator: Option<Arc<StateValidator>>,
     _protocol: PhantomData<P>,
 }
 
@@ -42,8 +45,34 @@ where
             start_time: Instant::now(),
             last_activity: SystemTime::now(),
             execution_context: ExecutionContext::new(session_id.into(), role),
+            validator: None,
             _protocol: PhantomData,
         }
+    }
+
+    /// Create a new protocol state machine with validation enabled
+    pub fn with_validation(
+        session_id: impl Into<String>, 
+        role: Box<dyn Role>, 
+        protocol: P,
+        validator: Arc<StateValidator>
+    ) -> Self {
+        Self {
+            session_id: session_id.into(),
+            current_protocol: protocol,
+            is_complete: false,
+            step_count: 0,
+            start_time: Instant::now(),
+            last_activity: SystemTime::now(),
+            execution_context: ExecutionContext::new(session_id.into(), role),
+            validator: Some(validator),
+            _protocol: PhantomData,
+        }
+    }
+
+    /// Enable validation with custom configuration
+    pub fn enable_validation(&mut self, config: ValidationConfig) {
+        self.validator = Some(Arc::new(StateValidator::with_config(config)));
     }
 
     /// Get the current session ID
@@ -121,6 +150,63 @@ where
             start_time: self.start_time,
             last_activity: SystemTime::now(),
             execution_context: self.execution_context,
+            validator: self.validator.clone(),
+            _protocol: PhantomData,
+        })
+    }
+
+    /// Transition to a new protocol state with validation
+    pub async fn validated_transition<NewP>(
+        self,
+        new_protocol: NewP,
+        action: &str,
+        role: &dyn Role,
+    ) -> RuntimeResult<ProtocolState<NewP>>
+    where
+        NewP: GlobalProtocol + Clone,
+    {
+        if self.is_complete {
+            return Err(RuntimeError::Protocol(
+                ProtocolViolation::SessionTerminated {
+                    session_id: self.session_id.clone(),
+                }
+            ));
+        }
+
+        // Perform validation if validator is available
+        if let Some(validator) = &self.validator {
+            match validator.validate_transition(&self, &new_protocol, action, role).await {
+                Ok(ValidationResult::Valid { .. }) => {
+                    // Validation passed, proceed with transition
+                }
+                Ok(ValidationResult::Warning { warnings, .. }) => {
+                    // Log warnings but continue
+                    for warning in warnings {
+                        eprintln!("VALIDATION WARNING: {}", warning);
+                    }
+                }
+                Ok(ValidationResult::Invalid { errors, .. }) => {
+                    // Validation failed, return the first error
+                    if let Some(error) = errors.into_iter().next() {
+                        return Err(RuntimeError::StateValidation(error));
+                    }
+                }
+                Err(e) => {
+                    // Validation system error
+                    return Err(e);
+                }
+            }
+        }
+
+        Ok(ProtocolState {
+            session_id: self.session_id,
+            current_protocol: new_protocol,
+            is_complete: false,
+            step_count: self.step_count + 1,
+            start_time: self.start_time,
+            last_activity: SystemTime::now(),
+            execution_context: self.execution_context,
+            validator: self.validator.clone(),
             _protocol: PhantomData,
         })
     }

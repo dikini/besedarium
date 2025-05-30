@@ -28,9 +28,12 @@ pub mod state;
 pub mod channel;
 pub mod error;
 pub mod session;
+pub mod validation;
 
-// Re-export main types
-pub use state::{ProtocolState, StateTransition, ExecutionContext};
-pub use channel::{TypedChannel, ChannelMessage, ChannelConfig};
-pub use error::{RuntimeError, ProtocolViolation, CommunicationError};
-pub use session::{Session, SessionManager};
+// Re-export common types for convenience
+pub use state::{ProtocolState, ExecutionContext, StateTransition};
+pub use channel::{TypedChannel, ChannelConfig};
+pub use error::{RuntimeError, RuntimeResult, ProtocolViolation, CommunicationError, 
+               DeadlockError, LivelockError, StateValidationError, ValidationMode};
+pub use session::{Session, SessionConfig, SessionManager};
+pub use validation::{StateValidator, ValidationConfig, ValidationResult};
