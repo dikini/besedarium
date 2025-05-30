@@ -216,11 +216,14 @@ where
                 }
                 Ok(ValidationResult::Invalid { errors, .. }) => {
                     // Validation failed, log all errors and return the first one
-                    let mut error_iter = errors.into_iter();
-                    while let Some(error) = error_iter.next() {
+                    let error_vec: Vec<_> = errors.into_iter().collect();
+                    
+                    // Log all validation errors for comprehensive debugging
+                    for error in &error_vec {
                         eprintln!("VALIDATION ERROR: {}", error);
                     }
-                    if let Some(first_error) = error_iter.next() {
+                    
+                    if let Some(first_error) = error_vec.into_iter().next() {
                         return Err(runtime_error(RuntimeError::StateValidation {
                             error: first_error,
                             severity: ErrorSeverity::High,

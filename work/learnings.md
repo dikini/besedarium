@@ -317,3 +317,40 @@ RuntimeError::Communication {
     recovery_suggestion: RecoverySuggestion::RetryWithBackoff,
 }
 ```
+
+### Critical Bug Fixes and Code Quality
+
+**Validation Error Handling Bug Fix (Task 3.1.6):**
+
+A critical bug was discovered in validation error handling where iterator consumption during logging prevented errors from being returned, making validation ineffective.
+
+**Problem Pattern (Incorrect):**
+
+```rust
+// BUG: Iterator consumed during logging, no errors left to return
+let mut error_iter = errors.into_iter();
+while let Some(error) = error_iter.next() {
+    eprintln!("VALIDATION ERROR: {}", error);  // Consumes ALL errors
+}
+if let Some(first_error) = error_iter.next() {  // Always None!
+    return Err(runtime_error(RuntimeError::StateValidation { /* ... */ }));
+}
+```
+
+**Solution Pattern (Correct):**
+
+```rust
+// FIXED: Collect errors first, log all, then return first
+let error_vec: Vec<_> = errors.into_iter().collect();
+
+// Log all validation errors for comprehensive debugging
+for error in &error_vec {
+    eprintln!("VALIDATION ERROR: {}", error);
+}
+
+if let Some(first_error) = error_vec.into_iter().next() {
+    return Err(runtime_error(RuntimeError::StateValidation { /* ... */ }));
+}
+```
+
+**Key Insight**: When implementing comprehensive logging of collections, always preserve the data for subsequent use. This pattern ensures both debugging visibility and proper error propagation.
