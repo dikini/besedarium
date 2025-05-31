@@ -1117,7 +1117,7 @@ pub fn session_type_attribute_impl(args: TokenStream, input: TokenStream) -> Tok
 }
 
 /// Parse protocol attribute arguments with duplicate detection
-/// 
+///
 /// Parses attribute arguments like: io = "async", metadata = "standard", buffer_size = 2048
 /// Returns an error if any attribute appears more than once.
 #[allow(dead_code)] // Will be used when integrating with main protocol macro
@@ -1162,7 +1162,7 @@ pub fn parse_protocol_args(args: TokenStream) -> Result<ProtocolAttributes> {
 }
 
 /// Parse protocol attribute arguments with duplicate detection (test version)
-/// 
+///
 /// This version accepts proc_macro2::TokenStream for use in unit tests.
 /// Parses attribute arguments like: io = "async", metadata = "standard", buffer_size = 2048
 /// Returns an error if any attribute appears more than once.
@@ -1181,7 +1181,8 @@ pub fn parse_protocol_args_test(args: proc_macro2::TokenStream) -> Result<Protoc
     }
 
     // Try to parse as comma-separated list of MetaNameValue items
-    let parser = syn::punctuated::Punctuated::<syn::MetaNameValue, syn::Token![,]>::parse_terminated;
+    let parser =
+        syn::punctuated::Punctuated::<syn::MetaNameValue, syn::Token![,]>::parse_terminated;
     if let Ok(name_values) = parser.parse2(args.clone()) {
         for name_value in name_values {
             parse_single_attribute(&mut attrs, &name_value)?;
@@ -1229,7 +1230,9 @@ fn parse_single_attribute(
     attrs: &mut ProtocolAttributes,
     name_value: &syn::MetaNameValue,
 ) -> syn::Result<()> {
-    let attr_name = name_value.path.get_ident()
+    let attr_name = name_value
+        .path
+        .get_ident()
         .ok_or_else(|| syn::Error::new_spanned(&name_value.path, "Invalid attribute name"))?
         .to_string();
 
@@ -1244,7 +1247,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit_str),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.io_type = Some(lit_str.value());
             } else {
                 return Err(syn::Error::new_spanned(
@@ -1263,7 +1267,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit_str),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.metadata_type = Some(lit_str.value());
             } else {
                 return Err(syn::Error::new_spanned(
@@ -1282,7 +1287,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Int(lit_int),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 match lit_int.base10_parse::<usize>() {
                     Ok(val) => attrs.buffer_size = Some(val),
                     Err(_) => {
@@ -1309,7 +1315,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Int(lit_int),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 match lit_int.base10_parse::<u64>() {
                     Ok(val) => attrs.timeout_ms = Some(val),
                     Err(_) => {
@@ -1336,7 +1343,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit_str),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.serialization = Some(lit_str.value());
             } else {
                 return Err(syn::Error::new_spanned(
@@ -1355,7 +1363,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Bool(lit_bool),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.validation = Some(lit_bool.value());
             } else {
                 return Err(syn::Error::new_spanned(
@@ -1374,7 +1383,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Bool(lit_bool),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.concurrent = Some(lit_bool.value());
             } else {
                 return Err(syn::Error::new_spanned(
@@ -1393,7 +1403,8 @@ fn parse_single_attribute(
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit_str),
                 ..
-            }) = &name_value.value {
+            }) = &name_value.value
+            {
                 attrs.reliability = Some(lit_str.value());
             } else {
                 return Err(syn::Error::new_spanned(

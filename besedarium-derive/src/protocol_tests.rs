@@ -28,7 +28,7 @@ mod tests {
         let tokens = TokenStream::from_str("buffer_size = 1024").unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
         assert_eq!(result.buffer_size, Some(1024));
-        
+
         // Test timeout_ms attribute
         let tokens = TokenStream::from_str("timeout_ms = 5000").unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
@@ -58,11 +58,10 @@ mod tests {
     /// Test parsing of multiple valid attributes
     #[test]
     fn test_parse_multiple_attributes() {
-        let tokens = TokenStream::from_str(
-            "io = \"async\", buffer_size = 2048, validation = true"
-        ).unwrap();
+        let tokens =
+            TokenStream::from_str("io = \"async\", buffer_size = 2048, validation = true").unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
-        
+
         assert_eq!(result.io_type, Some("async".to_string()));
         assert_eq!(result.buffer_size, Some(2048));
         assert_eq!(result.validation, Some(true));
@@ -75,7 +74,7 @@ mod tests {
     fn test_duplicate_io_attribute() {
         let tokens = TokenStream::from_str("io = \"async\", io = \"sync\"").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'io'"));
@@ -85,9 +84,10 @@ mod tests {
     /// Test duplicate metadata attribute detection
     #[test]
     fn test_duplicate_metadata_attribute() {
-        let tokens = TokenStream::from_str("metadata = \"standard\", metadata = \"custom\"").unwrap();
+        let tokens =
+            TokenStream::from_str("metadata = \"standard\", metadata = \"custom\"").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'metadata'"));
@@ -98,7 +98,7 @@ mod tests {
     fn test_duplicate_buffer_size_attribute() {
         let tokens = TokenStream::from_str("buffer_size = 1024, buffer_size = 2048").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'buffer_size'"));
@@ -109,7 +109,7 @@ mod tests {
     fn test_duplicate_timeout_ms_attribute() {
         let tokens = TokenStream::from_str("timeout_ms = 1000, timeout_ms = 5000").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'timeout_ms'"));
@@ -118,9 +118,10 @@ mod tests {
     /// Test duplicate serialization attribute detection
     #[test]
     fn test_duplicate_serialization_attribute() {
-        let tokens = TokenStream::from_str("serialization = \"json\", serialization = \"binary\"").unwrap();
+        let tokens =
+            TokenStream::from_str("serialization = \"json\", serialization = \"binary\"").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'serialization'"));
@@ -131,7 +132,7 @@ mod tests {
     fn test_duplicate_validation_attribute() {
         let tokens = TokenStream::from_str("validation = true, validation = false").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'validation'"));
@@ -142,7 +143,7 @@ mod tests {
     fn test_duplicate_concurrent_attribute() {
         let tokens = TokenStream::from_str("concurrent = true, concurrent = false").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'concurrent'"));
@@ -151,9 +152,12 @@ mod tests {
     /// Test duplicate reliability attribute detection
     #[test]
     fn test_duplicate_reliability_attribute() {
-        let tokens = TokenStream::from_str("reliability = \"at_least_once\", reliability = \"exactly_once\"").unwrap();
+        let tokens = TokenStream::from_str(
+            "reliability = \"at_least_once\", reliability = \"exactly_once\"",
+        )
+        .unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'reliability'"));
@@ -163,10 +167,11 @@ mod tests {
     #[test]
     fn test_mixed_valid_and_duplicate_attributes() {
         let tokens = TokenStream::from_str(
-            "io = \"async\", buffer_size = 1024, io = \"sync\", validation = true"
-        ).unwrap();
+            "io = \"async\", buffer_size = 1024, io = \"sync\", validation = true",
+        )
+        .unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Duplicate attribute 'io'"));
@@ -177,7 +182,7 @@ mod tests {
     fn test_unknown_attribute() {
         let tokens = TokenStream::from_str("unknown_attr = \"value\"").unwrap();
         let result = parse_protocol_args_test(tokens);
-        
+
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Unknown protocol attribute: 'unknown_attr'"));
@@ -214,7 +219,7 @@ mod tests {
     fn test_empty_input() {
         let tokens = TokenStream::from_str("").unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
-        
+
         // Should return default attributes
         assert_eq!(result.io_type, None);
         assert_eq!(result.metadata_type, None);
@@ -234,16 +239,22 @@ mod tests {
             ("metadata = \"std\", metadata = \"custom\"", "metadata"),
             ("buffer_size = 1024, buffer_size = 2048", "buffer_size"),
             ("timeout_ms = 1000, timeout_ms = 5000", "timeout_ms"),
-            ("serialization = \"json\", serialization = \"binary\"", "serialization"),
+            (
+                "serialization = \"json\", serialization = \"binary\"",
+                "serialization",
+            ),
             ("validation = true, validation = false", "validation"),
             ("concurrent = true, concurrent = false", "concurrent"),
-            ("reliability = \"once\", reliability = \"twice\"", "reliability"),
+            (
+                "reliability = \"once\", reliability = \"twice\"",
+                "reliability",
+            ),
         ];
 
         for (input, expected_attr) in test_cases {
             let tokens = TokenStream::from_str(input).unwrap();
             let result = parse_protocol_args_test(tokens);
-            
+
             assert!(result.is_err(), "Expected error for input: {}", input);
             let error_msg = result.unwrap_err().to_string();
             assert!(
@@ -262,7 +273,7 @@ mod tests {
             "io = \"async\", metadata = \"standard\", buffer_size = 1024, timeout_ms = 5000, serialization = \"json\", validation = true, concurrent = false, reliability = \"at_least_once\""
         ).unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
-        
+
         assert_eq!(result.io_type, Some("async".to_string()));
         assert_eq!(result.metadata_type, Some("standard".to_string()));
         assert_eq!(result.buffer_size, Some(1024));
