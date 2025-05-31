@@ -11,8 +11,137 @@ This document consolidates key insights, patterns, and solutions discovered duri
 - Robust runtime system with graceful shutdown and resource tracking
 - Comprehensive error handling with detailed diagnostics
 - Zero clippy warnings with production-ready code quality
+- **NEW**: Enhanced attribute macro system with argument parsing for role metadata
+- **NEW**: Advanced DSL protocol parsing with choice/branching syntax support
+- **NEW**: All besedarium-derive tests passing (13/13) after fixing proc_macro API issues
+
+## Recent Progress: Protocol DSL Implementation (Task 3.3.4)
+
+### Advanced DSL Features Implemented
+
+**Choice/Branching Syntax:**
+- Implemented parsing for choice messages with variants: `Request { GetData(id: u32), PostData(data: String), Quit }`
+- Added support for match statement parsing to handle choice branches
+- Created comprehensive AST structures for choice flows, variants, and branches
+
+**Multi-line Protocol Parsing:**
+- Enhanced `parse_simple_protocol_syntax` to handle multi-line constructs by tracking brace balance
+- Implemented line collection for complex message flows that span multiple lines
+- Added proper termination detection for complete protocol statements
+
+**Protocol Flow AST:**
+- Complete protocol flow enumeration: MessageFlow, Choice, Loop, Conditional, Parallel, End, Continue
+- Implemented Clone derivations for all protocol structures to enable composition
+- Added comprehensive field structures for message properties and metadata
+
+### Critical Compilation Fixes
+
+**MessageSpec Enum Usage:**
+- Fixed incorrect struct construction `MessageSpec { name, fields }` 
+- Corrected to proper enum variant usage `MessageSpec::Simple { name, fields }`
+- Updated all parsing functions to use enum variants consistently
+
+**Clone Trait Implementation:**
+- Added `#[derive(Clone)]` to all protocol flow structures
+- Fixed trait bound issues for MessageFlow, LoopFlow, ConditionalFlow, ParallelFlow
+- Ensured MessageSpec, MessageProperties, and MessageField all implement Clone
+
+**Proc_macro API Testing Issues:**
+- Resolved "procedural macro API is used outside of a procedural macro" errors
+- Replaced direct proc_macro::TokenStream usage in tests with proc_macro2::TokenStream
+- Implemented test-friendly parsing using `syn::parse2` instead of `syn::parse`
+
+### Protocol Parsing Functions Implemented
+
+```rust
+// Core parsing functions for protocol DSL
+fn parse_message_flow_from_text(text: &str) -> Result<MessageFlow>
+fn parse_message_spec_from_text(text: &str) -> Result<MessageSpec>
+fn parse_choice_variants(text: &str) -> Result<Vec<ChoiceVariant>>
+fn parse_choice_variant(text: &str) -> Result<ChoiceVariant>
+fn parse_message_fields(text: &str) -> Result<Vec<MessageField>>
+```
+
+**Test Strategy for Proc Macros:**
+```rust
+// Pattern for testing proc macro parsing logic without proc_macro context
+#[test]
+fn test_parse_role_attributes_display_name() {
+    let tokens = quote! { display_name = "Custom Role Name" };
+    let meta: Meta = syn::parse2(tokens).unwrap();
+    
+    let display_name = match meta {
+        Meta::NameValue(nv) if nv.path.is_ident("display_name") => {
+            match nv.value {
+                syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) => Some(s.value()),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+    
+    assert_eq!(display_name, Some("Custom Role Name".to_string()));
+}
+```
+
+# Learnings: Besedarium Session Type Library Implementation
+
+## Executive Summary
+
+This document consolidates key insights, patterns, and solutions discovered during implementation of a Rust-based session type library. The library provides type-level protocol safety, runtime validation, and comprehensive error handling for distributed communication systems.
+
+**Key Achievements:**
+
+- 214/214 tests passing (100% success rate)
+- Complete type-level protocol system with duality verification
+- Robust runtime system with graceful shutdown and resource tracking
+- Comprehensive error handling with detailed diagnostics
+- Zero clippy warnings with production-ready code quality
+- **NEW**: Enhanced attribute macro system with argument parsing for role metadata
 
 ## Core Architecture Patterns
+
+### Procedural Macro Implementation Patterns
+
+**Attribute Macro Argument Parsing:**
+
+- Use modern `syn::Meta` parsing instead of deprecated `syn::AttributeArgs`
+- Implement robust error handling for malformed macro arguments
+- Support both single parameters and parameter lists
+- Generate conditional code based on parsed arguments
+
+**Key Pattern - Modern Macro Argument Parsing:**
+
+```rust
+// Pattern for parsing attribute macro arguments safely
+fn parse_role_attributes(args: TokenStream) -> Result<Option<String>> {
+    if args.is_empty() {
+        return Ok(None);
+    }
+
+    let meta: Meta = syn::parse(args)?;
+    match meta {
+        Meta::List(list) => {
+            let parser = syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated;
+            let nested_metas = parser.parse2(list.tokens)?;
+            // Parse individual parameters...
+        }
+        Meta::NameValue(name_value) => {
+            // Handle single parameter...
+        }
+        _ => {
+            return Err(syn::Error::new_spanned(meta, "Expected role attributes..."));
+        }
+    }
+}
+```
+
+**Attribute Macro Best Practices:**
+- Always validate argument types at parse time
+- Provide clear error messages for invalid syntax
+- Support both simple and complex parameter patterns
+- Generate different implementations based on parameters
+- Test both success and error cases comprehensively
 
 ### Type-Level Programming Foundation
 
