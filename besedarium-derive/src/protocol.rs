@@ -18,8 +18,8 @@ use syn::{
     DeriveInput, Ident, Result, Token, Type,
 };
 
+use crate::dual_generation::{generate_dual_protocol_code, DualGenerator};
 use crate::utils::{basic_trait_impl, get_type_name, handle_result, is_enum, is_struct};
-use crate::dual_generation::{DualGenerator, generate_dual_protocol_code};
 
 /// Protocol specification AST structures
 #[derive(Clone)]
@@ -530,7 +530,7 @@ pub fn protocol_attribute_impl(args: TokenStream, input: TokenStream) -> TokenSt
             return e.to_compile_error().into();
         }
     };
-    
+
     let input = parse_macro_input!(input as syn::ItemStruct);
     let struct_name = &input.ident;
 
@@ -1084,7 +1084,10 @@ fn parse_choice_variant(text: &str) -> Result<ChoiceVariant> {
 
 /// Generate the protocol implementation code
 /// Generate the complete protocol implementation with optional dual generation
-pub(crate) fn generate_protocol_implementation(protocol_spec: ProtocolSpec, protocol_attrs: ProtocolAttributes) -> Result<TokenStream2> {
+pub(crate) fn generate_protocol_implementation(
+    protocol_spec: ProtocolSpec,
+    protocol_attrs: ProtocolAttributes,
+) -> Result<TokenStream2> {
     let struct_name = &protocol_spec.name;
 
     // Generate basic protocol implementation
@@ -1103,7 +1106,7 @@ pub(crate) fn generate_protocol_implementation(protocol_spec: ProtocolSpec, prot
     if protocol_attrs.generate_dual {
         // Generate dual protocol using DualGenerator
         let dual_generator = DualGenerator::new(protocol_spec.clone(), protocol_attrs.clone());
-        
+
         match dual_generator.generate_dual_spec() {
             Ok(dual_spec) => {
                 // Generate combined original and dual protocol code

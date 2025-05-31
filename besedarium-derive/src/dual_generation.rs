@@ -5,7 +5,7 @@
 //! protocols from `#[protocol]` specifications, ensuring type-safe communication
 //! by swapping roles and maintaining duality relationships.
 
-use crate::protocol::{ProtocolSpec, ProtocolFlow, MessageFlow, ChoiceFlow, ProtocolAttributes};
+use crate::protocol::{ChoiceFlow, MessageFlow, ProtocolAttributes, ProtocolFlow, ProtocolSpec};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{Ident, Result};
@@ -28,7 +28,7 @@ impl DualGenerator {
     /// Generate dual protocol specification
     pub fn generate_dual_spec(&self) -> Result<ProtocolSpec> {
         let dual_name = self.generate_dual_name()?;
-        
+
         let dual_spec = ProtocolSpec {
             name: dual_name,
             attributes: self.attributes.clone(),
@@ -63,7 +63,8 @@ impl DualGenerator {
 
     /// Transform protocol flows to their duals
     fn transform_flows(&self, flows: &[ProtocolFlow]) -> Result<Vec<ProtocolFlow>> {
-        flows.iter()
+        flows
+            .iter()
             .map(|flow| self.transform_single_flow(flow))
             .collect()
     }
@@ -93,11 +94,13 @@ impl DualGenerator {
                     None
                 };
 
-                Ok(ProtocolFlow::Conditional(crate::protocol::ConditionalFlow {
-                    condition: cond_flow.condition.clone(),
-                    if_branch: dual_if_branch,
-                    else_branch: dual_else_branch,
-                }))
+                Ok(ProtocolFlow::Conditional(
+                    crate::protocol::ConditionalFlow {
+                        condition: cond_flow.condition.clone(),
+                        if_branch: dual_if_branch,
+                        else_branch: dual_else_branch,
+                    },
+                ))
             }
             ProtocolFlow::Parallel(par_flow) => {
                 // For parallel flows, transform each branch
@@ -132,14 +135,19 @@ impl DualGenerator {
             sender: choice_flow.receiver.clone(),
             receiver: choice_flow.sender.clone(),
             message: choice_flow.message.clone(),
-            branches: choice_flow.branches.iter()
+            branches: choice_flow
+                .branches
+                .iter()
                 .map(|branch| self.dual_choice_branch(branch))
                 .collect::<Result<Vec<_>>>()?,
         })
     }
 
     /// Generate dual of a choice branch
-    fn dual_choice_branch(&self, branch: &crate::protocol::ChoiceBranch) -> Result<crate::protocol::ChoiceBranch> {
+    fn dual_choice_branch(
+        &self,
+        branch: &crate::protocol::ChoiceBranch,
+    ) -> Result<crate::protocol::ChoiceBranch> {
         Ok(crate::protocol::ChoiceBranch {
             variant: branch.variant.clone(),
             bound_fields: branch.bound_fields.clone(),
@@ -177,11 +185,11 @@ pub fn generate_dual_protocol_code(
 
     Ok(quote! {
         #original_impl
-        
+
         #dual_impl
-        
+
         #is_dual_impl
-        
+
         #dual_docs
     })
 }
@@ -189,12 +197,10 @@ pub fn generate_dual_protocol_code(
 /// Generate protocol implementation for a given spec
 fn generate_protocol_impl(spec: &ProtocolSpec) -> Result<TokenStream2> {
     let struct_name = &spec.name;
-    
+
     // Generate roles tuple type
-    let role_types: Vec<_> = spec.roles.iter()
-        .map(|role| quote! { #role })
-        .collect();
-    
+    let role_types: Vec<_> = spec.roles.iter().map(|role| quote! { #role }).collect();
+
     Ok(quote! {
         impl ::besedarium::protocol::foundation::GlobalProtocol for #struct_name {
             type Roles = (#(#role_types),*);
@@ -213,18 +219,18 @@ fn generate_is_dual_impl(original_name: &Ident, dual_name: &Ident) -> Result<Tok
         // Implement IsDual to prove duality relationship
         impl ::besedarium::protocol::duality::IsDual<#dual_name> for #original_name {}
         impl ::besedarium::protocol::duality::IsDual<#original_name> for #dual_name {}
-        
+
         // Compile-time assertion to verify duality
         const _: () = {
             fn _assert_duality() {
-                fn _check_dual<P1, P2>() 
-                where 
+                fn _check_dual<P1, P2>()
+                where
                     P1: ::besedarium::protocol::duality::IsDual<P2>,
                     P2: ::besedarium::protocol::duality::IsDual<P1>,
                 {
                     // This function will only compile if the duality relationship holds
                 }
-                
+
                 _check_dual::<#original_name, #dual_name>();
             }
         };
@@ -249,7 +255,7 @@ fn generate_dual_documentation(original_name: &Ident, dual_name: &Ident) -> Toke
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{MessageSpec, MessageProperties};
+    use crate::protocol::{MessageProperties, MessageSpec};
 
     fn create_test_protocol() -> ProtocolSpec {
         ProtocolSpec {
@@ -259,17 +265,15 @@ mod tests {
                 syn::Ident::new("Client", proc_macro2::Span::call_site()),
                 syn::Ident::new("Server", proc_macro2::Span::call_site()),
             ],
-            flows: vec![
-                ProtocolFlow::MessageFlow(MessageFlow {
-                    sender: syn::Ident::new("Client", proc_macro2::Span::call_site()),
-                    receiver: syn::Ident::new("Server", proc_macro2::Span::call_site()),
-                    message: MessageSpec::Simple {
-                        name: syn::Ident::new("Request", proc_macro2::Span::call_site()),
-                        fields: vec![],
-                    },
-                    properties: MessageProperties::default(),
-                }),
-            ],
+            flows: vec![ProtocolFlow::MessageFlow(MessageFlow {
+                sender: syn::Ident::new("Client", proc_macro2::Span::call_site()),
+                receiver: syn::Ident::new("Server", proc_macro2::Span::call_site()),
+                message: MessageSpec::Simple {
+                    name: syn::Ident::new("Request", proc_macro2::Span::call_site()),
+                    fields: vec![],
+                },
+                properties: MessageProperties::default(),
+            })],
         }
     }
 
@@ -278,7 +282,7 @@ mod tests {
         let spec = create_test_protocol();
         let attrs = ProtocolAttributes::default();
         let generator = DualGenerator::new(spec, attrs);
-        
+
         assert_eq!(generator.original_spec.name, "TestProtocol");
     }
 
@@ -287,12 +291,12 @@ mod tests {
         let spec = create_test_protocol();
         let attrs = ProtocolAttributes::default();
         let generator = DualGenerator::new(spec, attrs);
-        
+
         let original_roles = vec![
             syn::Ident::new("Client", proc_macro2::Span::call_site()),
             syn::Ident::new("Server", proc_macro2::Span::call_site()),
         ];
-        
+
         let swapped = generator.swap_roles(&original_roles);
         assert_eq!(swapped[0], "Server");
         assert_eq!(swapped[1], "Client");
@@ -303,7 +307,7 @@ mod tests {
         let spec = create_test_protocol();
         let attrs = ProtocolAttributes::default();
         let generator = DualGenerator::new(spec, attrs);
-        
+
         let dual_name = generator.generate_dual_name().unwrap();
         assert_eq!(dual_name, "TestProtocolDual");
     }
@@ -314,7 +318,7 @@ mod tests {
         let mut attrs = ProtocolAttributes::default();
         attrs.dual_name = Some("CustomDualName".to_string());
         let generator = DualGenerator::new(spec, attrs);
-        
+
         let dual_name = generator.generate_dual_name().unwrap();
         assert_eq!(dual_name, "CustomDualName");
     }
@@ -324,7 +328,7 @@ mod tests {
         let spec = create_test_protocol();
         let attrs = ProtocolAttributes::default();
         let generator = DualGenerator::new(spec, attrs);
-        
+
         let original_flow = MessageFlow {
             sender: syn::Ident::new("Client", proc_macro2::Span::call_site()),
             receiver: syn::Ident::new("Server", proc_macro2::Span::call_site()),
@@ -334,7 +338,7 @@ mod tests {
             },
             properties: MessageProperties::default(),
         };
-        
+
         let dual_flow = generator.dual_message_flow(&original_flow);
         assert_eq!(dual_flow.sender, "Server");
         assert_eq!(dual_flow.receiver, "Client");
@@ -350,7 +354,7 @@ mod tests {
             ..Default::default()
         };
         let generator = DualGenerator::new(spec, attrs);
-        
+
         let dual_spec = generator.generate_dual_spec().unwrap();
         assert_eq!(dual_spec.name, "TestProtocolDual");
         assert_eq!(dual_spec.roles.len(), 2);

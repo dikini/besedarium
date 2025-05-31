@@ -340,8 +340,9 @@ mod tests {
     #[test]
     fn test_dual_attributes_with_regular_attributes() {
         let tokens = TokenStream::from_str(
-            "io = \"async\", generate_dual = true, buffer_size = 1024, dual_name = \"MyDual\""
-        ).unwrap();
+            "io = \"async\", generate_dual = true, buffer_size = 1024, dual_name = \"MyDual\"",
+        )
+        .unwrap();
         let result = parse_protocol_args_test(tokens).unwrap();
 
         // Check dual attributes
@@ -389,7 +390,8 @@ mod tests {
     /// Test duplicate dual_name detection
     #[test]
     fn test_duplicate_dual_name_detection() {
-        let tokens = TokenStream::from_str("dual_name = \"First\", dual_name = \"Second\"").unwrap();
+        let tokens =
+            TokenStream::from_str("dual_name = \"First\", dual_name = \"Second\"").unwrap();
         let result = parse_protocol_args_test(tokens);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
