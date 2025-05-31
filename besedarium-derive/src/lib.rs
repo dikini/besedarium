@@ -187,3 +187,21 @@ pub fn role(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn endpoint(args: TokenStream, input: TokenStream) -> TokenStream {
     protocol::endpoint_attribute_impl(args, input)
 }
+
+/// Attribute macro for session type annotations
+///
+/// This macro adds session type metadata and validation
+/// for type aliases and session type definitions.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use besedarium_derive::session_type;
+///
+/// #[session_type(validate = true, duality_check = true, role = "Client")]
+/// type ClientSession = TSend<Message, TRecv<Response, TEnd>>;
+/// ```
+#[proc_macro_attribute]
+pub fn session_type(args: TokenStream, input: TokenStream) -> TokenStream {
+    protocol::session_type_attribute_impl(args, input)
+}

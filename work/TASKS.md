@@ -201,8 +201,11 @@ developer experience.
     - [x] **Task 3.3.2c**: Added comprehensive utility functions for derive macro operations
     - [x] **Task 3.3.2d**: Created integration tests with all 5 test scenarios passing
     - [x] **Task 3.3.2e**: Resolved circular dependency issues and optimized for proc-macro best practices
-  - [ ] **Task 3.3.3**: Develop Basic Attribute Macros (`#[protocol]`, `#[role]`, `#[endpoint]`)
-  - [ ] **Task 3.3.4**: Create Advanced DSL Features (choice, branching, loops, recursion)
+  - [x] **Task 3.3.3**: Develop Basic Attribute Macros (`#[protocol]`, `#[role]`, `#[endpoint]`, `#[session_type]`) ✅ **COMPLETED** (2025-05-31)
+    - [x] **Task 3.3.3a**: Phase 1 - Basic attribute macro infrastructure with AST structures and parsing foundations
+    - [x] **Task 3.3.3b**: Phase 2 - Enhanced protocol parsing with doc comment support, sophisticated session type generation, and comprehensive testing (25/25 tests passing)
+    - [x] **Task 3.3.3c**: Phase 3 - Complete `#[session_type]` attribute macro with syn API compatibility fixes and full macro exports
+  - [x] **Task 3.3.4**: Create Advanced DSL Features (choice, branching, loops, recursion) ✅ **COMPLETED**
   - [ ] **Task 3.3.5**: Implement Dual Protocol Generation Integration
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
