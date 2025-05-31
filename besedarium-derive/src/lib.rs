@@ -37,12 +37,15 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
+mod dual_generation;
 mod label;
 mod message;
 mod protocol;
 mod role;
 mod utils;
 
+#[cfg(test)]
+mod dual_integration_tests;
 #[cfg(test)]
 mod protocol_tests;
 

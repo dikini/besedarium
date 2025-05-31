@@ -19,8 +19,10 @@ use syn::{
 };
 
 use crate::utils::{basic_trait_impl, get_type_name, handle_result, is_enum, is_struct};
+use crate::dual_generation::{DualGenerator, generate_dual_protocol_code};
 
 /// Protocol specification AST structures
+#[derive(Clone)]
 pub struct ProtocolSpec {
     pub name: Ident,
     pub attributes: ProtocolAttributes,
@@ -99,7 +101,7 @@ pub struct ParallelFlow {
     pub branches: Vec<Vec<ProtocolFlow>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ProtocolAttributes {
     pub io_type: Option<String>,
     pub metadata_type: Option<String>,
@@ -109,6 +111,11 @@ pub struct ProtocolAttributes {
     pub validation: Option<bool>,
     pub concurrent: Option<bool>,
     pub reliability: Option<String>,
+    // Dual Protocol Generation Attributes
+    pub generate_dual: bool,
+    pub dual_name: Option<String>,
+    pub verify_duality: bool,
+    pub dual_documentation: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -516,9 +523,15 @@ fn generate_global_protocol_impl(type_name: &syn::Ident) -> TokenStream2 {
 
 /// Implementation of the `#[protocol]` attribute macro
 pub fn protocol_attribute_impl(args: TokenStream, input: TokenStream) -> TokenStream {
-    let _args = args; // TODO: Parse protocol attributes like io type, metadata
+    // Parse protocol attributes from args
+    let protocol_attrs = match parse_protocol_args(args) {
+        Ok(attrs) => attrs,
+        Err(e) => {
+            return e.to_compile_error().into();
+        }
+    };
+    
     let input = parse_macro_input!(input as syn::ItemStruct);
-
     let struct_name = &input.ident;
 
     // Try to parse protocol specification from doc comments
@@ -542,7 +555,7 @@ pub fn protocol_attribute_impl(args: TokenStream, input: TokenStream) -> TokenSt
     };
 
     // Generate the protocol implementation based on parsed specification
-    match generate_protocol_implementation(protocol_spec) {
+    match generate_protocol_implementation(protocol_spec, protocol_attrs) {
         Ok(tokens) => TokenStream::from(tokens),
         Err(e) => {
             let _error_msg = format!("Failed to generate protocol implementation: {}", e);
@@ -1070,11 +1083,12 @@ fn parse_choice_variant(text: &str) -> Result<ChoiceVariant> {
 }
 
 /// Generate the protocol implementation code
-fn generate_protocol_implementation(protocol_spec: ProtocolSpec) -> Result<TokenStream2> {
+/// Generate the complete protocol implementation with optional dual generation
+pub(crate) fn generate_protocol_implementation(protocol_spec: ProtocolSpec, protocol_attrs: ProtocolAttributes) -> Result<TokenStream2> {
     let struct_name = &protocol_spec.name;
 
-    // For now, generate a basic implementation
-    let impl_tokens = quote! {
+    // Generate basic protocol implementation
+    let basic_impl = quote! {
         impl GlobalProtocol for #struct_name {
             type Roles = ();
             type Messages = ();
@@ -1085,7 +1099,33 @@ fn generate_protocol_implementation(protocol_spec: ProtocolSpec) -> Result<Token
         }
     };
 
-    Ok(impl_tokens)
+    // If dual generation is enabled, generate both original and dual protocols
+    if protocol_attrs.generate_dual {
+        // Generate dual protocol using DualGenerator
+        let dual_generator = DualGenerator::new(protocol_spec.clone(), protocol_attrs.clone());
+        
+        match dual_generator.generate_dual_spec() {
+            Ok(dual_spec) => {
+                // Generate combined original and dual protocol code
+                match generate_dual_protocol_code(&protocol_spec, &dual_spec, &protocol_attrs) {
+                    Ok(dual_code) => Ok(dual_code),
+                    Err(e) => {
+                        // Fallback to basic implementation if dual generation fails
+                        let _error_msg = format!("Dual generation failed: {}", e);
+                        Ok(basic_impl)
+                    }
+                }
+            }
+            Err(e) => {
+                // Fallback to basic implementation if dual spec generation fails
+                let _error_msg = format!("Dual spec generation failed: {}", e);
+                Ok(basic_impl)
+            }
+        }
+    } else {
+        // Generate only the original protocol
+        Ok(basic_impl)
+    }
 }
 
 /// Implementation for the endpoint attribute macro
@@ -1413,10 +1453,72 @@ fn parse_single_attribute(
                 ));
             }
         }
+        "generate_dual" => {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(lit_bool),
+                ..
+            }) = &name_value.value
+            {
+                attrs.generate_dual = lit_bool.value();
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected boolean literal for 'generate_dual' attribute",
+                ));
+            }
+        }
+        "dual_name" => {
+            if attrs.dual_name.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'dual_name': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit_str),
+                ..
+            }) = &name_value.value
+            {
+                attrs.dual_name = Some(lit_str.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected string literal for 'dual_name' attribute",
+                ));
+            }
+        }
+        "verify_duality" => {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(lit_bool),
+                ..
+            }) = &name_value.value
+            {
+                attrs.verify_duality = lit_bool.value();
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected boolean literal for 'verify_duality' attribute",
+                ));
+            }
+        }
+        "dual_documentation" => {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(lit_bool),
+                ..
+            }) = &name_value.value
+            {
+                attrs.dual_documentation = lit_bool.value();
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected boolean literal for 'dual_documentation' attribute",
+                ));
+            }
+        }
         _ => {
             return Err(syn::Error::new_spanned(
                 &name_value.path,
-                format!("Unknown protocol attribute: '{}'. Supported attributes: io, metadata, buffer_size, timeout_ms, serialization, validation, concurrent, reliability", attr_name),
+                format!("Unknown protocol attribute: '{}'. Supported attributes: io, metadata, buffer_size, timeout_ms, serialization, validation, concurrent, reliability, generate_dual, dual_name, verify_duality, dual_documentation", attr_name),
             ));
         }
     }
