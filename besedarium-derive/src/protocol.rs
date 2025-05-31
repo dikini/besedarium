@@ -1457,6 +1457,12 @@ fn parse_single_attribute(
             }
         }
         "generate_dual" => {
+            if attrs.generate_dual {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'generate_dual': this attribute can only be specified once",
+                ));
+            }
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Bool(lit_bool),
                 ..
@@ -1491,6 +1497,12 @@ fn parse_single_attribute(
             }
         }
         "verify_duality" => {
+            if attrs.verify_duality {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'verify_duality': this attribute can only be specified once",
+                ));
+            }
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Bool(lit_bool),
                 ..
@@ -1505,6 +1517,12 @@ fn parse_single_attribute(
             }
         }
         "dual_documentation" => {
+            if attrs.dual_documentation {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'dual_documentation': this attribute can only be specified once",
+                ));
+            }
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Bool(lit_bool),
                 ..

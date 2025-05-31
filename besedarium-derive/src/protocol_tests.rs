@@ -163,6 +163,39 @@ mod tests {
         assert!(error_msg.contains("Duplicate attribute 'reliability'"));
     }
 
+    /// Test duplicate generate_dual attribute detection
+    #[test]
+    fn test_duplicate_generate_dual_detection() {
+        let tokens =
+            TokenStream::from_str("generate_dual = true, generate_dual = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'generate_dual'"));
+    }
+
+    /// Test duplicate verify_duality attribute detection
+    #[test]
+    fn test_duplicate_verify_duality_detection() {
+        let tokens =
+            TokenStream::from_str("verify_duality = true, verify_duality = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'verify_duality'"));
+    }
+
+    /// Test duplicate dual_documentation attribute detection
+    #[test]
+    fn test_duplicate_dual_documentation_detection() {
+        let tokens =
+            TokenStream::from_str("dual_documentation = true, dual_documentation = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'dual_documentation'"));
+    }
+
     /// Test mixed valid and duplicate attributes
     #[test]
     fn test_mixed_valid_and_duplicate_attributes() {

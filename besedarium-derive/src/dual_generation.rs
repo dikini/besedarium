@@ -51,11 +51,10 @@ impl DualGenerator {
         Ok(syn::Ident::new(&dual_name, proc_macro2::Span::call_site()))
     }
 
-    /// Swap roles in the dual protocol
+    /// Swap roles in the dual protocol by reversing their order
     fn swap_roles(&self, roles: &[Ident]) -> Vec<Ident> {
-        // For now, simply reverse the order of roles
-        // In a more sophisticated implementation, this could use
-        // explicit role mapping or semantic role reversal
+        // Simple role reversal: [A, B] becomes [B, A]
+        // This implements the basic duality where sender/receiver roles are swapped
         let mut swapped = roles.to_vec();
         swapped.reverse();
         swapped
