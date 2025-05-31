@@ -163,6 +163,38 @@ mod tests {
         assert!(error_msg.contains("Duplicate attribute 'reliability'"));
     }
 
+    /// Test duplicate generate_dual attribute detection
+    #[test]
+    fn test_duplicate_generate_dual_detection() {
+        let tokens = TokenStream::from_str("generate_dual = true, generate_dual = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'generate_dual'"));
+    }
+
+    /// Test duplicate verify_duality attribute detection
+    #[test]
+    fn test_duplicate_verify_duality_detection() {
+        let tokens =
+            TokenStream::from_str("verify_duality = true, verify_duality = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'verify_duality'"));
+    }
+
+    /// Test duplicate dual_documentation attribute detection
+    #[test]
+    fn test_duplicate_dual_documentation_detection() {
+        let tokens =
+            TokenStream::from_str("dual_documentation = true, dual_documentation = false").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'dual_documentation'"));
+    }
+
     /// Test mixed valid and duplicate attributes
     #[test]
     fn test_mixed_valid_and_duplicate_attributes() {
@@ -229,6 +261,11 @@ mod tests {
         assert_eq!(result.validation, None);
         assert_eq!(result.concurrent, None);
         assert_eq!(result.reliability, None);
+        // Check dual generation defaults
+        assert_eq!(result.generate_dual, false);
+        assert_eq!(result.dual_name, None);
+        assert_eq!(result.verify_duality, false);
+        assert_eq!(result.dual_documentation, false);
     }
 
     /// Test comprehensive duplicate detection across all attributes
@@ -282,5 +319,114 @@ mod tests {
         assert_eq!(result.validation, Some(true));
         assert_eq!(result.concurrent, Some(false));
         assert_eq!(result.reliability, Some("at_least_once".to_string()));
+    }
+
+    /// Test parsing of dual generation attributes
+    #[test]
+    fn test_parse_dual_generation_attributes() {
+        // Test generate_dual attribute
+        let tokens = TokenStream::from_str("generate_dual = true").unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+        assert_eq!(result.generate_dual, true);
+        assert_eq!(result.dual_name, None);
+        assert_eq!(result.verify_duality, false);
+        assert_eq!(result.dual_documentation, false);
+
+        // Test dual_name attribute
+        let tokens = TokenStream::from_str("dual_name = \"CustomDual\"").unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+        assert_eq!(result.dual_name, Some("CustomDual".to_string()));
+        assert_eq!(result.generate_dual, false);
+
+        // Test verify_duality attribute
+        let tokens = TokenStream::from_str("verify_duality = true").unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+        assert_eq!(result.verify_duality, true);
+        assert_eq!(result.generate_dual, false);
+
+        // Test dual_documentation attribute
+        let tokens = TokenStream::from_str("dual_documentation = true").unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+        assert_eq!(result.dual_documentation, true);
+        assert_eq!(result.generate_dual, false);
+    }
+
+    /// Test parsing of multiple dual generation attributes
+    #[test]
+    fn test_parse_multiple_dual_attributes() {
+        let tokens = TokenStream::from_str(
+            "generate_dual = true, dual_name = \"ClientServerDual\", verify_duality = true, dual_documentation = true"
+        ).unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+
+        assert_eq!(result.generate_dual, true);
+        assert_eq!(result.dual_name, Some("ClientServerDual".to_string()));
+        assert_eq!(result.verify_duality, true);
+        assert_eq!(result.dual_documentation, true);
+        // Check that other attributes remain at defaults
+        assert_eq!(result.io_type, None);
+        assert_eq!(result.buffer_size, None);
+    }
+
+    /// Test dual generation attributes with regular attributes
+    #[test]
+    fn test_dual_attributes_with_regular_attributes() {
+        let tokens = TokenStream::from_str(
+            "io = \"async\", generate_dual = true, buffer_size = 1024, dual_name = \"MyDual\"",
+        )
+        .unwrap();
+        let result = parse_protocol_args_test(tokens).unwrap();
+
+        // Check dual attributes
+        assert_eq!(result.generate_dual, true);
+        assert_eq!(result.dual_name, Some("MyDual".to_string()));
+        assert_eq!(result.verify_duality, false);
+        assert_eq!(result.dual_documentation, false);
+        // Check regular attributes
+        assert_eq!(result.io_type, Some("async".to_string()));
+        assert_eq!(result.buffer_size, Some(1024));
+    }
+
+    /// Test dual generation attribute error cases
+    #[test]
+    fn test_dual_attributes_error_cases() {
+        // Test generate_dual with wrong type
+        let tokens = TokenStream::from_str("generate_dual = \"not_a_bool\"").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Expected boolean literal for 'generate_dual' attribute"));
+
+        // Test dual_name with wrong type
+        let tokens = TokenStream::from_str("dual_name = 123").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Expected string literal for 'dual_name' attribute"));
+
+        // Test verify_duality with wrong type
+        let tokens = TokenStream::from_str("verify_duality = \"not_a_bool\"").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Expected boolean literal for 'verify_duality' attribute"));
+
+        // Test dual_documentation with wrong type
+        let tokens = TokenStream::from_str("dual_documentation = 42").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Expected boolean literal for 'dual_documentation' attribute"));
+    }
+
+    /// Test duplicate dual_name detection
+    #[test]
+    fn test_duplicate_dual_name_detection() {
+        let tokens =
+            TokenStream::from_str("dual_name = \"First\", dual_name = \"Second\"").unwrap();
+        let result = parse_protocol_args_test(tokens);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Duplicate attribute 'dual_name'"));
     }
 }
