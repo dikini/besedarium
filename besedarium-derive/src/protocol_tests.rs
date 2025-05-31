@@ -166,8 +166,7 @@ mod tests {
     /// Test duplicate generate_dual attribute detection
     #[test]
     fn test_duplicate_generate_dual_detection() {
-        let tokens =
-            TokenStream::from_str("generate_dual = true, generate_dual = false").unwrap();
+        let tokens = TokenStream::from_str("generate_dual = true, generate_dual = false").unwrap();
         let result = parse_protocol_args_test(tokens);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
