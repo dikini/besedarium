@@ -46,6 +46,29 @@ fn generate_role_impl(type_name: &syn::Ident) -> TokenStream2 {
     basic_trait_impl(type_name, trait_path, None)
 }
 
+/// Extract display_name value from a Meta::NameValue, with proper error handling
+fn extract_display_name_from_name_value(name_value: &syn::MetaNameValue) -> Result<Option<String>> {
+    if name_value.path.is_ident("display_name") {
+        if let syn::Expr::Lit(expr_lit) = &name_value.value {
+            if let Lit::Str(lit_str) = &expr_lit.lit {
+                Ok(Some(lit_str.value()))
+            } else {
+                Err(syn::Error::new_spanned(
+                    &expr_lit.lit,
+                    "display_name must be a string literal",
+                ))
+            }
+        } else {
+            Err(syn::Error::new_spanned(
+                &name_value.value,
+                "display_name must be a string literal",
+            ))
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 /// Parse role attribute arguments to extract metadata like display_name
 fn parse_role_attributes(args: TokenStream) -> Result<Option<String>> {
     if args.is_empty() {
@@ -63,44 +86,14 @@ fn parse_role_attributes(args: TokenStream) -> Result<Option<String>> {
 
             for nested_meta in nested_metas {
                 if let Meta::NameValue(name_value) = nested_meta {
-                    if name_value.path.is_ident("display_name") {
-                        if let syn::Expr::Lit(expr_lit) = &name_value.value {
-                            if let Lit::Str(lit_str) = &expr_lit.lit {
-                                display_name = Some(lit_str.value());
-                            } else {
-                                return Err(syn::Error::new_spanned(
-                                    &expr_lit.lit,
-                                    "display_name must be a string literal",
-                                ));
-                            }
-                        } else {
-                            return Err(syn::Error::new_spanned(
-                                &name_value.value,
-                                "display_name must be a string literal",
-                            ));
-                        }
+                    if let Some(name) = extract_display_name_from_name_value(&name_value)? {
+                        display_name = Some(name);
                     }
                 }
             }
         }
         Meta::NameValue(name_value) => {
-            if name_value.path.is_ident("display_name") {
-                if let syn::Expr::Lit(expr_lit) = &name_value.value {
-                    if let Lit::Str(lit_str) = &expr_lit.lit {
-                        display_name = Some(lit_str.value());
-                    } else {
-                        return Err(syn::Error::new_spanned(
-                            &expr_lit.lit,
-                            "display_name must be a string literal",
-                        ));
-                    }
-                } else {
-                    return Err(syn::Error::new_spanned(
-                        &name_value.value,
-                        "display_name must be a string literal",
-                    ));
-                }
-            }
+            display_name = extract_display_name_from_name_value(&name_value)?;
         }
         _ => {
             return Err(syn::Error::new_spanned(
