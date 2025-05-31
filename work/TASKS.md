@@ -201,8 +201,8 @@ developer experience.
     - [x] **Task 3.3.2c**: Added comprehensive utility functions for derive macro operations
     - [x] **Task 3.3.2d**: Created integration tests with all 5 test scenarios passing
     - [x] **Task 3.3.2e**: Resolved circular dependency issues and optimized for proc-macro best practices
-  - [ ] **Task 3.3.3**: Develop Basic Attribute Macros (`#[protocol]`, `#[role]`, `#[endpoint]`)
-  - [ ] **Task 3.3.4**: Create Advanced DSL Features (choice, branching, loops, recursion)
+  - [x] **Task 3.3.3**: Develop Basic Attribute Macros (`#[protocol]`, `#[role]`, `#[endpoint]`)
+  - [x] **Task 3.3.4**: Create Advanced DSL Features (choice, branching, loops, recursion)
   - [ ] **Task 3.3.5**: Implement Dual Protocol Generation Integration
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
@@ -223,7 +223,7 @@ once the library features are stable and well-tested.
 - [ ] **Task 4.4**: Add Doccomments
   - [ ] **Task 4.4.1**: Add comprehensive doccomments to all public types, traits, and functions in the library.
 - [ ] **Task 4.5**: Review and Update Internal Documentation
-  - [x] **Task 4.5.1**: Review and update `work/learnings.md` with insights from all phases. ✅ **COMPLETED** (2025-05-31)
+  - [ ] **Task 4.5.1**: Review and update `work/learnings.md` with insights from all phases.
 
 ## Ongoing Tasks
 
