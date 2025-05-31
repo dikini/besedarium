@@ -24,5 +24,5 @@ pub use error::{
     RuntimeResult, StateValidationError, ValidationMode,
 };
 pub use state::{ExecutionContext, ProtocolState, StateTransition};
-// pub use session::{Session, SessionConfig, SessionManager}; // TODO: Implement session module
+pub use session::{Session, SessionConfig, SessionManager};
 pub use validation::{StateValidator, ValidationConfig, ValidationResult};

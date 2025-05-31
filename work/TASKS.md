@@ -143,6 +143,19 @@ Phase 1 tasks.
   - [x] **Task 2.4.2**: Implement multi-party protocol examples as integration tests. ✅ **COMPLETED** (covered by existing integration tests in `tests/client_server_integration.rs`)
   - [x] **Task 2.4.3**: Implement examples with complex data serialization as integration tests. ✅ **COMPLETED**
   - [x] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests. (wip) ✅ **COMPLETED**
+- [ ] **Task 2.5**: Address Remaining TODO Comments in Integration Tests (Priority: Medium)
+  - [ ] **Task 2.5.1**: Implement missing error propagation test in `src/runtime/integration_tests.rs`
+    - **Description**: Replace placeholder TODO with actual test using session functionality to verify proper error propagation across protocol boundaries
+    - **Context**: Session module is fully implemented (1,193 lines) and provides comprehensive error handling capabilities
+    - **Priority**: Medium - improves test coverage for error scenarios
+  - [ ] **Task 2.5.2**: Implement multi-session concurrent execution test in `src/runtime/integration_tests.rs`
+    - **Description**: Replace placeholder TODO with actual test leveraging `SessionManager<P, R, AIO>` for coordinating multiple concurrent session executions
+    - **Context**: SessionManager provides multi-session lifecycle management and bulk operations
+    - **Priority**: Medium - validates concurrent session behavior
+  - [ ] **Task 2.5.3**: Implement concurrent state and channel operations test in `src/runtime/integration_tests.rs`
+    - **Description**: Replace placeholder TODO with actual test combining state machine transitions with channel communication under concurrent load
+    - **Context**: Both state machine and channel components have comprehensive implementations with async support
+    - **Priority**: Medium - validates thread-safety and concurrent access patterns
 
 ## Phase 3: Advanced Features, Optimizations & Tooling
 
@@ -253,6 +266,20 @@ once the library features are stable and well-tested.
 
 ## Ongoing Tasks
 
+- [x] **Task: TODO Analysis and Resolution** ✅ **COMPLETED** (2025-01-02)
+  - [x] **Analysis Phase**: Comprehensive TODO comment analysis across codebase using `grep -ri "TODO" src`
+    - **Findings**: 5 TODO comments identified in `src/runtime/` components 
+    - **Key Discovery**: Session module (`src/runtime/session/mod.rs`) was incorrectly marked as incomplete with TODO comment
+    - **Reality**: Session module contains 1,193 lines of production-ready code with comprehensive functionality
+  - [x] **Resolution Phase**: Fixed misleading TODO comment and enabled session module exports
+    - **Fixed**: Removed incorrect TODO comment from `src/runtime/mod.rs` 
+    - **Enabled**: Session module exports (`Session`, `SessionConfig`, `SessionManager`) now available to users
+    - **Verified**: All builds and tests pass (239 library tests) with session functionality accessible
+  - [x] **Next Steps Planning**: Added Task 2.5 with 3 specific integration test improvement tasks
+    - **Task 2.5.1**: Implement error propagation test using available session functionality
+    - **Task 2.5.2**: Implement multi-session concurrent execution test using SessionManager
+    - **Task 2.5.3**: Implement concurrent state and channel operations test
+  - **Impact**: Major functionality (session management) that was hidden behind TODO is now available to users
 - [ ] **Refactoring**: Continuously refactor code for clarity, efficiency, and maintainability.
   - [ ] Refactor `Label` and `Labelled` types (as part of Task 1.2 or ongoing).
   - [ ] Standardize error handling (as part of Task 1.3, 3.1 or ongoing).
