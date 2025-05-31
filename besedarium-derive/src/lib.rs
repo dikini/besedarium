@@ -43,6 +43,9 @@ mod protocol;
 mod role;
 mod utils;
 
+#[cfg(test)]
+mod protocol_tests;
+
 /// Derive macro for the `Message` trait
 ///
 /// This automatically implements the `Message` trait for structs and enums.

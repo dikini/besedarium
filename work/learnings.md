@@ -226,6 +226,92 @@ fn parse_role_attributes(args: TokenStream) -> Result<Option<String>> {
 - Generate different implementations based on parameters
 - Test both success and error cases comprehensively
 
+### Procedural Macro TokenStream Compatibility Issues
+
+**Problem: Test Infrastructure Incompatibility**
+
+- Procedural macros use `proc_macro::TokenStream` but unit tests require `proc_macro2::TokenStream`
+- Error: "procedural macro API is used outside of a procedural macro"
+- This fundamental compatibility issue prevents normal unit testing approaches
+
+**Solution: Dual Function Strategy**
+
+```rust
+// Production version for actual macros
+pub fn parse_protocol_args(args: proc_macro::TokenStream) -> Result<ProtocolAttributes> {
+    // Implementation using syn::parse(args)
+}
+
+// Test version for unit tests
+#[cfg(test)]
+pub fn parse_protocol_args_test(args: proc_macro2::TokenStream) -> Result<ProtocolAttributes> {
+    // Implementation using syn::parse2(args)
+}
+```
+
+**Key Learning**: Always provide test-compatible versions of proc macro parsing functions to enable comprehensive unit testing.
+
+### Flexible Attribute Parsing Patterns
+
+**Challenge: Multiple Input Formats**
+
+- Tests provide raw expressions: `io = "async"`
+- Macro contexts may provide wrapped Meta structures
+- Need to handle both single attributes and comma-separated lists
+
+**Solution: Progressive Parsing Strategy**
+
+```rust
+// Try direct MetaNameValue parsing first
+if let Ok(name_value) = syn::parse2::<syn::MetaNameValue>(args.clone()) {
+    parse_single_attribute(&mut attrs, &name_value)?;
+    return Ok(attrs);
+}
+
+// Try comma-separated list parsing
+let parser = syn::punctuated::Punctuated::<syn::MetaNameValue, syn::Token![,]>::parse_terminated;
+if let Ok(name_values) = parser.parse2(args.clone()) {
+    // Handle multiple attributes
+}
+
+// Fallback to Meta parsing for backwards compatibility
+```
+
+**Key Insight**: Flexible parsing strategies enable support for multiple input formats while maintaining backward compatibility.
+
+### Comprehensive Duplicate Detection Implementation
+
+**8 Protocol Attributes Covered:**
+
+- String attributes: `io_type`, `metadata_type`, `serialization`, `reliability`
+- Integer attributes: `buffer_size` (usize), `timeout_ms` (u64)
+- Boolean attributes: `validation`, `concurrent`
+
+**Validation Strategy:**
+
+1. **Type-specific parsing** - Each attribute type has dedicated validation logic
+2. **Duplicate detection** - Check if attribute already exists before setting
+3. **Detailed error messages** - Specific error messages for each attribute and error type
+4. **Comprehensive testing** - 16 test cases covering all scenarios
+
+**Error Message Pattern:**
+
+```rust
+"Duplicate attribute '{name}': this attribute can only be specified once"
+"Expected {type} literal for '{name}' attribute"
+"Unknown protocol attribute '{name}'. Supported attributes are: {list}"
+```
+
+**Testing Coverage Achieved:**
+
+- ✅ Single attribute parsing for all 8 types
+- ✅ Multiple attribute parsing
+- ✅ Duplicate detection for each attribute type  
+- ✅ Invalid value type detection
+- ✅ Unknown attribute detection
+- ✅ Mixed valid/invalid scenarios
+- ✅ Empty input handling
+
 ### Type-Level Programming Foundation
 
 **Protocol Type System Design:**

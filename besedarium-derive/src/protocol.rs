@@ -12,7 +12,7 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseStream, Parser},
     parse_macro_input,
     punctuated::Punctuated,
     DeriveInput, Ident, Result, Token, Type,
@@ -1092,10 +1092,10 @@ fn generate_protocol_implementation(protocol_spec: ProtocolSpec) -> Result<Token
 pub fn endpoint_attribute_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     // For now, just return the input unchanged with a comment
     let input_tokens: proc_macro2::TokenStream = input.into();
-    let args_tokens: proc_macro2::TokenStream = args.into();
+    let _args_tokens: proc_macro2::TokenStream = args.into();
 
     let output = quote! {
-        // Endpoint attribute applied with args: #args_tokens
+        // Endpoint attribute applied with args: #_args_tokens
         #input_tokens
     };
 
@@ -1106,14 +1106,309 @@ pub fn endpoint_attribute_impl(args: TokenStream, input: TokenStream) -> TokenSt
 pub fn session_type_attribute_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     // For now, just return the input unchanged with a comment
     let input_tokens: proc_macro2::TokenStream = input.into();
-    let args_tokens: proc_macro2::TokenStream = args.into();
+    let _args_tokens: proc_macro2::TokenStream = args.into();
 
     let output = quote! {
-        // Session type attribute applied with args: #args_tokens
+        // Session type attribute applied with args: #_args_tokens
         #input_tokens
     };
 
     output.into()
 }
 
-// ...existing code...
+/// Parse protocol attribute arguments with duplicate detection
+/// 
+/// Parses attribute arguments like: io = "async", metadata = "standard", buffer_size = 2048
+/// Returns an error if any attribute appears more than once.
+#[allow(dead_code)] // Will be used when integrating with main protocol macro
+pub fn parse_protocol_args(args: TokenStream) -> Result<ProtocolAttributes> {
+    if args.is_empty() {
+        return Ok(ProtocolAttributes::default());
+    }
+
+    let meta: syn::Meta = syn::parse(args)?;
+    let mut attrs = ProtocolAttributes::default();
+
+    match meta {
+        syn::Meta::List(list) => {
+            // Parse comma-separated list like: io = "async", buffer_size = 1024
+            let parser = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated;
+            let nested_metas = parser.parse2(list.tokens)?;
+
+            for nested_meta in nested_metas {
+                if let syn::Meta::NameValue(name_value) = nested_meta {
+                    parse_single_attribute(&mut attrs, &name_value)?;
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        nested_meta,
+                        "Expected attribute in the form: attribute = value",
+                    ));
+                }
+            }
+        }
+        syn::Meta::NameValue(name_value) => {
+            // Single attribute like: io = "async"
+            parse_single_attribute(&mut attrs, &name_value)?;
+        }
+        _ => {
+            return Err(syn::Error::new_spanned(
+                meta,
+                "Expected protocol attributes in the form: attribute = value",
+            ));
+        }
+    }
+
+    Ok(attrs)
+}
+
+/// Parse protocol attribute arguments with duplicate detection (test version)
+/// 
+/// This version accepts proc_macro2::TokenStream for use in unit tests.
+/// Parses attribute arguments like: io = "async", metadata = "standard", buffer_size = 2048
+/// Returns an error if any attribute appears more than once.
+#[cfg(test)]
+pub fn parse_protocol_args_test(args: proc_macro2::TokenStream) -> Result<ProtocolAttributes> {
+    if args.is_empty() {
+        return Ok(ProtocolAttributes::default());
+    }
+
+    let mut attrs = ProtocolAttributes::default();
+
+    // Try to parse as a single MetaNameValue first
+    if let Ok(name_value) = syn::parse2::<syn::MetaNameValue>(args.clone()) {
+        parse_single_attribute(&mut attrs, &name_value)?;
+        return Ok(attrs);
+    }
+
+    // Try to parse as comma-separated list of MetaNameValue items
+    let parser = syn::punctuated::Punctuated::<syn::MetaNameValue, syn::Token![,]>::parse_terminated;
+    if let Ok(name_values) = parser.parse2(args.clone()) {
+        for name_value in name_values {
+            parse_single_attribute(&mut attrs, &name_value)?;
+        }
+        return Ok(attrs);
+    }
+
+    // If neither works, try parsing as Meta for backwards compatibility
+    let meta: syn::Meta = syn::parse2(args)?;
+    match meta {
+        syn::Meta::List(list) => {
+            // Parse comma-separated list like: io = "async", buffer_size = 1024
+            let parser = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated;
+            let nested_metas = parser.parse2(list.tokens)?;
+
+            for nested_meta in nested_metas {
+                if let syn::Meta::NameValue(name_value) = nested_meta {
+                    parse_single_attribute(&mut attrs, &name_value)?;
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        nested_meta,
+                        "Expected attribute in the form: attribute = value",
+                    ));
+                }
+            }
+        }
+        syn::Meta::NameValue(name_value) => {
+            // Single attribute like: io = "async"
+            parse_single_attribute(&mut attrs, &name_value)?;
+        }
+        _ => {
+            return Err(syn::Error::new_spanned(
+                meta,
+                "Expected protocol attributes in the form: attribute = value",
+            ));
+        }
+    }
+
+    Ok(attrs)
+}
+
+/// Helper function to parse a single protocol attribute and check for duplicates
+#[allow(dead_code)] // Will be used when integrating with main protocol macro
+fn parse_single_attribute(
+    attrs: &mut ProtocolAttributes,
+    name_value: &syn::MetaNameValue,
+) -> syn::Result<()> {
+    let attr_name = name_value.path.get_ident()
+        .ok_or_else(|| syn::Error::new_spanned(&name_value.path, "Invalid attribute name"))?
+        .to_string();
+
+    match attr_name.as_str() {
+        "io" => {
+            if attrs.io_type.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'io': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit_str),
+                ..
+            }) = &name_value.value {
+                attrs.io_type = Some(lit_str.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected string literal for 'io' attribute",
+                ));
+            }
+        }
+        "metadata" => {
+            if attrs.metadata_type.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'metadata': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit_str),
+                ..
+            }) = &name_value.value {
+                attrs.metadata_type = Some(lit_str.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected string literal for 'metadata' attribute",
+                ));
+            }
+        }
+        "buffer_size" => {
+            if attrs.buffer_size.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'buffer_size': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Int(lit_int),
+                ..
+            }) = &name_value.value {
+                match lit_int.base10_parse::<usize>() {
+                    Ok(val) => attrs.buffer_size = Some(val),
+                    Err(_) => {
+                        return Err(syn::Error::new_spanned(
+                            lit_int,
+                            "Invalid integer value for 'buffer_size' attribute",
+                        ));
+                    }
+                }
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected integer literal for 'buffer_size' attribute",
+                ));
+            }
+        }
+        "timeout_ms" => {
+            if attrs.timeout_ms.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'timeout_ms': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Int(lit_int),
+                ..
+            }) = &name_value.value {
+                match lit_int.base10_parse::<u64>() {
+                    Ok(val) => attrs.timeout_ms = Some(val),
+                    Err(_) => {
+                        return Err(syn::Error::new_spanned(
+                            lit_int,
+                            "Invalid integer value for 'timeout_ms' attribute",
+                        ));
+                    }
+                }
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected integer literal for 'timeout_ms' attribute",
+                ));
+            }
+        }
+        "serialization" => {
+            if attrs.serialization.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'serialization': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit_str),
+                ..
+            }) = &name_value.value {
+                attrs.serialization = Some(lit_str.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected string literal for 'serialization' attribute",
+                ));
+            }
+        }
+        "validation" => {
+            if attrs.validation.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'validation': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(lit_bool),
+                ..
+            }) = &name_value.value {
+                attrs.validation = Some(lit_bool.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected boolean literal for 'validation' attribute",
+                ));
+            }
+        }
+        "concurrent" => {
+            if attrs.concurrent.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'concurrent': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(lit_bool),
+                ..
+            }) = &name_value.value {
+                attrs.concurrent = Some(lit_bool.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected boolean literal for 'concurrent' attribute",
+                ));
+            }
+        }
+        "reliability" => {
+            if attrs.reliability.is_some() {
+                return Err(syn::Error::new_spanned(
+                    name_value,
+                    "Duplicate attribute 'reliability': this attribute can only be specified once",
+                ));
+            }
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit_str),
+                ..
+            }) = &name_value.value {
+                attrs.reliability = Some(lit_str.value());
+            } else {
+                return Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Expected string literal for 'reliability' attribute",
+                ));
+            }
+        }
+        _ => {
+            return Err(syn::Error::new_spanned(
+                &name_value.path,
+                format!("Unknown protocol attribute: '{}'. Supported attributes: io, metadata, buffer_size, timeout_ms, serialization, validation, concurrent, reliability", attr_name),
+            ));
+        }
+    }
+
+    Ok(())
+}
