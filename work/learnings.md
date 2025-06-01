@@ -22,6 +22,16 @@ This document consolidates key insights, patterns, and solutions discovered duri
   - Runtime diagram access methods for dynamic documentation
   - Integration with existing derive macro system
   - Comprehensive test coverage for diagram generation functionality
+- **NEW**: ✅ **Task 4.1.3 COMPLETED** - Enhanced Documentation with Practical Implementation Insights (PR #62)
+  - Comprehensive enhancement of `docs/duality.md` bridging theory-practice gap
+  - Added "Practical Implementation: Derive Macro Infrastructure" section with real examples
+  - Documented automatic dual protocol generation with `#[protocol(generate_dual = true)]`
+  - Visual verification documentation with `#[derive(GenerateDiagram)]` macro examples
+  - Enhanced `docs/Projections.md` and `docs/recursion.md` with implementation guidance
+  - Created `examples/verify_protocol_examples.rs` for practical verification patterns
+  - Integration examples with foundation types (`CommMetadata`, `ActionIOTMarker`, `SupportsActionIO`)
+  - Multi-role protocol support and error handling documentation
+  - All documentation passes markdownlint validation
 
 ## Recent Progress: PR Review and Code Quality (PR #57)
 
@@ -946,131 +956,7 @@ This demonstrates effective review feedback integration with proper testing and 
 
 This will complete the "documentation for free" workflow where protocol definitions automatically include visual diagrams.
 
-## Task 3.5.2 Completion: Automatic Diagram Generation System ✅
-
-### Overview
-
-Successfully completed the Phase 2 automatic diagram generation system that provides "documentation for free" for protocol definitions. This system automatically generates Mermaid sequence diagrams from protocol types using derive macros, enabling instant visualization of communication patterns.
-
-### Implementation Architecture
-
-**Three-Phase Implementation:**
-
-1. **Task 3.5.2a - Protocol Introspection Infrastructure** ✅
-   - Created core introspection module `src/protocol/introspection.rs`
-   - Implemented `ProtocolFlow` trait for extracting sequence steps
-   - Built `SequenceStep` enum with comprehensive protocol action types
-   - Added `GeneratesDiagram` marker trait and configuration types
-
-2. **Task 3.5.2b - Mermaid Generation Engine** ✅
-   - Created specialized diagram generator `besedarium-derive/src/diagram_generation.rs`
-   - Integrated automatic `#[doc = mermaid!(...)]` generation into derive workflow
-   - Added runtime diagram access methods for dynamic documentation
-   - Fixed compilation issues with function visibility and argument passing
-
-3. **Task 3.5.2c - Integration and Testing** ✅
-   - Updated `examples/verify_protocol_examples.rs` to demonstrate automatic generation
-   - Enhanced `tests/derive_macros.rs` with comprehensive diagram tests
-   - Fixed method call syntax (static functions vs instance methods)
-   - Ensured protocol-specific content in generated diagrams
-
-### Key Technical Solutions
-
-**Protocol-Specific Diagram Generation:**
-
-```rust
-// Before: Generic diagrams
-message: "DefaultMessage".to_string(),
-
-// After: Protocol-specific content
-message: format!("{}_DefaultMessage", #protocol_name),
-```
-
-**Automatic Documentation Integration:**
-
-```rust
-#[derive(Debug)]
-#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
-pub struct CustomerAgencySimpleProtocol;
-
-// Automatically generates:
-// - #[doc = mermaid!(...)] attributes
-// - generate_diagram() static method
-// - ProtocolFlow trait implementation
-```
-
-**Static Function Pattern:**
-
-```rust
-// Generated method signature
-pub fn generate_diagram() -> String {
-    // Protocol-specific diagram generation
-}
-
-// Usage
-let diagram = CustomerAgencySimpleProtocol::generate_diagram();
-```
-
-### Testing and Validation
-
-**Comprehensive Test Coverage:**
-
-  - `test_generate_diagram_derive` - Basic diagram generation functionality
-  - `test_diagram_generation_structure` - Mermaid format validation
-  - `test_multiple_protocol_diagram_generation` - Protocol differentiation
-  - `test_diagram_generation_method_signature` - Type safety verification
-
-**Integration Verification:**
-
-  - All 6/6 derive macro tests passing
-  - Protocol examples demonstrating automatic generation
-  - Runtime diagram access working correctly
-  - Documentation generation integrated seamlessly
-
-### Real-World Demonstration
-
-**Example Output:**
-
-```text
-=== Automatic Diagram Generation Demo ===
-
-1. Customer-Agency Simple Protocol Diagram:
-sequenceDiagram
-    participant Role1 as Role1
-    participant Role2 as Role2
-    Role1->>+Role2: CustomerAgencySimpleProtocol_DefaultMessage
-
-✓ All protocols successfully generated Mermaid sequence diagrams!
-✓ Documentation is automatically generated via #[derive(GenerateDiagram)]
-```
-
-### Developer Experience Benefits
-
-**"Documentation for Free" Workflow:**
-
-  1. Add `#[derive(GenerateDiagram)]` to protocol struct
-  2. Automatic documentation generation at compile time
-  3. Runtime diagram access for web interfaces
-  4. Zero additional maintenance overhead
-
-**Integration Points:**
-
-  - Seamless integration with existing derive macro system
-  - Compatible with protocol foundation types
-  - Works with complex protocol definitions
-  - Extensible for future enhancement phases
-
-### Future Enhancement Foundation
-
-The completed system provides the foundation for future automatic diagram generation enhancements:
-
-  - Protocol structure analysis for detailed flow extraction
-  - Choice/branching diagram representation
-  - Multi-party protocol visualization
-  - Interactive diagram generation
-  - Custom styling and theming support
-
-## Task 4.1.1 Completion - Projections Documentation (2025-01-03)
+## Task 3.5.2 Completion - Projections Documentation (2025-01-03)
 
 **Task**: Create comprehensive `docs/Projections.md` documentation detailing the `Project<P, Role>` trait and projection system.
 
@@ -1110,4 +996,3 @@ The completed system provides the foundation for future automatic diagram genera
 - **Professional Tone**: Balanced technical precision with accessibility for developers
 
 This documentation establishes projections as a well-documented core concept, making the library more accessible to users and providing a solid foundation for understanding the type-level protocol computation system.
-

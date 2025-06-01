@@ -1125,6 +1125,7 @@ struct ClientServerProtocol;
 #### Key Implementation Features
 
 **Dual Generation Engine**: The `DualGenerator` struct analyzes protocol specifications and automatically generates dual protocols by:
+
 - Swapping roles in communication actions (`Send` ↔ `Receive`)
 - Inverting choice constructs (`Choice` ↔ `Offer`)
 - Preserving structural invariants (recursion, parallel composition)
@@ -1196,6 +1197,7 @@ impl ProtocolFlow for ExampleProtocol {
 ```
 
 **Benefits for Duality Understanding**:
+
 - **Visual Verification**: Generated diagrams make it easy to visually verify that dual protocols are indeed complementary
 - **Role Perspective**: Can generate diagrams from different role perspectives to show local protocol views
 - **Debugging Aid**: Protocol flow visualization helps identify duality violations or inconsistencies
@@ -1232,6 +1234,7 @@ where
 ```
 
 **Type Safety Preservation**: All macro-generated code maintains the same type safety guarantees as manually written protocols, with compile-time verification of:
+
 - Role compatibility in communication pairs
 - Message type consistency between send/receive pairs
 - IO capability requirements and constraints

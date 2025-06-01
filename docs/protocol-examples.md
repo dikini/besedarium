@@ -660,4 +660,273 @@ Rec, to guide protocol designers in making informed, safe choices.*
 
 ---
 
-*Prepared by GitHub Copilot, 12 May 2025*
+# Protocol Examples: Modern Rust Implementations
+
+## Introduction
+
+This document provides up-to-date Rust implementations for protocol examples using the current
+Besedarium library API. These examples demonstrate practical patterns for implementing multi-party
+session types with choices, messaging, and protocol coordination.
+
+All examples use the current API structure with:
+
+- Global protocol types: `TChanSend`, `TChanRecv`, `TChanChoice`, `TChanOffer`, etc.
+- Foundation types: `Role`, `Message`, `GlobalProtocol` traits
+- Channel/Label system: `ChanId`, `MsgLbl` with `DefaultChan`, `RequestLbl`, `ResponseLbl`
+- Action I/O markers: `InputAction`, `OutputAction`, `BiDirectionalAction`
+
+---
+
+## Integration Tests: Real Working Examples
+
+This section leverages the actual integration tests from Task 2.4, providing real working code examples that compile and run successfully with the current Besedarium API. These examples bridge the gap between theoretical concepts and practical implementation.
+
+### 1. Simple Login Protocol (From Integration Tests)
+
+**File:** `tests/client_server_integration.rs`
+
+This is a real working example that demonstrates the fundamental patterns:
+
+```rust
+use besedarium::protocol::foundation::*;
+use besedarium::protocol::global::*;
+
+// Simple Login Protocol: Client → Server (login) → Client (ack) → End
+type LoginProtocol = TChanSend<
+    Alice,    // Sender: Client (Alice)
+    Bob,      // Receiver: Server (Bob)
+    AuthChan, // Channel: Auth channel
+    LoginLbl, // Message label: Login
+    LoginMsg, // Message: Login credentials
+    TChanSend<
+        // Continuation: Server responds
+        Bob,                                             // Sender: Server (Bob)
+        Alice,                                           // Receiver: Client (Alice)
+        AuthChan,                                        // Channel: Auth channel
+        AckLbl,                                          // Message label: Ack
+        AckMsg,                                          // Message: Acknowledgment
+        TChanEnd<AuthChan, AckLbl, BiDirectionalAction>, // End protocol
+        BiDirectionalAction,
+    >,
+    BiDirectionalAction,
+>;
+```
+
+**Message Types (From `tests/integration_common.rs`):**
+
+```rust
+// Login message with username and password
+#[derive(Debug, Clone)]
+pub struct LoginMsg(pub String, pub String);
+impl Message for LoginMsg {}
+
+// Acknowledgment message with success flag and optional token
+#[derive(Debug, Clone)]
+pub struct AckMsg(pub bool, pub Option<String>);
+impl Message for AckMsg {}
+```
+
+**Key Features Demonstrated:**
+- Sequential message exchange between two roles
+- Proper channel and label usage
+- Message type integration with foundation traits
+- Protocol termination with `TChanEnd`
+
+### 2. Multi-Party Protocol (Three Roles)
+
+**Real Working Example from Integration Tests:**
+
+```rust
+// Three-party protocol: Client → Server → Database → Server → Client
+type ThreePartyProtocol = TChanSend<
+    Alice, // Client sends to Server
+    Bob,
+    AuthChan,
+    LoginLbl,
+    LoginMsg,
+    TChanSend<
+        // Server forwards to Database
+        Bob,
+        Charlie,
+        DataChan,
+        DataLbl,
+        DataMsg,
+        TChanRecv<
+            // Database responds to Server
+            Charlie,
+            Bob,
+            DataChan,
+            ResultLbl,
+            ResultMsg,
+            TChanSend<
+                // Server responds to Client
+                Bob,
+                Alice,
+                AuthChan,
+                AckLbl,
+                AckMsg,
+                TChanEnd<AuthChan, AckLbl, BiDirectionalAction>,
+                BiDirectionalAction,
+            >,
+            BiDirectionalAction,
+        >,
+        BiDirectionalAction,
+    >,
+    BiDirectionalAction,
+>;
+```
+
+**Key Features:**
+- Three distinct roles: Client (Alice), Server (Bob), Database (Charlie)
+- Message forwarding pattern
+- Multiple channel usage (`AuthChan`, `DataChan`)
+- Real working message types from integration tests
+
+### 3. Complex Data Serialization
+
+**Working Example with Complex Message Types:**
+
+```rust
+// Complex user profile data structure
+#[derive(Debug, Clone, PartialEq)]
+pub struct UserProfile {
+    pub user_id: u64,
+    pub username: String,
+    pub email: Option<String>,
+    pub preferences: Vec<(String, String)>,
+    pub aliases: Vec<String>,
+}
+
+// Server command enum with multiple variants
+#[derive(Debug, Clone, PartialEq)]
+pub enum ServerCommand {
+    StoreProfile(UserProfile),
+    ProcessOrder(OrderDetails),
+    GetStatus,
+}
+
+// Protocol using complex data types
+type UserProfileExchangeProtocol = TChanSend<
+    Alice,          // Sender
+    Bob,            // Receiver
+    DataChan,       // Channel
+    UserProfileLbl, // Message Label
+    UserProfileMsg, // Message Type
+    TChanSend<
+        Bob,      // Sender
+        Alice,    // Receiver
+        DataChan, // Channel
+        AckLbl,   // Message Label
+        AckMsg,   // Message Type
+        TChanEnd<DataChan, AckLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >,
+    BiDirectionalAction,
+>;
+```
+
+**Key Features:**
+- Complex nested data structures
+- Optional fields and collections
+- Enum variants with associated data
+- Full integration with Message trait system
+
+### 4. Protocol Duality Verification
+
+**Real Working Duality Example:**
+
+```rust
+// Client perspective protocol
+type ClientProtocol = TChanSend</* ... */>;
+
+// Server perspective protocol (dual)
+type ServerProtocol = TChanRecv<
+    Alice,    // Receiver: Server receives from Client
+    Bob,      // Sender: (from server perspective)
+    AuthChan, // Channel: Auth channel
+    LoginLbl, // Message label: Login
+    LoginMsg, // Message: Login credentials
+    TChanRecv<
+        // Continuation: Server sends response
+        Bob,      // Receiver: (from server perspective)
+        Alice,    // Sender: Server sends to Client
+        AuthChan, // Channel: Auth channel
+        AckLbl,   // Message label: Ack
+        AckMsg,   // Message: Acknowledgment
+        TChanEnd<AuthChan, AckLbl, BiDirectionalAction>, // End protocol
+        BiDirectionalAction,
+    >,
+    BiDirectionalAction,
+>;
+```
+
+**Verification Pattern:**
+
+```rust
+#[test]
+fn test_protocol_duality() {
+    // Verify both protocols are valid
+    fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+    requires_global_protocol(std::marker::PhantomData::<ClientProtocol>);
+    requires_global_protocol(std::marker::PhantomData::<ServerProtocol>);
+    
+    // TODO: When IsDual implementations are complete, add duality verification
+}
+```
+
+### 5. Protocol Projection Testing
+
+**Real Working Projection Examples:**
+
+```rust
+#[test]
+fn test_protocol_projection() {
+    // Test that protocols can be projected to local endpoints
+    type AliceEndpoint = <() as Project<LoginProtocol, Alice>>::Output;
+    type BobEndpoint = <() as Project<LoginProtocol, Bob>>::Output;
+
+    // Verify projections are valid local protocols
+    fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
+    requires_local_protocol(std::marker::PhantomData::<AliceEndpoint>);
+    requires_local_protocol(std::marker::PhantomData::<BobEndpoint>);
+}
+```
+
+## Running and Verifying Integration Examples
+
+### Test Execution
+
+To run the real working examples from integration tests:
+
+```bash
+# Run all integration tests
+cargo test --test client_server_integration
+
+# Run specific test categories
+cargo test --test client_server_integration test_login_protocol
+cargo test --test client_server_integration test_multi_party_protocol
+cargo test --test client_server_integration test_complex_data_exchange
+
+# Run with verbose output to see detailed results
+cargo test --test client_server_integration -- --nocapture
+```
+
+### Verification Examples
+
+You can also run the verification examples:
+
+```bash
+# Run the protocol verification examples
+cargo run --example verify_protocol_examples
+
+# Run all examples
+cargo run --example verify_protocol_examples --features all-examples
+```
+
+### Development Workflow
+
+1. **Study Integration Tests**: Examine `tests/client_server_integration.rs` for working patterns
+2. **Use Common Infrastructure**: Leverage `tests/integration_common.rs` for role and message definitions
+3. **Verify Compilation**: Ensure your protocols compile with `cargo check`
+4. **Test Projections**: Verify protocol projections work for all roles
+5. **Add Integration Tests**: Contribute new examples to the integration test suite

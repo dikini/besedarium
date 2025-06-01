@@ -278,7 +278,13 @@ once the library features are stable and well-tested.
 - [x] **Task 4.1**: Create Core Concept Documentation
   - [x] **Task 4.1.1**: Create `docs/Projections.md` (detailing `Project<P, Role>`). ✅ **COMPLETED**
   - [x] **Task 4.1.2**: Create `docs/recursion.md` (detailing `Rec<P>`, `Var<N>`). (**COMPLETED** - 2025-05-27)
-  - [ ] **Task 4.1.3**: Update/Refine `docs/duality.md` with implementation insights.
+  - [x] **Task 4.1.3**: Update/Refine `docs/duality.md` with implementation insights. ✅ **COMPLETED** (2025-06-01) - **PR #62**
+  - [x] Enhanced duality documentation with comprehensive practical implementation section
+  - [x] Added detailed derive macro infrastructure documentation with automatic dual generation
+  - [x] Documented visual verification through Mermaid diagram generation
+  - [x] Provided concrete examples of `#[protocol(generate_dual = true)]` usage
+  - [x] Enhanced docs/Projections.md and docs/recursion.md with practical implementation examples
+  - [x] Created examples/verify_protocol_examples.rs for practical verification patterns
 - [ ] **Task 4.2**: Write Comprehensive Usage Examples
   - [ ] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4).
 - [x] **Task 4.3**: Update Project README ✅ **COMPLETED**
