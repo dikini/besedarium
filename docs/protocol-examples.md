@@ -20,6 +20,61 @@ All examples use the current API structure with:
 
 For immediate practical guidance, jump to **Section 7: Integration Tests - Real Working Examples** which contains verified, compilable code patterns extracted from the comprehensive test suite.
 
+### Automatic Diagram Generation
+
+**New in Besedarium**: Protocols can now automatically generate Mermaid sequence diagrams using the `#[derive(GenerateDiagram)]` macro:
+
+```rust
+use besedarium_derive::GenerateDiagram;
+
+#[derive(Protocol, GenerateDiagram)]
+struct CustomerAgencyProtocol;
+
+// Automatically generates both protocol implementation and diagram capability
+impl CustomerAgencyProtocol {
+    fn demo() {
+        // Generate a Mermaid sequence diagram automatically
+        let diagram = CustomerAgencyProtocol::generate_diagram();
+        println!("{}", diagram);
+        
+        // Output:
+        // sequenceDiagram
+        //     Customer->>Agency: Order
+        //     Agency-->>Customer: Quote
+        //     alt Accept
+        //         Customer->>Agency: Accept
+        //         Agency-->>Customer: Date
+        //     else Reject
+        //         Customer->>Agency: Reject
+        //     end
+    }
+}
+```
+
+**Features:**
+
+- **Zero-effort visualization**: Diagrams are generated directly from protocol types
+- **Mermaid compatibility**: Output works with GitHub, documentation tools, and IDEs
+- **Automatic documentation**: Can be embedded in doc comments using `#[doc = mermaid!(...)]`
+- **Live examples**: See `examples/verify_protocol_examples.rs` for working demonstrations
+
+**Integration with Documentation:**
+The generated diagrams integrate seamlessly with Rust documentation:
+
+```rust
+#[derive(Protocol, GenerateDiagram)]
+/// Customer-Agency Protocol
+/// 
+#[doc = mermaid!(
+    r#"sequenceDiagram
+        Customer->>Agency: Order
+        Agency-->>Customer: Quote"#
+)]
+struct DocumentedProtocol;
+```
+
+For complete examples of automatic diagram generation, see Section 7 and `examples/verify_protocol_examples.rs`.
+
 ---
 
 ## 1. Customer-Agency Simple Protocol
@@ -1125,7 +1180,136 @@ fn test_simple_protocol_structures() {
 3. **Duality Preparation**: Structure for future duality verification
 4. **Building Block Testing**: Verifying fundamental protocol components
 
-## 7.5. Integration Test Infrastructure
+## 7.5. Automatic Diagram Generation Examples
+
+The following examples demonstrate automatic diagram generation for protocol visualization:
+
+### Example 1: Customer-Agency Protocol Diagram
+
+```rust
+use besedarium_derive::GenerateDiagram;
+use besedarium::protocol::foundation::*;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct CustomerAgencyProtocol;
+
+fn demonstrate_diagram_generation() {
+    #[cfg(feature = "derive")]
+    {
+        let diagram = CustomerAgencyProtocol::generate_diagram();
+        println!("Generated diagram:\n{}", diagram);
+    }
+    #[cfg(not(feature = "derive"))]
+    {
+        println!("Diagram generation requires the 'derive' feature");
+    }
+}
+```
+
+### Example 2: Multi-Party Protocol Diagrams
+
+```rust
+use besedarium_derive::GenerateDiagram;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct WebServiceProxyProtocol;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct CustomerExtendedChoice;
+
+fn demonstrate_multi_protocol_diagrams() {
+    #[cfg(feature = "derive")]
+    {
+        // Generate diagrams for multiple protocols
+        let proxy_diagram = WebServiceProxyProtocol::generate_diagram();
+        let choice_diagram = CustomerExtendedChoice::generate_diagram();
+        
+        println!("Proxy Protocol:\n{}\n", proxy_diagram);
+        println!("Extended Choice Protocol:\n{}\n", choice_diagram);
+    }
+}
+```
+
+### Example 3: Integration with Documentation
+
+The generated diagrams can be embedded directly in documentation:
+
+```rust
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+/// # Customer-Agency Protocol
+///
+/// This protocol demonstrates a simple request-response pattern with choice.
+/// 
+/// ## Protocol Flow
+/// 
+/// The protocol follows this sequence:
+/// 1. Customer sends order to agency
+/// 2. Agency responds with quote  
+/// 3. Customer chooses to accept or reject
+///
+/// ## Generated Diagram
+///
+/// When the `derive` feature is enabled, this protocol automatically generates
+/// a Mermaid sequence diagram that can be visualized in documentation tools.
+///
+/// ```rust
+/// let diagram = CustomerAgencyProtocol::generate_diagram();
+/// ```
+struct DocumentedProtocol;
+```
+
+### Example 4: Runtime Diagram Generation
+
+```rust
+use std::fs::File;
+use std::io::Write;
+
+fn save_protocol_diagrams() -> std::io::Result<()> {
+    #[cfg(feature = "derive")]
+    {
+        // Generate diagrams at runtime
+        let customer_diagram = CustomerAgencyProtocol::generate_diagram();
+        let proxy_diagram = WebServiceProxyProtocol::generate_diagram();
+        
+        // Save to files for documentation or debugging
+        let mut file = File::create("customer_agency.mmd")?;
+        file.write_all(customer_diagram.as_bytes())?;
+        
+        let mut file = File::create("web_service_proxy.mmd")?;
+        file.write_all(proxy_diagram.as_bytes())?;
+        
+        println!("Diagrams saved to .mmd files");
+    }
+    
+    Ok(())
+}
+```
+
+### Running the Examples
+
+All examples above are available in `examples/verify_protocol_examples.rs`:
+
+```bash
+# Run with diagram generation enabled
+cargo run --example verify_protocol_examples --features derive
+
+# View generated diagrams  
+cargo run --example verify_protocol_examples --features derive | grep -A20 "sequenceDiagram"
+```
+
+### Testing Diagram Generation
+
+Comprehensive tests for diagram generation are in `tests/derive_macros.rs`:
+
+```bash
+# Run diagram generation tests
+cargo test --features derive test_diagram
+
+# Run all derive macro tests  
+cargo test --features derive derive_macros
+```
+
+## 7.6. Integration Test Infrastructure
 
 The integration tests provide a comprehensive infrastructure that can be reused for protocol development:
 
@@ -1165,7 +1349,7 @@ The integration tests provide a comprehensive infrastructure that can be reused 
 - **UserProfile**: Complex user data with metadata and tags
 - **ServerCommand**: Commands with parameters and optional nested data
 
-## 7.6. Common Implementation Patterns
+## 7.7. Common Implementation Patterns
 
 ### 1. Request-Response Pattern
 
@@ -1224,7 +1408,7 @@ type ComplexDataProtocol = TChanSend<
 >;
 ```
 
-## 7.7. Testing and Verification
+## 7.8. Testing and Verification
 
 ### Compilation Testing Pattern
 
@@ -1252,7 +1436,7 @@ fn test_types_implement_required_traits() {
 }
 ```
 
-## 7.8. Cross-References to Integration Tests
+## 7.9. Cross-References to Integration Tests
 
 All examples in this section are extracted from and verified against:
 
