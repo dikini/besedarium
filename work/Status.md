@@ -1,6 +1,40 @@
 # Status
 
-## Latest Update (2025-05-31): Enhanced Protocol Attribute Parsing ✅ COMPLETED
+## Latest Update (2025-01-02): Protocol Visualization Task Planning ✅ COMPLETED
+
+### Task 3.5.2 Planning: Automatic Diagram Generation from Protocol Definitions
+
+**✅ Task 3.5.2 Planning Phase - FULLY COMPLETED:**
+
+- **Comprehensive Specification**: Created detailed implementation specification in `work/prompts/3.5.2-automatic-diagram-generation.md`
+- **Technical Strategy**: Selected derive macro approach (Option 1) for automatic diagram generation from protocol type definitions
+- **Implementation Plan**: Defined 5-7 edit sequence covering protocol introspection, Mermaid generation engine, and integration testing
+- **Foundation Assessment**: Validated existing infrastructure readiness including `simple-mermaid` integration, verified protocol examples, and derive macro capabilities
+- **Task Structure**: Added Task 3.5.2 with subtasks 3.5.2a (Protocol Introspection), 3.5.2b (Mermaid Generation), 3.5.2c (Integration & Testing)
+
+**Key Planning Decisions:**
+
+- **Derive Macro Integration**: Extend existing `besedarium-derive` infrastructure with `#[derive(GenerateDiagram)]` support
+- **Type-Level Analysis**: Create `ProtocolFlow` trait for extracting sequence information from protocol type definitions
+- **Automatic Documentation**: Generate `#[doc = mermaid!(...)]` attributes automatically from protocol structure
+- **API Compatibility**: Maintain backward compatibility with existing protocol definitions and examples
+
+**Technical Architecture Planned:**
+
+```rust
+#[derive(Protocol, GenerateDiagram)]
+#[protocol(roles = "Customer, Agency", start_type = "CustomerSendsOrder")]
+pub struct CustomerAgencySimpleProtocol;
+// Automatically generates embedded Mermaid sequence diagrams in documentation
+```
+
+**Next Steps**: Ready to begin Task 3.5.2a implementation with protocol introspection infrastructure
+
+**Foundation Status**: Building on completed Task 3.5.1 (Phase 1 visualization) and Task 4.2.1 (protocol examples verification)
+
+---
+
+## Previous Update (2025-05-31): Enhanced Protocol Attribute Parsing ✅ COMPLETED
 
 ### Duplicate Attribute Detection Enhancement ✅ COMPLETED
 
