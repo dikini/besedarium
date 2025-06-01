@@ -37,11 +37,13 @@ Welcome to the Besedarium protocol framework documentation.
 ## Building Documentation
 
 ### Rustdoc
+
 ```bash
 cargo doc --workspace --open
 ```
 
 ### mdBook
+
 ```bash
 mdbook serve docs/ --open
 ```

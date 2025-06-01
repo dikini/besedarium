@@ -244,6 +244,20 @@ developer experience.
     - [x] Create `examples/protocol_viz.rs` demonstrating protocol visualization ✅
     - [x] Configure mdBook with `[preprocessor.mermaid]` in `docs/book.toml` ✅
     - [x] Write user guide `docs/protocol-viz.md` covering both rustdoc and mdBook workflows ✅
+  - [ ] **Task 3.5.2**: Phase 2 - Automatic Diagram Generation from Protocol Definitions
+    - [ ] **Task 3.5.2a**: Protocol Introspection Infrastructure (2 edits)
+      - [ ] Create `src/protocol/introspection.rs` with `ProtocolFlow` trait and `SequenceStep` enum
+      - [ ] Extend derive macro in `besedarium-derive/src/protocol.rs` with `GenerateDiagram` support
+    - [ ] **Task 3.5.2b**: Mermaid Generation Engine (2 edits)
+      - [ ] Create `besedarium-derive/src/diagram_generation.rs` with `ProtocolDiagramGenerator`
+      - [ ] Integrate automatic `#[doc = mermaid!(...)]` generation into protocol derive macro
+    - [ ] **Task 3.5.2c**: Integration and Testing (2-3 edits)
+      - [ ] Update `examples/verify_protocol_examples.rs` to demonstrate `#[derive(GenerateDiagram)]`
+      - [ ] Create comprehensive test suite for diagram generation functionality
+      - [ ] Update documentation with automatic generation examples (optional)
+    - **Goal**: Generate Mermaid sequence diagrams automatically from protocol type definitions using derive macros
+    - **Innovation**: Leverage type-level protocol analysis to create "documentation for free" workflow
+    - **Foundation**: Build on Phase 1's `simple-mermaid` integration and existing derive macro infrastructure
 
 ## Phase 4: Comprehensive Documentation
 

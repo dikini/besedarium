@@ -7,6 +7,7 @@ Besedarium library API. These examples demonstrate practical patterns for implem
 session types with choices, messaging, and protocol coordination.
 
 All examples use the current API structure with:
+
 - Global protocol types: `TChanSend`, `TChanRecv`, `TChanChoice`, `TChanOffer`, etc.
 - Foundation types: `Role`, `Message`, `GlobalProtocol` traits
 - Channel/Label system: `ChanId`, `MsgLbl` with `DefaultChan`, `RequestLbl`, `ResponseLbl`
@@ -19,6 +20,7 @@ All examples use the current API structure with:
 ### Protocol Description
 
 A basic request-response protocol with choice:
+
 1. Customer sends an order to the agency
 2. Agency replies with a quote
 3. Customer chooses to accept or reject:
@@ -174,6 +176,7 @@ impl GlobalProtocol for CustomerAgencySimple {}
 ### Protocol Description
 
 An extended protocol with retry capability:
+
 1. Customer sends an order to the agency
 2. Agency replies with a quote  
 3. Customer chooses between three options:
@@ -294,6 +297,7 @@ impl GlobalProtocol for CustomerAgencyRetry {}
 ### Protocol Description
 
 A three-party protocol involving client, proxy, and web service:
+
 1. Client sends a request to the proxy
 2. Proxy chooses to either forward or audit the request:
    - **Forward**: Proxy forwards to web service, web service replies to client
@@ -563,6 +567,7 @@ pub fn export_web_service_proxy_diagram() -> String {
 ### Type Aliases
 
 The library provides convenient type aliases for common patterns:
+
 - `SimpleChannelSend<S, R, Msg, P>` for basic sending
 - `SimpleChannelRecv<R, S, Msg, P>` for basic receiving  
 - `SimpleChannelChoice<R, Left, Right>` for basic choices
