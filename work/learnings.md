@@ -1025,17 +1025,17 @@ let diagram = CustomerAgencySimpleProtocol::generate_diagram();
 
 **Comprehensive Test Coverage:**
 
-  - `test_generate_diagram_derive` - Basic diagram generation functionality
-  - `test_diagram_generation_structure` - Mermaid format validation
-  - `test_multiple_protocol_diagram_generation` - Protocol differentiation
-  - `test_diagram_generation_method_signature` - Type safety verification
+- `test_generate_diagram_derive` - Basic diagram generation functionality
+- `test_diagram_generation_structure` - Mermaid format validation
+- `test_multiple_protocol_diagram_generation` - Protocol differentiation
+- `test_diagram_generation_method_signature` - Type safety verification
 
 **Integration Verification:**
 
-  - All 6/6 derive macro tests passing
-  - Protocol examples demonstrating automatic generation
-  - Runtime diagram access working correctly
-  - Documentation generation integrated seamlessly
+- All 6/6 derive macro tests passing
+- Protocol examples demonstrating automatic generation
+- Runtime diagram access working correctly
+- Documentation generation integrated seamlessly
 
 ### Real-World Demonstration
 
@@ -1066,20 +1066,20 @@ sequenceDiagram
 
 **Integration Points:**
 
-  - Seamless integration with existing derive macro system
-  - Compatible with protocol foundation types
-  - Works with complex protocol definitions
-  - Extensible for future enhancement phases
+- Seamless integration with existing derive macro system
+- Compatible with protocol foundation types
+- Works with complex protocol definitions
+- Extensible for future enhancement phases
 
 ### Future Enhancement Foundation
 
 The completed system provides the foundation for future automatic diagram generation enhancements:
 
-  - Protocol structure analysis for detailed flow extraction
-  - Choice/branching diagram representation
-  - Multi-party protocol visualization
-  - Interactive diagram generation
-  - Custom styling and theming support
+- Protocol structure analysis for detailed flow extraction
+- Choice/branching diagram representation
+- Multi-party protocol visualization
+- Interactive diagram generation
+- Custom styling and theming support
 
 ## Task 4.1.1 Completion - Projections Documentation (2025-01-03)
 
@@ -1354,4 +1354,3 @@ pub struct CustomerAgencySimpleProtocol;
 **✅ Documentation Process**: Established workflow for embedding generated content
 
 **Next Step**: Begin Task 3.5.2a implementation with protocol introspection infrastructure
-

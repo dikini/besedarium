@@ -286,7 +286,7 @@ once the library features are stable and well-tested.
   - [x] Enhanced docs/Projections.md and docs/recursion.md with practical implementation examples
   - [x] Created examples/verify_protocol_examples.rs for practical verification patterns
 - [ ] **Task 4.2**: Write Comprehensive Usage Examples
-  - [ ] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4).
+  - [x] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4). ✅ **COMPLETED**
 - [x] **Task 4.3**: Update Project README ✅ **COMPLETED**
   - [x] **Task 4.3.1**: Refresh `README.md` with current status, features, and quick start. ✅ **COMPLETED**
 - [ ] **Task 4.4**: Add Doccomments
