@@ -138,24 +138,25 @@ Phase 1 tasks.
   - [x] **Task 2.3.1**: Write unit tests for the runtime state machine. ✅ **COMPLETED** - created `src/runtime/state/tests.rs` with 25+ comprehensive tests
   - [x] **Task 2.3.2**: Write unit tests for channel communication logic. ✅ **COMPLETED** - created `src/runtime/channel/tests.rs` with 25+ comprehensive tests  
   - [x] **Task 2.3.3**: Write unit tests for session lifecycle management. ✅ **COMPLETED** - created `src/runtime/session/tests.rs` with 20+ comprehensive tests
-- [ ] **Task 2.4**: Develop Integration Tests (Complex Protocol Examples)
+- [x] **Task 2.4**: Develop Integration Tests (Complex Protocol Examples) ✅ **COMPLETED**
   - [x] **Task 2.4.1**: Remove or overhaul existing integration tests. ✅ **COMPLETED** (11 integration tests passing)
   - [x] **Task 2.4.2**: Implement multi-party protocol examples as integration tests. ✅ **COMPLETED** (covered by existing integration tests in `tests/client_server_integration.rs`)
   - [x] **Task 2.4.3**: Implement examples with complex data serialization as integration tests. ✅ **COMPLETED**
-  - [x] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests. (wip) ✅ **COMPLETED**
-- [ ] **Task 2.5**: Address Remaining TODO Comments in Integration Tests (Priority: Medium)
-  - [ ] **Task 2.5.1**: Implement missing error propagation test in `src/runtime/integration_tests.rs`
-    - **Description**: Replace placeholder TODO with actual test using session functionality to verify proper error propagation across protocol boundaries
-    - **Context**: Session module is fully implemented (1,193 lines) and provides comprehensive error handling capabilities
-    - **Priority**: Medium - improves test coverage for error scenarios
-  - [ ] **Task 2.5.2**: Implement multi-session concurrent execution test in `src/runtime/integration_tests.rs`
-    - **Description**: Replace placeholder TODO with actual test leveraging `SessionManager<P, R, AIO>` for coordinating multiple concurrent session executions
-    - **Context**: SessionManager provides multi-session lifecycle management and bulk operations
-    - **Priority**: Medium - validates concurrent session behavior
-  - [ ] **Task 2.5.3**: Implement concurrent state and channel operations test in `src/runtime/integration_tests.rs`
-    - **Description**: Replace placeholder TODO with actual test combining state machine transitions with channel communication under concurrent load
-    - **Context**: Both state machine and channel components have comprehensive implementations with async support
-    - **Priority**: Medium - validates thread-safety and concurrent access patterns
+  - [x] **Task 2.4.4**: Implement examples integrating with async runtimes as integration tests. ✅ **COMPLETED**
+- [x] **Task 2.5**: Address Remaining TODO Comments in Integration Tests ✅ **COMPLETED**
+  - [x] **Task 2.5.1**: Implement missing error propagation test in `src/runtime/integration_tests.rs` ✅ **COMPLETED**
+    - **Description**: Implemented comprehensive test in `test_error_propagation_integration()` using `StateValidator` and `validated_transition()` API
+    - **Implementation**: Tests channel timeouts, state validation errors, and session error propagation with proper error handling
+    - **Status**: Fully implemented and passing - covers error propagation across protocol boundaries
+  - [x] **Task 2.5.2**: Implement multi-session concurrent execution test in `src/runtime/integration_tests.rs` ✅ **COMPLETED**
+    - **Description**: Implemented comprehensive test in `test_multi_session_integration()` leveraging `SessionManager<P, R, AIO>` for coordinating multiple concurrent sessions
+    - **Implementation**: Tests concurrent session lifecycle management, bulk operations, and resource tracking
+    - **Status**: Fully implemented and passing - validates concurrent session behavior
+  - [x] **Task 2.5.3**: Implement concurrent state and channel operations test in `src/runtime/integration_tests.rs` ✅ **COMPLETED**
+    - **Description**: Implemented comprehensive test in `test_concurrent_state_channel_integration()` combining state machine transitions with channel communication under concurrent load
+    - **Implementation**: Uses `Arc<Barrier>`, `Arc<AtomicUsize>`, and proper mutex guards with async safety for thread-safety testing
+    - **Status**: Fully implemented and passing - validates thread-safety and concurrent access patterns
+  - **Result**: All 12 integration tests pass successfully with no remaining TODO items. Comprehensive coverage of runtime components working together.
 
 ## Phase 3: Advanced Features, Optimizations & Tooling
 
