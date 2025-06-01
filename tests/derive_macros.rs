@@ -63,10 +63,14 @@ mod tests {
     }
 
     // Test GenerateDiagram derive
-    #[derive(Debug, Clone, besedarium_derive::GlobalProtocol, besedarium_derive::GenerateDiagram)]
+    #[derive(
+        Debug, Clone, besedarium_derive::GlobalProtocol, besedarium_derive::GenerateDiagram,
+    )]
     struct DiagramTestProtocol;
 
-    #[derive(Debug, Clone, besedarium_derive::GlobalProtocol, besedarium_derive::GenerateDiagram)]
+    #[derive(
+        Debug, Clone, besedarium_derive::GlobalProtocol, besedarium_derive::GenerateDiagram,
+    )]
     struct CustomerAgencyProtocol;
 
     #[test]
@@ -126,8 +130,14 @@ mod tests {
         requires_generates_diagram::<CustomerAgencyProtocol>();
 
         // Test protocol flow functionality
-        assert_eq!(DiagramTestProtocol::get_protocol_name(), "DiagramTestProtocol");
-        assert_eq!(CustomerAgencyProtocol::get_protocol_name(), "CustomerAgencyProtocol");
+        assert_eq!(
+            DiagramTestProtocol::get_protocol_name(),
+            "DiagramTestProtocol"
+        );
+        assert_eq!(
+            CustomerAgencyProtocol::get_protocol_name(),
+            "CustomerAgencyProtocol"
+        );
 
         let roles = DiagramTestProtocol::get_roles();
         assert_eq!(roles.len(), 2);
@@ -175,13 +185,13 @@ mod tests {
     fn test_generate_diagram_derive() {
         // Test that protocols with GenerateDiagram derive can generate diagrams
         let diagram = DiagramTestProtocol::generate_diagram();
-        
+
         // Verify the output is a Mermaid sequence diagram
         assert!(diagram.starts_with("sequenceDiagram"));
         assert!(diagram.contains("DiagramTestProtocol"));
-        
+
         let customer_diagram = CustomerAgencyProtocol::generate_diagram();
-        
+
         // Verify the output is valid Mermaid syntax
         assert!(customer_diagram.starts_with("sequenceDiagram"));
         assert!(customer_diagram.contains("CustomerAgencyProtocol"));
@@ -191,16 +201,25 @@ mod tests {
     fn test_diagram_generation_structure() {
         // Test that generated diagrams have proper structure
         let diagram = DiagramTestProtocol::generate_diagram();
-        
+
         // Check for required Mermaid elements
-        assert!(diagram.contains("sequenceDiagram"), "Should start with sequenceDiagram");
-        
+        assert!(
+            diagram.contains("sequenceDiagram"),
+            "Should start with sequenceDiagram"
+        );
+
         // Verify that the diagram contains protocol-specific information
-        assert!(diagram.contains("DiagramTestProtocol"), "Should contain protocol name");
-        
+        assert!(
+            diagram.contains("DiagramTestProtocol"),
+            "Should contain protocol name"
+        );
+
         // Check that diagram is not empty beyond the header
         let lines: Vec<&str> = diagram.lines().collect();
-        assert!(lines.len() >= 2, "Should have more than just the header line");
+        assert!(
+            lines.len() >= 2,
+            "Should have more than just the header line"
+        );
     }
 
     #[test]
@@ -208,9 +227,12 @@ mod tests {
         // Test that different protocols generate different diagrams
         let diagram1 = DiagramTestProtocol::generate_diagram();
         let diagram2 = CustomerAgencyProtocol::generate_diagram();
-        
+
         // Diagrams should be different (contain different protocol names)
-        assert_ne!(diagram1, diagram2, "Different protocols should generate different diagrams");
+        assert_ne!(
+            diagram1, diagram2,
+            "Different protocols should generate different diagrams"
+        );
         assert!(diagram1.contains("DiagramTestProtocol"));
         assert!(diagram2.contains("CustomerAgencyProtocol"));
     }
@@ -223,7 +245,7 @@ mod tests {
             F: Fn() -> String,
         {
         }
-        
+
         check_diagram_method(DiagramTestProtocol::generate_diagram);
     }
 }

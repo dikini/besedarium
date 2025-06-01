@@ -49,7 +49,7 @@ impl ProtocolDiagramGenerator {
     pub fn generate_automatic_documentation(&self) -> TokenStream {
         let _protocol_ident = &self.input.ident;
         let protocol_name = &self.protocol_name;
-        
+
         // Generate documentation attribute with embedded Mermaid diagram
         // This uses the ProtocolFlow trait implementation to generate the diagram at compile time
         quote! {
@@ -116,12 +116,12 @@ impl ProtocolDiagramGenerator {
             /// ```
             pub fn generate_diagram() -> String {
                 use besedarium::protocol::introspection::{ProtocolFlow, mermaid_generator};
-                
+
                 // Use the ProtocolFlow implementation to get sequence steps
                 let steps = Self::generate_sequence_steps();
                 let roles = Self::get_roles();
                 let config = Self::get_diagram_config();
-                
+
                 // Generate the Mermaid diagram
                 mermaid_generator::generate_sequence_diagram(steps, roles, config)
             }
@@ -140,7 +140,7 @@ impl ProtocolDiagramGenerator {
     /// A `TokenStream` containing enhanced documentation attributes
     pub fn generate_enhanced_documentation(&self) -> TokenStream {
         let protocol_name = &self.protocol_name;
-        
+
         quote! {
             #[doc = concat!(
                 "# ", #protocol_name, " Protocol\n\n",
@@ -171,7 +171,7 @@ impl ProtocolDiagramGenerator {
     /// A `TokenStream` containing compile-time diagram embedding code
     pub fn generate_compile_time_diagram_embedding(&self) -> TokenStream {
         let protocol_ident = &self.input.ident;
-        
+
         quote! {
             // Generate a const function that can be evaluated at compile time
             // to embed the actual diagram content in the documentation
@@ -208,7 +208,7 @@ impl ProtocolDiagramGenerator {
         let roles = vec!["RoleA".to_string(), "RoleB".to_string()]; // Placeholder
         let start_type = Some("StartType".to_string()); // Placeholder
         let custom_config = None; // Placeholder
-        
+
         (roles, start_type, custom_config)
     }
 
@@ -223,11 +223,14 @@ impl ProtocolDiagramGenerator {
     /// # Returns
     /// A `TokenStream` containing role documentation
     pub fn generate_role_documentation(&self, roles: &[String]) -> TokenStream {
-        let role_docs: Vec<TokenStream> = roles.iter().map(|role| {
-            quote! {
-                #[doc = concat!("- **", #role, "**: Participates in protocol communication")]
-            }
-        }).collect();
+        let role_docs: Vec<TokenStream> = roles
+            .iter()
+            .map(|role| {
+                quote! {
+                    #[doc = concat!("- **", #role, "**: Participates in protocol communication")]
+                }
+            })
+            .collect();
 
         quote! {
             #[doc = "## Protocol Roles\n"]
@@ -245,7 +248,7 @@ impl ProtocolDiagramGenerator {
     /// A `TokenStream` containing usage example documentation
     pub fn generate_usage_examples(&self) -> TokenStream {
         let protocol_ident = &self.input.ident;
-        
+
         quote! {
             #[doc = "## Usage Example\n"]
             #[doc = "```rust"]
@@ -270,7 +273,7 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct TestProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         assert_eq!(generator.protocol_name, "TestProtocol");
     }
@@ -281,10 +284,10 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct CustomerAgencyProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         let doc_tokens = generator.generate_automatic_documentation();
-        
+
         // Verify that documentation contains expected elements
         let doc_string = doc_tokens.to_string();
         assert!(doc_string.contains("CustomerAgencyProtocol"));
@@ -298,10 +301,10 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct TestProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         let method_tokens = generator.generate_diagram_method();
-        
+
         let method_string = method_tokens.to_string();
         assert!(method_string.contains("generate_diagram"));
         assert!(method_string.contains("ProtocolFlow"));
@@ -315,10 +318,10 @@ mod tests {
             #[protocol(roles = "Customer, Agency", start_type = "CustomerSendsOrder")]
             struct CustomerAgencyProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         let (roles, start_type, _config) = generator.extract_protocol_metadata();
-        
+
         // Note: This is a placeholder implementation
         // Real implementation would parse the actual attributes
         assert!(!roles.is_empty());
@@ -331,10 +334,10 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct AdvancedProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         let doc_tokens = generator.generate_enhanced_documentation();
-        
+
         let doc_string = doc_tokens.to_string();
         assert!(doc_string.contains("AdvancedProtocol"));
         assert!(doc_string.contains("Type Safety"));
@@ -348,11 +351,15 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct MultiRoleProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
-        let roles = vec!["Customer".to_string(), "Agency".to_string(), "Bank".to_string()];
+        let roles = vec![
+            "Customer".to_string(),
+            "Agency".to_string(),
+            "Bank".to_string(),
+        ];
         let role_docs = generator.generate_role_documentation(&roles);
-        
+
         let doc_string = role_docs.to_string();
         assert!(doc_string.contains("Customer"));
         assert!(doc_string.contains("Agency"));
@@ -366,10 +373,10 @@ mod tests {
             #[derive(GenerateDiagram)]
             struct CompileTimeProtocol;
         };
-        
+
         let generator = ProtocolDiagramGenerator::new(input);
         let embedding_tokens = generator.generate_compile_time_diagram_embedding();
-        
+
         let embedding_string = embedding_tokens.to_string();
         assert!(embedding_string.contains("DIAGRAM_CONTENT"));
         assert!(embedding_string.contains("sequenceDiagram"));

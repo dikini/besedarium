@@ -18,9 +18,9 @@ use syn::{
     DeriveInput, Ident, Result, Token, Type,
 };
 
+use crate::diagram_generation::ProtocolDiagramGenerator;
 use crate::dual_generation::{generate_dual_protocol_code, DualGenerator};
 use crate::utils::{basic_trait_impl, get_type_name, handle_result, is_enum, is_struct};
-use crate::diagram_generation::ProtocolDiagramGenerator;
 
 /// Protocol specification AST structures
 #[derive(Clone)]
@@ -1579,9 +1579,9 @@ fn derive_generate_diagram_inner(input: &DeriveInput) -> Result<TokenStream2> {
 fn generate_protocol_flow_impl(type_name: &syn::Ident, _attrs: &[syn::Attribute]) -> TokenStream2 {
     // For now, generate a basic implementation that protocols can override
     // This will be enhanced in future phases to extract from protocol structure
-    
+
     let protocol_name = type_name.to_string();
-    
+
     // Create a dummy DeriveInput for diagram generator
     let dummy_input = syn::DeriveInput {
         attrs: Vec::new(),
@@ -1594,12 +1594,12 @@ fn generate_protocol_flow_impl(type_name: &syn::Ident, _attrs: &[syn::Attribute]
             semi_token: Some(syn::token::Semi::default()),
         }),
     };
-    
+
     // Create diagram generator for enhanced documentation
     let diagram_generator = ProtocolDiagramGenerator::new(dummy_input);
     let automatic_docs = diagram_generator.generate_automatic_documentation();
     let diagram_method = diagram_generator.generate_diagram_method();
-    
+
     quote! {
         #automatic_docs
         impl ::besedarium::protocol::introspection::ProtocolFlow for #type_name {
@@ -1631,7 +1631,7 @@ fn generate_protocol_flow_impl(type_name: &syn::Ident, _attrs: &[syn::Attribute]
         }
 
         impl ::besedarium::protocol::introspection::GeneratesDiagram for #type_name {}
-        
+
         impl #type_name {
             #diagram_method
         }
