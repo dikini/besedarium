@@ -72,12 +72,14 @@
 - **Test Suite Fixes**: Converted proc_macro tests to use `proc_macro2::TokenStream` and `syn::parse2` for compatibility
 
 **Test Results**: All 13 besedarium-derive tests passing (100% success rate), including:
+
 - 3 Role derive tests ✅
 - 3 Message derive tests ✅  
 - 3 Label derive tests ✅
 - 4 Role attribute parsing tests ✅
 
 **Advanced DSL Parsing Functions Implemented:**
+
 ```rust
 fn parse_message_flow_from_text(text: &str) -> Result<MessageFlow>
 fn parse_message_spec_from_text(text: &str) -> Result<MessageSpec>

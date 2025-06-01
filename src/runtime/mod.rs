@@ -17,12 +17,15 @@ pub mod session;
 pub mod state;
 pub mod validation;
 
+#[cfg(test)]
+mod integration_tests;
+
 // Re-export common types for convenience
 pub use channel::{ChannelConfig, TypedChannel};
 pub use error::{
     CommunicationError, DeadlockError, LivelockError, ProtocolViolation, RuntimeError,
     RuntimeResult, StateValidationError, ValidationMode,
 };
+pub use session::{Session, SessionConfig, SessionManager};
 pub use state::{ExecutionContext, ProtocolState, StateTransition};
-// pub use session::{Session, SessionConfig, SessionManager}; // TODO: Implement session module
 pub use validation::{StateValidator, ValidationConfig, ValidationResult};

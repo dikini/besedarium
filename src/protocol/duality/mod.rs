@@ -74,25 +74,6 @@ pub trait IsDual<P, Q> {
 pub type IsDualOutput<P, Q> = <() as IsDual<P, Q>>::Output;
 
 // ============================================================================
-// Default implementations for non-dual types
-// ============================================================================
-
-// Default implementation: types are not dual unless explicitly implemented above
-//
-// This implementation ensures that any types not covered by the specific
-// implementations above are considered non-dual, returning `False`.
-// TODO: Fix conflicting implementations issue - temporarily disabled
-/*
-impl<P, Q> IsDual<P, Q> for ()
-where
-    P: DualityCheck,
-    Q: DualityCheck,
-{
-    type Output = False;
-}
-*/
-
-// ============================================================================
 // Tests Module
 // ============================================================================
 
