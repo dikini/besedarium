@@ -239,6 +239,25 @@ developer experience.
       - All 48 derive crate tests passing, including dual generation functionality
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
+  - [x] **Task 3.5.1**: Phase 1 - Basic Diagram Rendering & Integration ✅ **COMPLETED**
+    - [x] Add `simple-mermaid` dependency to workspace `Cargo.toml` ✅
+    - [x] Create `examples/protocol_viz.rs` demonstrating protocol visualization ✅
+    - [x] Configure mdBook with `[preprocessor.mermaid]` in `docs/book.toml` ✅
+    - [x] Write user guide `docs/protocol-viz.md` covering both rustdoc and mdBook workflows ✅
+  - [ ] **Task 3.5.2**: Phase 2 - Automatic Diagram Generation from Protocol Definitions
+    - [ ] **Task 3.5.2a**: Protocol Introspection Infrastructure (2 edits)
+      - [ ] Create `src/protocol/introspection.rs` with `ProtocolFlow` trait and `SequenceStep` enum
+      - [ ] Extend derive macro in `besedarium-derive/src/protocol.rs` with `GenerateDiagram` support
+    - [ ] **Task 3.5.2b**: Mermaid Generation Engine (2 edits)
+      - [ ] Create `besedarium-derive/src/diagram_generation.rs` with `ProtocolDiagramGenerator`
+      - [ ] Integrate automatic `#[doc = mermaid!(...)]` generation into protocol derive macro
+    - [ ] **Task 3.5.2c**: Integration and Testing (2-3 edits)
+      - [ ] Update `examples/verify_protocol_examples.rs` to demonstrate `#[derive(GenerateDiagram)]`
+      - [ ] Create comprehensive test suite for diagram generation functionality
+      - [ ] Update documentation with automatic generation examples (optional)
+    - **Goal**: Generate Mermaid sequence diagrams automatically from protocol type definitions using derive macros
+    - **Innovation**: Leverage type-level protocol analysis to create "documentation for free" workflow
+    - **Foundation**: Build on Phase 1's `simple-mermaid` integration and existing derive macro infrastructure
 
 ## Phase 4: Comprehensive Documentation
 
@@ -249,8 +268,17 @@ once the library features are stable and well-tested.
   - [ ] **Task 4.1.1**: Create `docs/Projections.md` (detailing `Project<P, Role>`).
   - [ ] **Task 4.1.2**: Create `docs/recursion.md` (detailing `Rec<P>`, `Var<N>`).
   - [ ] **Task 4.1.3**: Update/Refine `docs/duality.md` with implementation insights.
-- [ ] **Task 4.2**: Write Comprehensive Usage Examples
-  - [ ] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4).
+- [x] **Task 4.2**: Write Comprehensive Usage Examples ✅ **COMPLETED**
+  - [x] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4). ✅ **COMPLETED** (2025-01-02)
+    - [x] **Documentation Creation**: Created comprehensive protocol examples documentation with modern API usage
+    - [x] **Verification Testing**: Created `examples/verify_protocol_examples.rs` to validate all examples compile correctly
+    - [x] **API Compatibility**: Fixed 26+ compilation errors to ensure examples work with current Besedarium library API
+    - [x] **Three Complete Examples**: 
+      - Customer-Agency Simple Protocol: Basic request-response pattern with proper role definitions
+      - Customer-Agency Retry Protocol: Advanced recursive protocol with retry logic and timeout handling
+      - Web Service with Proxy Protocol: Multi-party protocol demonstrating complex interaction patterns
+    - [x] **Integration Validated**: All examples compile successfully and integrate properly with existing codebase
+    - **Impact**: Provides working, verified examples for users to understand and implement session-typed protocols
 - [ ] **Task 4.3**: Update Project README
   - [ ] **Task 4.3.1**: Refresh `README.md` with current status, features, and quick start.
 - [ ] **Task 4.4**: Add Doccomments

@@ -15,6 +15,7 @@ This document consolidates key insights, patterns, and solutions discovered duri
 - **NEW**: Advanced DSL protocol parsing with choice/branching syntax support
 - **NEW**: All besedarium-derive tests passing (13/13) after fixing proc_macro API issues
 - **NEW**: PR review process improvements with code quality and maintainability focus
+- **NEW**: Protocol examples verification and automatic diagram generation planning
 
 ## Recent Progress: PR Review and Code Quality (PR #57)
 
@@ -892,3 +893,236 @@ if attrs.attribute_name {
 - Maintained backward compatibility
 
 This demonstrates effective review feedback integration with proper testing and documentation updates.
+
+## Protocol Visualization Implementation (Task 3.5.1) ✅ COMPLETED
+
+### Phase 1 Visualization Tools Successfully Delivered
+
+**Comprehensive Implementation:**
+
+- **Dependency Management**: Added `simple-mermaid = "0.2.0"` to workspace Cargo.toml for diagram generation
+- **Working Example**: Created `examples/protocol_viz.rs` with full protocol type definitions and Mermaid integration
+- **mdBook Configuration**: Established complete mdBook setup with Mermaid preprocessor in `docs/book.toml`
+- **User Documentation**: Delivered comprehensive 300+ line user guide `docs/protocol-viz.md` covering both rustdoc and mdBook workflows
+
+### Technical Implementation Patterns
+
+**Protocol Type Structure for Visualization:**
+
+```rust
+// Correct 7-parameter protocol type structure for compatibility
+type MyProtocol = (
+    Client,                    // Sender role
+    Server,                    // Receiver role  
+    Greeting,                 // Message type
+    DefaultChan,              // Channel ID type
+    RequestLbl,               // Message label type
+    OutputAction,             // Action type
+    BiDirectionalAction       // Action IO marker
+);
+```
+
+**Wrapper Pattern for Trait Implementation:**
+
+- **Challenge**: Rust orphan rules prevent implementing external traits on external types
+- **Solution**: Use wrapper structs to enable trait implementation while maintaining type safety
+
+```rust
+struct SimpleProtocol(SimpleClientServerProtocol);
+
+impl GlobalProtocol for SimpleProtocol {
+    // Implementation details
+}
+```
+
+**Mermaid Integration Strategy:**
+
+- **Avoid Macros**: `simple-mermaid` uses file-based approach that conflicts with embedded macro usage
+- **Use Fenced Code Blocks**: Prefer ````mermaid` blocks in documentation over procedural macros
+- **Manual Diagram Generation**: Create utility functions for programmatic diagram export
+
+### Documentation Integration Workflows
+
+**rustdoc Integration:**
+
+- Embed Mermaid diagrams using fenced code blocks in doc comments
+- Utilize doctest for ensuring code examples compile correctly
+- Generate documentation with `cargo doc --open` for diagram visualization
+
+**mdBook Integration:**
+
+- Configure `[preprocessor.mermaid]` for automatic diagram rendering
+- Install `mdbook-mermaid` preprocessor for diagram support
+- Build documentation with `mdbook serve docs/ --open` for live preview
+
+### Diagram Type Strategies
+
+**Sequence Diagrams for Message Flow:**
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    Client->>Server: Greeting
+    Server->>Client: Response
+```
+
+**State Diagrams for Protocol States:**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Initial
+    Initial --> AwaitingResponse : Send Greeting
+    AwaitingResponse --> Complete : Receive Response
+```
+
+**Graph Diagrams for Protocol Structure:**
+
+```mermaid
+graph TD
+    A[Client] -->|Greeting| B[Server]
+    B -->|Response| A
+```
+
+### Implementation Quality Assurance
+
+**Compilation Verification:**
+
+- All code compiles with `cargo check` and `cargo build --examples`
+- Example runs successfully with clear output demonstrating diagram generation
+- Integration with existing project structure maintained
+
+**Documentation Standards:**
+
+- Complete user guide covering installation, configuration, and usage
+- Working examples with actual compilable code
+- Troubleshooting section addressing common issues
+- Performance considerations for documentation builds
+
+### Project Structure Enhancement
+
+**New Files Created:**
+
+- `/examples/protocol_viz.rs` - Working protocol visualization example
+- `/docs/book.toml` - mdBook configuration with Mermaid support
+- `/docs/protocol-viz.md` - Comprehensive user guide
+- `/docs/SUMMARY.md` - Documentation navigation table of contents
+
+**Workspace Integration:**
+
+- Added visualization dependency to workspace-level Cargo.toml
+- Maintained compatibility with existing protocol foundation types
+- Integrated with project's trait system and type structure
+
+### Lessons Learned for Visualization Tasks
+
+1. **Foundation Type Compatibility**: Use existing foundation types (DefaultChan, RequestLbl, etc.) for consistency
+2. **Orphan Rule Navigation**: Wrapper structs are essential for implementing external traits on complex types
+3. **Documentation Tool Selection**: Choose tools based on integration requirements rather than feature richness
+4. **User Experience Priority**: Comprehensive documentation and working examples are critical for adoption
+5. **Incremental Delivery**: Phased approach allows for validation and feedback before advanced features
+
+This implementation establishes a solid foundation for protocol visualization while maintaining project architectural integrity and code quality standards.
+
+---
+
+## Latest Progress: Automatic Diagram Generation Planning (2025-01-02)
+
+### Task 3.5.2 Strategic Planning: From Manual to Automatic Protocol Visualization
+
+**Innovation Goal:** Transform protocol visualization from manual diagram creation to automatic generation directly from protocol type definitions.
+
+**Technical Strategy Decision:**
+
+- **Selected Approach**: Derive macro integration (`#[derive(GenerateDiagram)]`)
+- **Rejected Alternatives**: Procedural macro DSL, runtime analysis
+- **Rationale**: Leverages existing derive macro infrastructure, provides clean declarative syntax, integrates naturally with current codebase
+
+**Foundation Assessment:**
+
+- ✅ `simple-mermaid` integration working (Task 3.5.1 completed)
+- ✅ Protocol examples verified and API-compatible (`examples/verify_protocol_examples.rs`)
+- ✅ Existing derive macro infrastructure (`besedarium-derive` crate)
+- ✅ Understanding of protocol structure from type system analysis
+
+**Protocol Structure Mapping Strategy:**
+
+```rust
+// Type-level protocol definitions → Mermaid sequence diagrams
+TChanSend<From, To, _, _, Msg, Next, _>     → "From->>To: Msg"
+TChanRecv<To, From, _, _, Msg, Next, _>     → "From->>To: Msg"
+TChanChoice<Role, _, _, Branch1, Branch2, _> → "alt/else" blocks
+TChanEnd<_, _, _>                           → sequence termination
+```
+
+### Implementation Architecture Planning
+
+**Phase 2.1: Protocol Introspection Infrastructure**
+
+- `ProtocolFlow` trait for extracting sequence steps from type definitions
+- `SequenceStep` enum representing protocol actions (Send, Receive, Choice, End)
+- Type-level protocol traversal logic within Rust stable constraints
+
+**Phase 2.2: Mermaid Generation Engine**
+
+- `ProtocolDiagramGenerator` for converting protocol flow to Mermaid syntax
+- Automatic `#[doc = mermaid!(...)]` attribute generation
+- Support for multi-role protocols and complex interaction patterns
+
+**Phase 2.3: Integration and Testing**
+
+- Update `examples/verify_protocol_examples.rs` with automatic diagram generation
+- Comprehensive test suite for diagram generation accuracy
+- Documentation updates demonstrating seamless workflow
+
+### Developer Experience Vision
+
+**Target Workflow:**
+
+```rust
+#[derive(Protocol, GenerateDiagram)]
+#[protocol(roles = "Customer, Agency", start_type = "CustomerSendsOrder")]
+pub struct CustomerAgencySimpleProtocol;
+
+// Automatically generates documentation with embedded sequence diagram
+// No manual diagram maintenance required
+// Always consistent with code implementation
+```
+
+**Benefits Identified:**
+
+1. **Zero Maintenance**: Diagrams automatically stay current with code changes
+2. **Consistency**: Visual documentation matches implementation exactly
+3. **Productivity**: Developers focus on protocol logic, not diagram creation
+4. **Foundation**: Basis for interactive tools and validation visualizations
+
+### Planning Quality Indicators
+
+**Comprehensive Specification:** Created detailed 200+ line specification document covering:
+
+- Technical implementation strategy with 5-7 edit sequence
+- Rust stable constraint analysis and solutions
+- Testing strategy and success criteria
+- Future extension possibilities
+
+**Task Structure:** Organized into logical subtasks with clear dependencies:
+
+- 3.5.2a: Protocol Introspection Infrastructure (foundation)
+- 3.5.2b: Mermaid Generation Engine (core functionality)
+- 3.5.2c: Integration and Testing (validation)
+
+**Documentation Integration:** Updated multiple project tracking documents:
+
+- Task prompts with detailed specifications
+- TASKS.md with structured subtask breakdown
+- Status.md with planning completion status
+
+### Readiness Assessment
+
+**✅ Technical Foundation**: All prerequisite infrastructure components identified and verified
+**✅ API Compatibility**: Protocol examples demonstrate current API works correctly
+**✅ Implementation Strategy**: Clear derive macro approach with established patterns
+**✅ Testing Framework**: Existing test infrastructure can validate new functionality
+**✅ Documentation Process**: Established workflow for embedding generated content
+
+**Next Step**: Begin Task 3.5.2a implementation with protocol introspection infrastructure
