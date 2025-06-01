@@ -1,245 +1,916 @@
 # Recursion in Multiparty Session Types (MPST)
 
-## What is Recursion in MPST?
+## Overview
 
-Recursion in multiparty session types (MPST) allows the specification of protocols that
-repeat, loop, or have cyclic behavior. It enables the modeling of ongoing interactions,
-such as repeated request-response cycles, streaming, or protocols with indefinite
-lifetimes.
+Recursion in multiparty session types (MPST) enables the specification of protocols with
+repeating, looping, or cyclic communication patterns. This capability is essential for
+modeling real-world protocols that involve ongoing interactions, such as streaming data,
+persistent connections, or iterative request-response cycles.
 
-### Motivation
+### Key Benefits
 
-- Many real-world protocols require repeated or ongoing communication patterns.
-- Recursion increases expressiveness, allowing protocols to specify loops and cycles.
-- Examples: chat sessions, streaming, handshake retries, etc.
+- **Protocol Expressiveness**: Enables modeling of infinite or long-running protocols
+- **Loop Safety**: Provides compile-time guarantees about recursive communication patterns  
+- **Resource Management**: Runtime support for tracking and managing recursive contexts
+- **Practical Applications**: Chat sessions, streaming protocols, retry mechanisms, and server loops
 
-## Formal Definition (Implementation: TRec/EpRec)
+## Current Implementation Status
 
-A recursive protocol in MPST is defined using a *recursion label* and two constructs, each with explicit trait implementations:
+The Besedarium library currently provides **runtime recursion support** through the session
+context system, with planned compile-time recursion types following the established `TChan*`
+pattern used throughout the codebase.
 
-- `TRec<label, S>` — Introduces a recursion point with a globally unique, non-empty label in the global protocol.
+### Runtime Support (Available Now)
 
-    ```rust
-    pub struct TRec<IO, Lbl: types::ProtocolLabel, S: TSession<IO>>(PhantomData<(IO, Lbl, S)>);
-    ```
+The runtime system in `src/runtime/state.rs` provides immediate recursion capabilities:
 
-  - `IO`: Protocol marker type (e.g., Http, Mqtt). Used to distinguish protocol families.
-  - `Lbl`: Recursion label. Must be globally unique and non-empty. Propagated from global.
-  - `S`: Continuation session after the recursion point (may refer to itself).
+```rust
+use besedarium::runtime::{SessionContext, ChanRef};
 
-  - Implements the `TSession` trait and the `sealed` trait for global protocols.
-- `TContinue<label>` — Jumps back to the recursion point labeled `label` in the global protocol.
-  - Implements the `TSession` trait and the `sealed` trait for global protocols.
-
-  ```rust
-  pub struct TContinue<IO, Lbl: types::ProtocolLabel>(PhantomData<(IO, Lbl)>);
-  ```
-
-  - `IO`: Protocol marker type (e.g., Http, Mqtt).
-  - `Lbl`: Recursion label. Must match the label of an enclosing `TRec`.
-
-- `EpRec<label, Me, T>` — Local protocol recursion point (after projection), label faithfully propagated from global.
-
-    ```rust
-    pub struct EpRec<IO, Lbl: types::ProtocolLabel, Me, T>(PhantomData<(IO, Lbl, Me, T)>);
-    ```
-
-- `IO`: Protocol marker type (e.g., Http, Mqtt). Used to distinguish protocol families.
-- `Lbl`: Recursion label. Must be globally unique and non-empty. Propagated from global.
-- `Me`: The role for which this local protocol is defined.
-- `T`: Continuation session after the recursion point (may refer to itself).
-
-  - Implements the `EpSession` trait and the `sealed` trait for local protocols.
-
-- `EpContinue<label, Me>` — Local continue, label matches the corresponding `EpRec`.
-
-    ```rust
-    pub struct EpContinue<IO, Lbl: types::ProtocolLabel, Me>(PhantomData<(IO, Lbl, Me)>);
-    ```
-
-- `IO`: Protocol marker type (e.g., Http, Mqtt).
-- `Lbl`: Recursion label. Must match the label of an enclosing `EpRec`.
-- `Me`: The role for which this local protocol is defined.
-
-  - Implements the `EpSession` trait and the `sealed` trait for local protocols.
-
-**Important:**
-
-- Labels must be globally unique and non-empty. `TRec` is not allowed to have an empty label.
-- The label is the only recursion variable; all references must use the label.
-- All four types (`TRec`, `TContinue`, `EpRec`, `EpContinue`) are required to implement their respective session traits and the `sealed` trait to ensure type safety and protocol invariants at compile time.
-
-**Syntax Example:**
-
-```text
-TRec<Loop, send A -> B: Msg; TContinue<Loop>>
-```
-
-This protocol means: "A sends a message to B, then the protocol repeats from the start, using the label `Loop`."
-
-## Informal Example: Ping-Pong Protocol (with Labels)
-
-A simple ping-pong protocol between roles `A` and `B`:
-
-```text
-global protocol PingPong(role A, role B) {
-  TRec<Loop, {
-    send A -> B: Ping;
-    send B -> A: Pong;
-    TContinue<Loop>;
-  }>
+async fn server_loop(chan: ChanRef, mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    // Enter recursion context with depth tracking
+    ctx.enter_recursion("server_main_loop")?;
+    
+    loop {
+        // Handle client request
+        let request: ClientRequest = chan.recv().await?;
+        
+        // Process and respond
+        let response = process_request(request).await?;
+        chan.send(response).await?;
+        
+        // Check termination condition
+        if should_shutdown() {
+            break;
+        }
+    }
+    
+    // Clean exit from recursion context  
+    ctx.exit_recursion("server_main_loop")?;
+    Ok(())
 }
 ```
 
-- `A` sends `Ping` to `B`.
-- `B` replies with `Pong` to `A`.
-- The protocol repeats indefinitely, using the label `Loop`.
+### Planned Type System (Under Development)
 
-## Example: Global Protocol Definition Using `TRec`/`TContinue`
+The compile-time recursion types will follow the established `TChan*` naming convention:
 
-Below is the PingPong protocol defined using the Rust types described above:
+- **`TChanRec<Label, S>`**: Recursion point in global protocols
+- **`TChanVar<Label>`**: Variable reference to recursion point
+- **`EpRec<Label, Role, S>`**: Local protocol recursion point (after projection)
+- **`EpVar<Label, Role>`**: Local protocol variable reference
+
+## Planned Type System Design
+
+### Global Protocol Recursion Types
+
+Following the current `TChan*` pattern used in `src/protocol/global/protocols.rs`:
 
 ```rust
-use besedarium::protocol::global::{TRec, TContinue, TSend, TRecv, TEnd};
-use besedarium::types::{ProtocolLabel, RoleA, RoleB, Ping, Pong, Loop};
+use std::marker::PhantomData;
+use crate::protocol::global::TSession;
 
-// Define a unique label type for the recursion
-pub struct Loop;
-impl ProtocolLabel for Loop {}
+/// Recursion point in global protocol
+pub struct TChanRec<Label, S> 
+where
+    Label: ProtocolLabel,
+    S: TSession,
+{
+    _phantom: PhantomData<(Label, S)>,
+}
 
-// PingPong protocol: A sends Ping to B, B sends Pong to A, repeat
-pub type PingPongProtocol = TRec<
-    (), // IO marker (replace with your IO type)
-    Loop,
-    TSend<
-        (), None, RoleA, Ping,
-        TRecv<
-            (), None, RoleB, Pong,
-            TContinue<(), Loop>
-        >
-    >
->;
+/// Variable reference to recursion point  
+pub struct TChanVar<Label>
+where
+    Label: ProtocolLabel,
+{
+    _phantom: PhantomData<Label>,
+}
+
+impl<Label, S> TSession for TChanRec<Label, S>
+where
+    Label: ProtocolLabel,
+    S: TSession,
+{
+    // Implementation details...
+}
+
+impl<Label> TSession for TChanVar<Label>
+where
+    Label: ProtocolLabel,
+{
+    // Implementation details...
+}
 ```
 
-- This definition uses `TRec` to introduce the recursion point, and `TContinue` to loop back.
-- The label `Loop` is defined as a Rust type and implements `ProtocolLabel`.
-- The protocol alternates between sending and receiving, then recurses.
+### Local Protocol Recursion Types
 
-## Diagram: Recursive Protocol Structure (with Labels)
+After projection to local protocols:
 
-```mermaid
-flowchart TD
-    Start((Start))
-    A1[A sends Ping to B]
-    B1[B sends Pong to A]
-    Loop{{TContinue<Loop>}}
-    Start --> A1 --> B1 --> Loop --> A1
+```rust
+use crate::protocol::local::Session;
+
+/// Local recursion point
+pub struct EpRec<Label, Role, S>
+where
+    Label: ProtocolLabel,
+    Role: 'static,
+    S: Session<Role>,
+{
+    _phantom: PhantomData<(Label, Role, S)>,
+}
+
+/// Local variable reference
+pub struct EpVar<Label, Role>
+where
+    Label: ProtocolLabel,
+    Role: 'static,
+{
+    _phantom: PhantomData<(Label, Role)>,
+}
 ```
 
-- The loop shows the recursive structure: after each round, the protocol returns to the start of the block labeled `Loop`.
+### Protocol Labels
 
-## Key Points
+Type-safe recursion labels using the current pattern:
 
-- Recursion is defined using `TRec<label, ...>` and `TContinue<label>` (global), `EpRec<label, ...>` and `EpContinue<label>` (local).
-- Labels must be globally unique and non-empty.
-- Projections must propagate the label from global to local protocols without change.
-- Recursive protocols must be carefully designed to ensure properties like deadlock-freedom and progress (see later sections).
+```rust
+/// Trait for type-level protocol labels
+pub trait ProtocolLabel: 'static + Send + Sync {
+    const LABEL: &'static str;
+}
 
----
+// Example label definitions
+#[derive(Debug, Clone, Copy)]
+pub struct MainServerLoop;
 
-## Specification and Implementation Variants of Recursion
+impl ProtocolLabel for MainServerLoop {
+    const LABEL: &'static str = "main_server_loop";
+}
 
-### Specification: Global and Local Protocols
+#[derive(Debug, Clone, Copy)]  
+pub struct ClientRetryLoop;
 
-- **Global recursion** is specified using `TRec<label, ...>` and `TContinue<label>`.
-- **Local recursion** (after projection) uses `EpRec<label, ...>` and `EpContinue<label>`, with the label faithfully propagated from the global protocol.
-- **Scoping:**
-  - Labels must be globally unique and non-empty.
-  - `TContinue<label>`/`EpContinue<label>` must refer to an enclosing `TRec<label, ...>`/`EpRec<label, ...>`.
-
-**Example: Global and Local Recursion (with Labels)**
-
-```text
-// Global
-TRec<Loop, {
-  send A -> B: Ping;
-  send B -> A: Pong;
-  TContinue<Loop>;
-}>
-
-// Local for A (after projection)
-EpRec<Loop, {
-  send B: Ping;
-  recv B: Pong;
-  EpContinue<Loop>;
-}>
+impl ProtocolLabel for ClientRetryLoop {
+    const LABEL: &'static str = "client_retry_loop";
+}
 ```
 
-### Implementation in Rust
+## Runtime Recursion Support
 
-#### Type-Level Encoding
+The current runtime system provides comprehensive recursion management through the 
+`SessionContext` type in `src/runtime/state.rs`.
 
-- Recursion is encoded using the Rust types and combinators defined above (`TRec`, `TContinue`, etc.), with explicit label types and trait bounds.
-- The PingPong protocol example above demonstrates how to use these types to define a recursive protocol at the type level.
-- All recursion and continuation points are tracked at the type level, ensuring compile-time safety and correct label propagation.
-- The implementation enforces that labels are globally unique and non-empty, and that all combinators implement the required session and sealed traits.
-- **Macros:**
-  - Consider providing procedural or declarative macros to make recursive protocol definitions more ergonomic and less verbose.
-  - Macros could automate repetitive type construction, enforce label uniqueness, and improve readability for complex protocols.
-  - When designing macros, ensure:
-    - Labels are generated or checked for uniqueness at macro expansion time.
-    - Macro-generated code is fully type-checked and integrates with the trait system.
-    - Macro syntax is clear and closely matches the protocol notation used in documentation.
-  - Future macro support should be designed to integrate with both global and local protocol combinators, and to support nested recursion, choice, and parallel composition.
+### Recursion Depth Tracking
 
-#### Value-Level (Runtime) Representation
+```rust
+use besedarium::runtime::SessionContext;
 
-- **Note:** The following is speculative and not yet designed or implemented in this codebase.
-- Value-level (runtime) representation of recursive protocols could be approached in several ways:
-  - **State Machine:** Implement the protocol as a state machine, where each state corresponds to a protocol combinator, and recursion is handled by looping or jumping to the appropriate state.
-  - **Loop Constructs:** Use explicit loop constructs in the runtime logic to repeat protocol fragments as dictated by the type-level recursion.
-  - **Dynamic Dispatch:** For highly dynamic protocols, trait objects or enums could be used to represent protocol states at runtime, with recursion handled by re-entering the appropriate state.
-- The choice of runtime representation should be guided by performance, safety, and maintainability considerations, and should be designed to preserve the invariants established at the type level.
+async fn recursive_protocol(mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    // Enter recursion - automatically tracks depth
+    ctx.enter_recursion("my_protocol_loop")?;
+    
+    // Recursive logic here...
+    for i in 0..1000 {
+        // Each iteration is tracked
+        process_iteration(i).await?;
+        
+        // Runtime prevents stack overflow
+        if ctx.recursion_depth("my_protocol_loop")? > MAX_SAFE_DEPTH {
+            return Err("Recursion depth limit exceeded".into());
+        }
+    }
+    
+    // Always exit recursion context
+    ctx.exit_recursion("my_protocol_loop")?;
+    Ok(())
+}
+```
 
-## Implementation Notes: Projection of Recursion
+### Error Handling in Recursive Contexts
 
-Projection is the process of translating a global protocol (using `TRec`/`TContinue`) into a local protocol (using `EpRec`/`EpContinue`) for a specific role.
+```rust
+async fn robust_recursive_server(
+    chan: ChanRef, 
+    mut ctx: SessionContext
+) -> Result<(), Box<dyn Error>> {
+    ctx.enter_recursion("server_loop")?;
+    
+    // Use RAII pattern for guaranteed cleanup
+    let _guard = RecursionGuard::new(&mut ctx, "server_loop");
+    
+    loop {
+        match handle_client_interaction(&chan).await {
+            Ok(should_continue) if should_continue => continue,
+            Ok(_) => break, // Clean termination
+            Err(e) => {
+                eprintln!("Error in server loop: {}", e);
+                // Decide whether to continue or abort based on error type
+                if is_recoverable_error(&e) {
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+    }
+    
+    Ok(())
+    // _guard automatically calls exit_recursion on drop
+}
+```
 
-- **Modularity:**
-  - All helper functions for projecting recursion should be implemented in:
-    - `src/protocol/transforms/rec.rs` (for recursion points)
-    - `src/protocol/transforms/continue.rs` (for continue points)
-  - This keeps the codebase modular and consistent with the structure used for other protocol combinators.
+## Protocol Projection for Recursion
 
-- **Pattern:**
-  - The implementation should follow the established patterns for protocol projection in the library:
-    - Use trait-based dispatch and helper traits for protocol combinator projection.
-    - Ensure that label propagation and role-specific filtering are handled at the type level.
-    - Maintain compositionality and extensibility for future protocol features.
+When recursion types are implemented, projection will follow these rules:
 
-- **Invariants to Preserve:**
-  - Labels must be faithfully propagated from global to local protocols.
-  - All recursion and continue points must be matched by label.
-  - No label may be empty; all must be globally unique.
-  - The structure of recursion must be preserved: every `TContinue<L>` must correspond to an enclosing `TRec<L, ...>`.
-  - Projection must not introduce or remove recursion cycles.
+### Projection Rules
 
-- **Preconditions (for implementation and tests):**
-  - The input global protocol must be well-formed:
-    - All labels are unique and non-empty.
-    - All `TContinue<L>` refer to a valid, enclosing `TRec<L, ...>`.
-    - The protocol is type-correct and passes trait bounds.
+1. **Recursion Point Projection**:
 
-- **Postconditions (for implementation and tests):**
-  - The projected local protocol must:
-    - Use `EpRec` and `EpContinue` with the same label as the global protocol.
-    - Preserve the recursion structure and label mapping.
-    - Be type-correct and pass all trait and label invariants.
-    - Pass all protocol safety and deadlock-freedom checks established for the library.
+   ```rust
+   // Global: TChanRec<Label, S>
+   // Projects to each participating role:
+   // Role R: EpRec<Label, R, Project(S, R)>
+   ```
 
-- **Testing:**
-  - Tests should cover:
-    - Correct projection of recursion and continue points for all roles.
-    - Label preservation and uniqueness.
-    - Handling of nested and mutually recursive protocols.
-    - Failure cases: missing labels, mismatched continue, or duplicate labels should be rejected at compile time.
+2. **Variable Reference Projection**:
+
+   ```rust
+   // Global: TChanVar<Label>  
+   // Projects to each participating role:
+   // Role R: EpVar<Label, R>
+   ```
+
+3. **Label Preservation**:
+   - Recursion labels maintain their identity across projection
+   - Type safety ensures matching labels between recursion points and variables
+
+### Example: Ping-Pong Protocol with Planned Types
+
+```rust
+use besedarium::protocol::global::*;
+use besedarium::protocol::local::*;
+
+// Define roles
+#[derive(Debug, Clone, Copy)]
+pub struct Client;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Server;
+
+// Define recursion label
+#[derive(Debug, Clone, Copy)]
+pub struct PingLoop;
+
+impl ProtocolLabel for PingLoop {
+    const LABEL: &'static str = "ping_loop";
+}
+
+// Global protocol with recursion (planned)
+type PingPongProtocol = TChanRec<PingLoop,
+    TChanSend<Client, Server, String,
+    TChanRecv<Server, Client, String,
+    TChanChoice<Client, Server, {
+        Continue: TChanVar<PingLoop>,
+        Stop: TChanEnd
+    }>>>>;
+
+// Client's local protocol (after projection)
+type ClientPingPong = EpRec<PingLoop, Client,
+    EpSend<Server, String,
+    EpRecv<Server, String,  
+    EpChoice<Server, {
+        Continue: EpVar<PingLoop, Client>,
+        Stop: EpEnd
+    }>>>>;
+
+// Server's local protocol (after projection)  
+type ServerPingPong = EpRec<PingLoop, Server,
+    EpRecv<Client, String,
+    EpSend<Client, String,
+    EpOffer<Client, {
+        Continue: EpVar<PingLoop, Server>,
+        Stop: EpEnd  
+    }>>>>;
+```
+
+## Practical Usage Examples
+
+### Example 1: HTTP Server with Current Runtime Support
+
+```rust
+use besedarium::runtime::{ChanRef, SessionContext};
+use tokio::net::TcpListener;
+
+async fn http_server_main() -> Result<(), Box<dyn Error>> {
+    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let mut ctx = SessionContext::new();
+    
+    // Enter main server loop
+    ctx.enter_recursion("http_server_main")?;
+    
+    loop {
+        let (socket, addr) = listener.accept().await?;
+        println!("New connection from: {}", addr);
+        
+        // Spawn handler for each connection
+        let mut client_ctx = ctx.clone();
+        tokio::spawn(async move {
+            if let Err(e) = handle_http_client(socket, &mut client_ctx).await {
+                eprintln!("Client handler error: {}", e);
+            }
+        });
+        
+        // Check for shutdown signal
+        if should_shutdown() {
+            break;
+        }
+    }
+    
+    ctx.exit_recursion("http_server_main")?;
+    println!("Server shutting down gracefully");
+    Ok(())
+}
+
+async fn handle_http_client(
+    socket: tokio::net::TcpStream, 
+    ctx: &mut SessionContext
+) -> Result<(), Box<dyn Error>> {
+    let chan = ChanRef::from_tcp_stream(socket)?;
+    
+    // Enter client handling loop
+    ctx.enter_recursion("client_session")?;
+    
+    loop {
+        // Read HTTP request
+        let request: HttpRequest = chan.recv().await?;
+        
+        // Process request
+        let response = match request.path.as_str() {
+            "/health" => HttpResponse::ok("Server is healthy"),
+            "/data" => HttpResponse::ok(&get_data().await?),
+            _ => HttpResponse::not_found("Resource not found"),
+        };
+        
+        // Send response
+        chan.send(response).await?;
+        
+        // Check if client wants to keep connection alive
+        if !request.keep_alive {
+            break;
+        }
+    }
+    
+    ctx.exit_recursion("client_session")?;
+    Ok(())
+}
+```
+
+### Example 2: Streaming Data Protocol
+
+```rust
+use besedarium::runtime::{ChanRef, SessionContext};
+use tokio_stream::{Stream, StreamExt};
+
+async fn data_streaming_server<S>(
+    chan: ChanRef,
+    mut data_stream: S,
+    mut ctx: SessionContext
+) -> Result<(), Box<dyn Error>>
+where
+    S: Stream<Item = Result<DataChunk, std::io::Error>> + Unpin,
+{
+    ctx.enter_recursion("streaming_loop")?;
+    
+    // Send initial handshake
+    chan.send(StreamStart).await?;
+    
+    loop {
+        match data_stream.next().await {
+            Some(Ok(chunk)) => {
+                // Send data chunk
+                chan.send(DataMessage { chunk }).await?;
+                
+                // Wait for acknowledgment
+                let ack: Acknowledgment = chan.recv().await?;
+                
+                match ack {
+                    Acknowledgment::Continue => continue,
+                    Acknowledgment::Stop => break,
+                    Acknowledgment::Error(e) => {
+                        eprintln!("Client reported error: {}", e);
+                        break;
+                    }
+                }
+            }
+            Some(Err(e)) => {
+                // Send error to client
+                chan.send(StreamError { error: e.to_string() }).await?;
+                break;
+            }
+            None => {
+                // Stream ended naturally
+                chan.send(StreamEnd).await?;
+                break;
+            }
+        }
+    }
+    
+    ctx.exit_recursion("streaming_loop")?;
+    Ok(())
+}
+```
+
+## Implementation Guidelines
+
+### 1. Resource Management
+
+Always use proper resource management for recursion contexts:
+
+```rust
+// RAII helper for automatic cleanup
+pub struct RecursionGuard<'a> {
+    ctx: &'a mut SessionContext,
+    label: &'static str,
+}
+
+impl<'a> RecursionGuard<'a> {
+    pub fn new(ctx: &'a mut SessionContext, label: &'static str) -> Result<Self, RecursionError> {
+        ctx.enter_recursion(label)?;
+        Ok(RecursionGuard { ctx, label })
+    }
+}
+
+impl<'a> Drop for RecursionGuard<'a> {
+    fn drop(&mut self) {
+        if let Err(e) = self.ctx.exit_recursion(self.label) {
+            eprintln!("Error exiting recursion context: {}", e);
+        }
+    }
+}
+```
+
+### 2. Label Management
+
+Use descriptive, hierarchical labels for complex protocols:
+
+```rust
+#[derive(Debug, Clone, Copy)]
+pub struct ServerMainLoop;
+
+#[derive(Debug, Clone, Copy)] 
+pub struct ClientSessionLoop;
+
+#[derive(Debug, Clone, Copy)]
+pub struct AuthRetryLoop;
+
+#[derive(Debug, Clone, Copy)]
+pub struct DataTransferLoop;
+
+impl ProtocolLabel for ServerMainLoop {
+    const LABEL: &'static str = "server.main_loop";
+}
+
+impl ProtocolLabel for ClientSessionLoop {
+    const LABEL: &'static str = "client.session_loop";
+}
+
+impl ProtocolLabel for AuthRetryLoop {
+    const LABEL: &'static str = "auth.retry_loop"; 
+}
+
+impl ProtocolLabel for DataTransferLoop {
+    const LABEL: &'static str = "data.transfer_loop";
+}
+```
+
+### 3. Depth Limits and Monitoring
+
+Implement appropriate depth limits and monitoring:
+
+```rust
+const DEFAULT_MAX_RECURSION_DEPTH: usize = 1000;
+const MONITORING_INTERVAL: usize = 100;
+
+async fn monitored_recursive_protocol(mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    ctx.enter_recursion("monitored_loop")?;
+    let _guard = RecursionGuard::new(&mut ctx, "monitored_loop")?;
+    
+    let mut iteration_count = 0;
+    
+    loop {
+        // Protocol logic...
+        iteration_count += 1;
+        
+        // Periodic monitoring
+        if iteration_count % MONITORING_INTERVAL == 0 {
+            let depth = ctx.recursion_depth("monitored_loop")?;
+            println!("Recursion depth: {}, iterations: {}", depth, iteration_count);
+            
+            if depth > DEFAULT_MAX_RECURSION_DEPTH * 0.8 as usize {
+                println!("Warning: Approaching recursion depth limit");
+            }
+        }
+        
+        // Termination condition
+        if should_terminate() {
+            break;
+        }
+    }
+    
+    println!("Completed {} iterations", iteration_count);
+    Ok(())
+}
+```
+
+## Error Handling and Recovery
+
+### Recursion-Specific Error Types
+
+```rust
+#[derive(Debug, thiserror::Error)]
+pub enum RecursionError {
+    #[error("Recursion depth limit exceeded for label '{label}': {depth} > {limit}")]
+    DepthLimitExceeded {
+        label: String,
+        depth: usize,
+        limit: usize,
+    },
+    
+    #[error("Attempting to exit recursion '{label}' that was never entered")]
+    UnbalancedExit { label: String },
+    
+    #[error("Recursion label '{label}' not found in current context")]
+    LabelNotFound { label: String },
+    
+    #[error("Nested recursion labels must be unique: '{label}' already active")]
+    DuplicateLabel { label: String },
+}
+```
+
+### Recovery Strategies
+
+```rust
+async fn resilient_server_loop(
+    chan: ChanRef,
+    mut ctx: SessionContext
+) -> Result<(), Box<dyn Error>> {
+    let mut retry_count = 0;
+    const MAX_RETRIES: u32 = 3;
+    
+    loop {
+        match run_server_iteration(&chan, &mut ctx).await {
+            Ok(()) => {
+                retry_count = 0; // Reset on success
+            }
+            Err(e) if is_recoverable(&e) => {
+                retry_count += 1;
+                if retry_count <= MAX_RETRIES {
+                    eprintln!("Recoverable error (attempt {}): {}", retry_count, e);
+                    
+                    // Cleanup recursion state if needed
+                    if let Err(_) = ctx.exit_recursion("server_iteration") {
+                        // Force cleanup
+                        ctx = SessionContext::new();
+                    }
+                    
+                    // Brief delay before retry
+                    tokio::time::sleep(Duration::from_millis(100 * retry_count as u64)).await;
+                    continue;
+                } else {
+                    return Err(format!("Max retries exceeded: {}", e).into());
+                }
+            }
+            Err(e) => {
+                return Err(format!("Unrecoverable error: {}", e).into());
+            }
+        }
+        
+        if should_shutdown() {
+            break;
+        }
+    }
+    
+    Ok(())
+}
+```
+
+## Advanced Patterns
+
+### Nested Recursion
+
+Using multiple recursion levels with different labels:
+
+```rust
+async fn nested_protocol_handler(
+    chan: ChanRef,
+    mut ctx: SessionContext
+) -> Result<(), Box<dyn Error>> {
+    // Outer loop: main protocol execution
+    ctx.enter_recursion("main_protocol")?;
+    
+    loop {
+        // Handle protocol phase
+        let phase_result = {
+            // Inner loop: retry mechanism
+            ctx.enter_recursion("retry_phase")?;
+            let _inner_guard = RecursionGuard::new(&mut ctx, "retry_phase")?;
+            
+            let mut attempts = 0;
+            loop {
+                attempts += 1;
+                
+                match execute_protocol_phase(&chan).await {
+                    Ok(result) => break Ok(result),
+                    Err(e) if attempts < MAX_PHASE_RETRIES => {
+                        eprintln!("Phase attempt {} failed: {}", attempts, e);
+                        continue;
+                    }
+                    Err(e) => break Err(e),
+                }
+            }
+        };
+        
+        match phase_result {
+            Ok(should_continue) if should_continue => continue,
+            Ok(_) => break, // Protocol completed successfully
+            Err(e) => return Err(e), // Unrecoverable error
+        }
+    }
+    
+    ctx.exit_recursion("main_protocol")?;
+    Ok(())
+}
+```
+
+### Conditional Recursion
+
+Implementing choice-based recursion patterns:
+
+```rust
+async fn conditional_server_loop(
+    chan: ChanRef,
+    mut ctx: SessionContext
+) -> Result<(), Box<dyn Error>> {
+    ctx.enter_recursion("conditional_loop")?;
+    
+    loop {
+        // Receive client choice
+        let client_choice: ClientChoice = chan.recv().await?;
+        
+        match client_choice {
+            ClientChoice::ProcessData { data } => {
+                let result = process_data(data).await?;
+                chan.send(ProcessResult { result }).await?;
+                // Continue loop
+            }
+            ClientChoice::StartSubprotocol => {
+                // Enter nested subprotocol
+                execute_subprotocol(&chan, &mut ctx).await?;
+                // Continue main loop after subprotocol
+            }
+            ClientChoice::Terminate => {
+                chan.send(Acknowledgment::Goodbye).await?;
+                break; // Exit loop
+            }
+        }
+    }
+    
+    ctx.exit_recursion("conditional_loop")?;
+    Ok(())
+}
+```
+
+## Testing Recursive Protocols
+
+### Unit Testing with Mocked Recursion
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use besedarium::testing::{MockChan, TestSessionContext};
+    
+    #[tokio::test]
+    async fn test_bounded_recursion() {
+        let mut ctx = TestSessionContext::new();
+        let chan = MockChan::new();
+        
+        // Set up test scenario
+        chan.expect_recv::<ClientRequest>()
+            .times(5)
+            .returning(|| Ok(ClientRequest::Continue));
+        
+        chan.expect_recv::<ClientRequest>()
+            .once()
+            .returning(|| Ok(ClientRequest::Terminate));
+        
+        // Test the recursive protocol
+        let result = bounded_server_loop(chan.into(), ctx).await;
+        assert!(result.is_ok());
+        
+        // Verify recursion was properly managed
+        assert_eq!(ctx.max_recursion_depth_reached("server_loop"), Some(1));
+    }
+    
+    #[tokio::test]
+    async fn test_recursion_depth_limit() {
+        let mut ctx = TestSessionContext::with_depth_limit(5);
+        let chan = MockChan::new();
+        
+        // Set up infinite loop scenario
+        chan.expect_recv::<ClientRequest>()
+            .returning(|| Ok(ClientRequest::Continue));
+        
+        // Test should fail due to depth limit
+        let result = unbounded_server_loop(chan.into(), ctx).await;
+        assert!(result.is_err());
+        
+        // Verify it was a depth limit error
+        assert!(matches!(result.unwrap_err().downcast::<RecursionError>()?, 
+                        RecursionError::DepthLimitExceeded { .. }));
+    }
+}
+```
+
+### Integration Testing
+
+```rust
+#[tokio::test]
+async fn test_recursive_client_server_integration() {
+    let (server_chan, client_chan) = besedarium::testing::create_test_channel_pair().await;
+    
+    // Start server in background
+    let server_handle = tokio::spawn(async move {
+        let mut ctx = SessionContext::new();
+        ping_pong_server(server_chan, ctx).await
+    });
+    
+    // Run client
+    let client_result = async {
+        let mut ctx = SessionContext::new();
+        ping_pong_client(client_chan, ctx, 10).await // 10 ping-pong cycles
+    }.await;
+    
+    // Wait for server completion
+    let server_result = server_handle.await?;
+    
+    // Both should complete successfully
+    assert!(client_result.is_ok());
+    assert!(server_result.is_ok());
+}
+```
+
+## Performance Considerations
+
+### Recursion Overhead
+
+- **Runtime Tracking**: Each recursion entry/exit involves minimal bookkeeping overhead
+- **Memory Usage**: Recursion contexts use stack-allocated tracking structures
+- **Optimization**: Consider tail-call optimization patterns where applicable
+
+### Monitoring and Profiling
+
+```rust
+use std::time::{Duration, Instant};
+
+async fn profiled_recursive_protocol(mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    let start_time = Instant::now();
+    let mut iteration_count = 0;
+    
+    ctx.enter_recursion("profiled_loop")?;
+    
+    loop {
+        let iteration_start = Instant::now();
+        
+        // Protocol iteration logic...
+        execute_iteration().await?;
+        
+        iteration_count += 1;
+        let iteration_time = iteration_start.elapsed();
+        
+        // Log performance metrics periodically
+        if iteration_count % 1000 == 0 {
+            let avg_time = start_time.elapsed() / iteration_count;
+            println!("Iteration {}: last={:?}, avg={:?}", 
+                     iteration_count, iteration_time, avg_time);
+        }
+        
+        if should_terminate() {
+            break;
+        }
+    }
+    
+    ctx.exit_recursion("profiled_loop")?;
+    
+    let total_time = start_time.elapsed();
+    println!("Completed {} iterations in {:?} (avg: {:?})", 
+             iteration_count, total_time, total_time / iteration_count);
+    
+    Ok(())
+}
+```
+
+## Migration Guide
+
+### From Manual Loops to Runtime Recursion
+
+**Before** (manual loop management):
+
+```rust
+async fn old_server_loop(chan: ChanRef) -> Result<(), Box<dyn Error>> {
+    loop {
+        // Protocol logic without recursion tracking
+        handle_request(&chan).await?;
+        
+        if should_stop() {
+            break;
+        }
+    }
+    Ok(())
+}
+```
+
+**After** (with runtime recursion support):
+
+```rust
+async fn new_server_loop(chan: ChanRef, mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    ctx.enter_recursion("server_loop")?;
+    let _guard = RecursionGuard::new(&mut ctx, "server_loop")?;
+    
+    loop {
+        // Same protocol logic but with recursion tracking
+        handle_request(&chan).await?;
+        
+        if should_stop() {
+            break;
+        }
+    }
+    
+    Ok(())
+    // _guard automatically exits recursion context
+}
+```
+
+### Preparing for Type-Level Recursion
+
+Structure your code to be ready for compile-time recursion types:
+
+```rust
+// Define your protocol labels now
+#[derive(Debug, Clone, Copy)]
+pub struct MyProtocolLoop;
+
+impl ProtocolLabel for MyProtocolLoop {
+    const LABEL: &'static str = "my_protocol_loop";
+}
+
+// Use label constants in runtime code
+async fn forward_compatible_loop(mut ctx: SessionContext) -> Result<(), Box<dyn Error>> {
+    ctx.enter_recursion(MyProtocolLoop::LABEL)?;
+    
+    // Protocol logic that will work with future type-level recursion
+    
+    ctx.exit_recursion(MyProtocolLoop::LABEL)?;
+    Ok(())
+}
+```
+
+## Future Enhancements
+
+### Planned Compile-Time Features
+
+1. **Static Recursion Analysis**: Compile-time verification that all recursion points have corresponding variables and termination paths.
+
+2. **Optimization Passes**: Compiler optimizations for common recursion patterns, including tail-call optimization.
+
+3. **Advanced Type Safety**: Enhanced type-level guarantees about recursion depth and termination.
+
+### Research Areas
+
+1. **Coinductive Session Types**: Support for protocols with infinite or unbounded execution.
+
+2. **Distributed Recursion**: Handling recursion across network boundaries with failure recovery.
+
+3. **Temporal Properties**: Integration with temporal logic to specify and verify time-based recursion properties.
+
+4. **Resource Bounds**: Compile-time analysis of resource usage in recursive protocols.
+
+## Related Documentation
+
+- **[Protocol Basics](protocol-basics.md)**: Foundation concepts for session types
+- **[Global Protocols](global-protocols.md)**: Understanding global protocol specification
+- **[Local Protocols](local-protocols.md)**: Local protocol projections and implementation
+- **[Runtime System](runtime.md)**: Runtime support and session management
+- **[Error Handling](error-handling.md)**: Error management strategies
+- **[Testing](testing.md)**: Testing approaches for session type protocols
+- **[Performance](performance.md)**: Performance optimization techniques
+
+## References
+
+1. Honda, K., Vasconcelos, V. T., & Kubo, M. (1998). Language primitives and type discipline for structured communication-based programming.
+2. Gay, S., & Hole, M. (2005). Subtyping for session types in the pi calculus.
+3. Deniélou, P. M., & Yoshida, N. (2012). Multiparty session types meet communicating automata.
+4. Scalas, A., & Yoshida, N. (2016). Lightweight session programming in Scala.
+5. Fowler, S. (2019). An Erlang implementation of multiparty session actors.

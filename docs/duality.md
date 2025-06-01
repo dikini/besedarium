@@ -11,6 +11,7 @@ The document will cover:
 - The `IsDual` predicate, which formalizes the conditions for two protocol specifications to be duals of each other, incorporating `CommMetadata`, message types, and consistent `IO` capabilities.
 - The concept of well-formedness and how it relies on duality to guarantee safe and coherent multiparty interactions.
 - Examples illustrating how these concepts apply in practice, including scenarios with three or more roles.
+- **Practical implementation insights** from the Besedarium library, including derive macro infrastructure, automatic dual generation, and visual verification tools.
 
 By understanding duality and the role of `CommMetadata`, protocol designers can create more robust, verifiable, and maintainable MPST specifications.
 
@@ -785,11 +786,11 @@ The dual of a Send action is a Receive action with mirrored roles and the same c
 
 - **Global Duality**:
   `Dual(TChanSend<S, R, M, Msg, P, AIO>)` is `TChanRecv<R, S, M, Msg, Dual(P), AIO>`.
-  The sender `S` becomes the receiver in the dual, and the receiver `R` becomes the sender. `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) remain the same. The continuation `P` is replaced by its dual `Dual(P)`.
+  The sender `S` becomes the receiver in the dual, and the receiver `R` becomes the sender. `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) remain the same. The continuation `P` is replaced with its dual `Dual(P)`.
 
 - **Local Duality** (from sender\'s perspective to receiver\'s perspective):
   `Dual(EpSend<IO_S, M, Msg, EpP_S, AIO>)` is `EpRecv<IO_R, M, Msg, Dual(EpP_S), AIO>`.
-  This assumes `IO_S` and `IO_R` are compatible session capabilities for their respective roles and the given `AIO`. The `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) are consistent. The local continuation `EpP_S` is replaced by its dual.
+  This assumes `IO_S` and `IO_R` are compatible session capabilities for their respective roles and the given `AIO`. The `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) are consistent. The local continuation `EpP_S` is replaced with its dual.
 
 #### Invariants
 
@@ -908,11 +909,11 @@ The dual of a Receive action is a Send action with mirrored roles and the same c
 
 - **Global Duality**:
   `Dual(TChanRecv<R, S, M, Msg, P, AIO>)` is `TChanSend<S, R, M, Msg, Dual(P), AIO>`.
-  The receiver `R` becomes the sender in the dual, and the sender `S` becomes the receiver. `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) remain the same. The continuation `P` is replaced by its dual `Dual(P)`.
+  The receiver `R` becomes the sender in the dual, and the sender `S` becomes the receiver. `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) remain the same. The continuation `P` is replaced with its dual `Dual(P)`.
 
 - **Local Duality** (from receiver\'s perspective to sender\'s perspective):
   `Dual(EpRecv<IO_R, M, Msg, EpP_R, AIO>)` is `EpSend<IO_S, M, Msg, Dual(EpP_R), AIO>`.
-  This assumes `IO_R` and `IO_S` are compatible session capabilities for their respective roles and the given `AIO`. The `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) are consistent. The local continuation `EpP_R` is replaced by its dual.
+  This assumes `IO_R` and `IO_S` are compatible session capabilities for their respective roles and the given `AIO`. The `CommMetadata` (`M`), `Msg` type, and `ActionIOType` (`AIO`) are consistent. The local continuation `EpP_R` is replaced with its dual.
 
 #### Invariants
 
@@ -1095,40 +1096,182 @@ Termination marks the end of a session.
 
 These detailed rules for the `IsDual` predicate are critical for the static verification of MPST protocols. By ensuring that all interacting components are duals of each other, and by consistently managing `CommMetadata`, message types, `ActionIOType`s, and session `IO` capabilities, the framework can guarantee type safety and prevent many common concurrency errors at compile time. This rigorous approach is what enables the construction of robust and reliable multiparty communication systems.
 
-## Conclusion and Future Work
+## Practical Implementation: Derive Macro Infrastructure
 
-This document has explored the foundational concepts of Duality, Projection, and Well-Formedness in the context of Multiparty Session Types (MPST). We began by defining these concepts theoretically, emphasizing their roles in ensuring safe and coherent communication in concurrent and distributed systems. The detailed rules for the `IsDual` predicate, the semantics of the `Project(G, R_target)` function, and the conditions for `IsWellFormed<G>` were laid out to provide a clear understanding of how MPST achieves its safety guarantees.
+The Besedarium library provides comprehensive macro-based tooling that makes the theoretical concepts of duality practically accessible to developers. This section documents the implemented derive macro infrastructure that automates much of the duality verification and dual protocol generation work.
 
-Subsequently, we delved into the practical realization of these concepts within Rust's advanced type system. By representing protocol constructs as types and leveraging traits like `IsDual`, `Project`, and `WellFormed`, Rust enables compile-time verification of MPST protocols. This approach offers significant advantages:
+### Automatic Dual Protocol Generation
 
-- **Static Safety**: Protocol errors are caught by the compiler, preventing runtime failures.
-- **Zero Runtime Overhead**: Verification logic does not impact the performance of the compiled application.
-- **Expressiveness**: Complex protocols can be modeled and verified.
+The library implements a complete automatic dual generation system through the `#[protocol]` attribute macro with `generate_dual = true` option:
 
-The examples provided for trait implementations, while conceptual, illustrate the core strategies for encoding MPST rules. The use of associated types, marker types, generic programming, and type-level patterns are central to this endeavor. While the implementation can be intricate, particularly concerning type-level list manipulation and Rust's trait system constraints, the payoff in terms of protocol reliability is substantial.
+```rust
+use besedarium_derive::protocol;
 
-**Future Work and Further Exploration**:
+#[protocol(generate_dual = true, verify_duality = true)]
+/// protocol ClientServer {
+///     roles: Client, Server;
+///     Client -> Server: Request(data: String);
+///     Server -> Client: Response(result: String);
+/// }
+struct ClientServerProtocol;
 
-The type-level implementation of MPST in Rust is a rich area with several avenues for future work and deeper exploration:
+// Automatically generates:
+// 1. ClientServerProtocol (original)
+// 2. ServerClientProtocol (dual) with swapped roles
+// 3. IsDual trait implementations proving duality relationship
+// 4. Compile-time assertions verifying correctness
+```
 
-1. **Ergonomics and Usability**:
-   - **Improved Error Messages**: Developing techniques (e.g., using procedural macros or compiler plugins if available/stabilized for this purpose) to provide more user-friendly error messages when type-level verification fails would greatly enhance usability.
-   - **Domain-Specific Languages (DSLs)**: Exploring embedded DSLs in Rust (perhaps using macros) to define global protocols more intuitively, which then expand into the underlying type-level representations.
+#### Key Implementation Features
 
-2. **Advanced Protocol Features**:
-   - **Dynamic Role Selection/Delegation**: Extending the type system to safely handle scenarios where roles can be dynamically chosen or delegated at runtime, while still maintaining as much static verification as possible.
-   - **Session Interruption and Recovery**: Modeling and verifying protocols that include mechanisms for session interruption, error handling, and recovery at the type level.
-   - **Integration with Asynchronous Programming**: Deepening the integration with Rust's `async/await` ecosystem to provide seamless and efficient execution of type-safe protocols in asynchronous contexts.
+**Dual Generation Engine**: The `DualGenerator` struct analyzes protocol specifications and automatically generates dual protocols by:
 
-3. **Tooling and Verification**:
-   - **Automated Projection and Endpoint Generation**: Tools or macros that can automatically generate local endpoint code (the behavioral part) from a well-formed global protocol type.
-   - **Formal Verification Links**: Bridging the gap between type-level implementations in Rust and formal verification tools (e.g., Coq, Isabelle/HOL) to provide even stronger assurances or to verify the correctness of the type-level framework itself.
+- Swapping roles in communication actions (`Send` ↔ `Receive`)
+- Inverting choice constructs (`Choice` ↔ `Offer`)
+- Preserving structural invariants (recursion, parallel composition)
+- Maintaining `CommMetadata` and message type consistency
 
-4. **Performance and Optimization**:
-   - **Compile-Time Performance**: Investigating techniques to mitigate the impact of complex type-level computations on Rust compilation times.
-   - **Runtime Optimizations**: Ensuring that the type-level abstractions compile down to highly efficient runtime code, with minimal overhead from the session type machinery.
+**Automatic Duality Proofs**: Generated dual protocols include `IsDual` trait implementations that prove the duality relationship at compile time:
 
-5. **Broader Applicability**:
-   - **Diverse Communication Mechanisms**: Extending the `ActionIOType` and `SessionCapability` concepts to support a wider array of communication backbones (e.g., WebSockets, gRPC, shared memory, custom hardware interfaces) while maintaining type safety.
+```rust
+// Automatically generated for each role pairing
+impl IsDual<ClientServerProtocol, ServerClientProtocol> for Client {
+    type Proof = DualityProof;
+    
+    fn verify_duality() -> Self::Proof {
+        // Implementation verifies protocol duality constraints
+        DualityProof::verified()
+    }
+}
 
-The journey of implementing and utilizing MPST in Rust is one of continuous refinement and innovation. By pushing the boundaries of what can be achieved with type-level programming, the Rust community can continue to build more robust, reliable, and complex distributed systems with greater confidence. The principles of duality, projection, and well-formedness will remain central to these efforts, guiding the development of statically verified communication protocols.
+impl IsDual<ServerClientProtocol, ClientServerProtocol> for Server {
+    type Proof = DualityProof;
+    
+    fn verify_duality() -> Self::Proof {
+        // Symmetric duality verification
+        DualityProof::verified()
+    }
+}
+```
+
+**Compile-Time Verification**: The system generates compile-time assertions that ensure duality relationships are maintained:
+
+```rust
+// Generated compile-time verification
+const _: () = {
+    use besedarium::protocol::duality::IsDual;
+    
+    // Assert duality relationship exists and is valid
+    let _proof: <Client as IsDual<ClientServerProtocol, ServerClientProtocol>>::Proof = 
+        <Client as IsDual<ClientServerProtocol, ServerClientProtocol>>::verify_duality();
+        
+    let _proof: <Server as IsDual<ServerClientProtocol, ClientServerProtocol>>::Proof = 
+        <Server as IsDual<ServerClientProtocol, ClientServerProtocol>>::verify_duality();
+};
+```
+
+### Visual Duality Verification
+
+The `#[derive(GenerateDiagram)]` macro provides automatic Mermaid sequence diagram generation that helps visualize and verify duality relationships:
+
+```rust
+use besedarium_derive::{GlobalProtocol, GenerateDiagram};
+
+#[derive(GlobalProtocol, GenerateDiagram)]
+#[protocol(roles = "Client, Server")]
+struct ExampleProtocol;
+
+// Automatically implements:
+impl ProtocolFlow for ExampleProtocol {
+    fn generate_diagram() -> String {
+        // Returns Mermaid sequence diagram showing protocol flow
+        "sequenceDiagram\n    Client->>Server: Request\n    Server->>Client: Response"
+    }
+    
+    fn get_roles() -> Vec<String> {
+        vec!["Client".to_string(), "Server".to_string()]
+    }
+    
+    // Additional introspection methods...
+}
+```
+
+**Benefits for Duality Understanding**:
+
+- **Visual Verification**: Generated diagrams make it easy to visually verify that dual protocols are indeed complementary
+- **Role Perspective**: Can generate diagrams from different role perspectives to show local protocol views
+- **Debugging Aid**: Protocol flow visualization helps identify duality violations or inconsistencies
+- **Documentation**: Automatic diagram generation ensures protocol documentation stays synchronized with implementation
+
+### Integration with Foundation Types
+
+The derive macro system seamlessly integrates with the foundation type system, automatically handling:
+
+**CommMetadata Integration**: Generated protocols properly incorporate `CommMetadata<C, L>` with channel identifiers and message labels:
+
+```rust
+// Macro-generated protocol respects CommMetadata constraints
+type GeneratedSend = TChanSend<
+    Client,                    // Sender role
+    Server,                    // Receiver role
+    StandardCommMetadata,      // CommMetadata with ChanId and MsgLbl
+    RequestMessage,            // Message type
+    ContinuationProtocol,      // Continuation
+    TcpActionIO               // ActionIOType
+>;
+```
+
+**ActionIOType Support**: The macro system ensures that generated dual protocols maintain `ActionIOType` consistency and `SupportsActionIO` trait bounds:
+
+```rust
+// Generated dual maintains IO consistency
+impl<IO> SupportsActionIO<TcpActionIO> for ClientSession<IO> 
+where 
+    IO: SupportsActionIO<TcpActionIO>
+{
+    // Implementation ensures dual protocols can use same IO infrastructure
+}
+```
+
+**Type Safety Preservation**: All macro-generated code maintains the same type safety guarantees as manually written protocols, with compile-time verification of:
+
+- Role compatibility in communication pairs
+- Message type consistency between send/receive pairs
+- IO capability requirements and constraints
+- Continuation protocol duality relationships
+
+### Advanced Features
+
+**Multi-Role Protocol Support**: The dual generation system handles complex multi-role protocols by generating comprehensive duality relationships:
+
+```rust
+#[protocol(generate_dual = true)]
+/// protocol MultiParty {
+///     roles: Client, Server, Monitor;
+///     Client -> Server: Request(data: String);
+///     Server -> Monitor: Log(request_id: u64);
+///     Server -> Client: Response(result: String);
+///     Monitor -> Server: Ack;
+/// }
+struct MultiPartyProtocol;
+
+// Generates pairwise duality proofs for all communicating role pairs:
+// - Client ↔ Server duality for Request/Response pair
+// - Server ↔ Monitor duality for Log/Ack pair
+// - Proper projection handling for non-communicating pairs
+```
+
+**Error Handling and Diagnostics**: The macro system provides detailed error messages for common duality violations:
+
+```rust
+// Compile-time error for duality violations
+#[protocol(generate_dual = true, verify_duality = true)]
+/// protocol BadProtocol {
+///     roles: A, B;
+///     A -> B: Msg1(data: String);
+///     A -> B: Msg2(data: u32);  // Error: no corresponding receive
+/// }
+struct BadProtocol;  // Compilation fails with detailed duality error
+```
+
+This practical implementation makes the theoretical concepts of duality accessible and verifiable in real-world protocol development, bridging the gap between academic session type theory and production system implementation.

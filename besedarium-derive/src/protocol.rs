@@ -18,6 +18,7 @@ use syn::{
     DeriveInput, Ident, Result, Token, Type,
 };
 
+use crate::diagram_generation::ProtocolDiagramGenerator;
 use crate::dual_generation::{generate_dual_protocol_code, DualGenerator};
 use crate::utils::{basic_trait_impl, get_type_name, handle_result, is_enum, is_struct};
 
@@ -1545,4 +1546,94 @@ fn parse_single_attribute(
     }
 
     Ok(())
+}
+
+/// Implementation of the `#[derive(GenerateDiagram)]` macro
+pub fn derive_generate_diagram_impl(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    handle_result(derive_generate_diagram_inner(&input))
+}
+
+/// Internal implementation logic for the GenerateDiagram derive
+fn derive_generate_diagram_inner(input: &DeriveInput) -> Result<TokenStream2> {
+    let type_name = get_type_name(input);
+
+    // GenerateDiagram trait can be derived for structs and enums
+    if !is_struct(input) && !is_enum(input) {
+        return Err(syn::Error::new_spanned(
+            input,
+            "#[derive(GenerateDiagram)] can only be derived for structs and enums",
+        ));
+    }
+
+    // Parse protocol-specific attributes for diagram generation
+    let protocol_attrs = crate::utils::parse_derive_attributes(input, "protocol");
+
+    // Generate the ProtocolFlow trait implementation
+    let trait_impl = generate_protocol_flow_impl(type_name, &protocol_attrs);
+
+    Ok(trait_impl)
+}
+
+/// Generate the ProtocolFlow trait implementation for diagram generation
+fn generate_protocol_flow_impl(type_name: &syn::Ident, _attrs: &[syn::Attribute]) -> TokenStream2 {
+    // For now, generate a basic implementation that protocols can override
+    // This will be enhanced in future phases to extract from protocol structure
+
+    let protocol_name = type_name.to_string();
+
+    // Create a dummy DeriveInput for diagram generator
+    let dummy_input = syn::DeriveInput {
+        attrs: Vec::new(),
+        vis: syn::Visibility::Public(syn::token::Pub::default()),
+        ident: type_name.clone(),
+        generics: syn::Generics::default(),
+        data: syn::Data::Struct(syn::DataStruct {
+            struct_token: syn::token::Struct::default(),
+            fields: syn::Fields::Unit,
+            semi_token: Some(syn::token::Semi::default()),
+        }),
+    };
+
+    // Create diagram generator for enhanced documentation
+    let diagram_generator = ProtocolDiagramGenerator::new(dummy_input);
+    let automatic_docs = diagram_generator.generate_automatic_documentation();
+    let diagram_method = diagram_generator.generate_diagram_method();
+
+    quote! {
+        #automatic_docs
+        impl ::besedarium::protocol::introspection::ProtocolFlow for #type_name {
+            fn generate_sequence_steps() -> Vec<::besedarium::protocol::introspection::SequenceStep> {
+                // Default implementation - protocols should override this
+                // In future phases, this will be generated from protocol structure analysis
+                vec![
+                    ::besedarium::protocol::introspection::SequenceStep::Send {
+                        from: "Role1".to_string(),
+                        to: "Role2".to_string(),
+                        message: format!("{}_DefaultMessage", #protocol_name),
+                    },
+                    ::besedarium::protocol::introspection::SequenceStep::End,
+                ]
+            }
+
+            fn get_roles() -> Vec<String> {
+                // Default implementation - extract from protocol definition in future phases
+                vec!["Role1".to_string(), "Role2".to_string()]
+            }
+
+            fn get_protocol_name() -> String {
+                stringify!(#type_name).to_string()
+            }
+
+            fn get_diagram_config() -> ::besedarium::protocol::introspection::DiagramConfig {
+                ::besedarium::protocol::introspection::DiagramConfig::default()
+            }
+        }
+
+        impl ::besedarium::protocol::introspection::GeneratesDiagram for #type_name {}
+
+        impl #type_name {
+            #diagram_method
+        }
+    }
 }

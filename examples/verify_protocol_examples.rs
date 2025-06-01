@@ -27,6 +27,10 @@ use besedarium::protocol::foundation::{
 };
 use besedarium::protocol::global::{TChanChoice, TChanEnd, TChanRecv, TChanSend};
 
+// Import the derive macro for automatic diagram generation
+#[cfg(feature = "derive")]
+use besedarium_derive::GenerateDiagram;
+
 // ================================
 // Customer-Agency Simple Protocol
 // ================================
@@ -106,8 +110,16 @@ type CustomerSendsOrder = TChanSend<
     BiDirectionalAction,
 >;
 
-// Simple protocol wrapper
+// Simple protocol wrapper with automatic diagram generation
+/// Customer-Agency Simple Protocol
+///
+/// This protocol demonstrates a basic request-response pattern with choice:
+/// 1. Customer sends an order to Agency
+/// 2. Agency responds with a quote
+/// 3. Customer chooses to accept or reject
+/// 4. If accepted, Agency sends confirmation date
 #[derive(Debug)]
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct CustomerAgencySimpleProtocol;
 
 impl GlobalProtocol for CustomerAgencySimpleProtocol {}
@@ -125,8 +137,16 @@ type RetryBranch = CustomerSendsOrder; // This creates a cycle that may need spe
 type CustomerMakesExtendedChoice =
     TChanChoice<Customer, DefaultChan, RequestLbl, AcceptBranch, RetryBranch, BiDirectionalAction>;
 
-// Retry protocol wrapper
+// Retry protocol wrapper with automatic diagram generation
+/// Customer-Agency Retry Protocol
+///
+/// Extended version of the simple protocol with retry capability:
+/// 1. Customer sends an order to Agency
+/// 2. Agency responds with a quote
+/// 3. Customer can choose to accept, reject, or retry (loop back to step 1)
+/// 4. If accepted, Agency sends confirmation date
 #[derive(Debug)]
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct CustomerAgencyRetryProtocol;
 
 impl GlobalProtocol for CustomerAgencyRetryProtocol {}
@@ -216,8 +236,16 @@ type WebServiceResponds = TChanSend<
 type ProxyRelaysReply =
     TChanSend<Proxy, Client, DefaultChan, ResponseLbl, Reply, WebServiceEnd, BiDirectionalAction>;
 
-// Web service protocol wrapper
+// Web service protocol wrapper with automatic diagram generation
+/// Web Service with Proxy Protocol
+///
+/// Multi-party protocol demonstrating message forwarding through a proxy:
+/// 1. Client sends request to Proxy
+/// 2. Proxy forwards request to WebService
+/// 3. WebService responds to Proxy
+/// 4. Proxy relays reply back to Client
 #[derive(Debug)]
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct WebServiceWithProxyProtocol;
 
 impl GlobalProtocol for WebServiceWithProxyProtocol {}
@@ -314,4 +342,30 @@ fn main() {
     println!("✓ Customer-Agency Retry Protocol");
     println!("✓ Web Service with Proxy Protocol");
     println!("All protocol examples compiled successfully!");
+
+    #[cfg(feature = "derive")]
+    {
+        println!("\n=== Automatic Diagram Generation Demo ===");
+
+        // Demonstrate automatic diagram generation for each protocol
+        println!("\n1. Customer-Agency Simple Protocol Diagram:");
+        let simple_diagram = CustomerAgencySimpleProtocol::generate_diagram();
+        println!("{}", simple_diagram);
+
+        println!("\n2. Customer-Agency Retry Protocol Diagram:");
+        let retry_diagram = CustomerAgencyRetryProtocol::generate_diagram();
+        println!("{}", retry_diagram);
+
+        println!("\n3. Web Service with Proxy Protocol Diagram:");
+        let proxy_diagram = WebServiceWithProxyProtocol::generate_diagram();
+        println!("{}", proxy_diagram);
+
+        println!("\n✓ All protocols successfully generated Mermaid sequence diagrams!");
+        println!("✓ Documentation is automatically generated via #[derive(GenerateDiagram)]");
+    }
+
+    #[cfg(not(feature = "derive"))]
+    {
+        println!("\nNote: Enable 'derive' feature to see automatic diagram generation demo");
+    }
 }
