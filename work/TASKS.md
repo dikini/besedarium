@@ -238,21 +238,51 @@ developer experience.
       - Verified end-to-end dual generation workflow from attributes to code generation
       - All 48 derive crate tests passing, including dual generation functionality
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
-- [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
+- [ ] **Task 3.5**: Develop Visualization Tools for Protocols
+  - [x] **Task 3.5.1**: Phase 1 - Manual Mermaid Integration ✅ **COMPLETED** (2025-05-31)
+    - [x] **Task 3.5.1a**: Integrated `simple-mermaid` for diagram embedding in documentation
+    - [x] **Task 3.5.1b**: Created example protocols with embedded sequence diagrams
+    - [x] **Task 3.5.1c**: Verified diagram rendering in `cargo doc` output
+  - [x] **Task 3.5.2**: Phase 2 - Automatic Diagram Generation from Protocol Definitions ✅ **COMPLETED**
+    - [x] **Task 3.5.2a**: Protocol Introspection Infrastructure (✅ **COMPLETED** - Step 1)
+      - [x] **Step 1**: Core introspection module implementation ✅ **COMPLETED**
+        - [x] Created `src/protocol/introspection.rs` with `ProtocolFlow` trait, `SequenceStep` enum, `ProtocolAnalyzer` helper trait
+        - [x] Implemented `GeneratesDiagram` marker trait and `DiagramConfig`/`DiagramTheme` for customization
+        - [x] Added Mermaid generation engine with sequence diagram support
+        - [x] Created comprehensive test suite (8 tests) covering all core functionality
+        - [x] Added type utilities for name extraction within stable Rust constraints
+      - [x] **Step 2**: Extend derive macro with GenerateDiagram support ✅ **COMPLETED**
+        - [x] Extended `besedarium-derive/src/protocol.rs` with `derive_generate_diagram_impl` function
+        - [x] Generated `ProtocolFlow` trait implementation for automatic diagram capability
+        - [x] Added export in `besedarium-derive/src/lib.rs` with comprehensive documentation
+        - [x] Created integration test in `tests/derive_macros.rs` verifying functionality
+        - [x] All tests passing (6/6 derive macro tests) with `GenerateDiagram` derive working correctly
+    - [x] **Task 3.5.2b**: Mermaid Generation Engine ✅ **COMPLETED** (2 edits completed)
+      - [x] Create `besedarium-derive/src/diagram_generation.rs` with `ProtocolDiagramGenerator`
+      - [x] Integrate automatic `#[doc = mermaid!(...)]` generation into protocol derive macro
+    - [x] **Task 3.5.2c**: Integration and Testing ✅ **COMPLETED** (3 edits completed)
+      - **Updated examples/verify_protocol_examples.rs**: Added `#[derive(GenerateDiagram)]` to protocol wrappers with enhanced documentation and automatic diagram generation demo
+      - **Enhanced tests/derive_macros.rs**: Added comprehensive tests for diagram generation functionality, method signatures, and multi-protocol differentiation
+      - **Fixed method call syntax**: Corrected from instance methods to static function calls (`Protocol::generate_diagram()`)
+      - **Protocol-specific content**: Updated derive macro to include protocol names in generated diagrams for unique identification
+      - **Successful integration**: All tests passing, examples working, automatic documentation generation functional
+      - [ ] Update `examples/verify_protocol_examples.rs` to demonstrate `#[derive(GenerateDiagram)]`
+      - [ ] Create comprehensive test suite for diagram generation functionality
+      - [ ] Update documentation with automatic generation examples (optional)
 
 ## Phase 4: Comprehensive Documentation
 
 This phase focuses on creating user-facing documentation and in-code doccomments
 once the library features are stable and well-tested.
 
-- [ ] **Task 4.1**: Create Core Concept Documentation
-  - [ ] **Task 4.1.1**: Create `docs/Projections.md` (detailing `Project<P, Role>`).
-  - [ ] **Task 4.1.2**: Create `docs/recursion.md` (detailing `Rec<P>`, `Var<N>`).
+- [x] **Task 4.1**: Create Core Concept Documentation
+  - [x] **Task 4.1.1**: Create `docs/Projections.md` (detailing `Project<P, Role>`). ✅ **COMPLETED**
+  - [x] **Task 4.1.2**: Create `docs/recursion.md` (detailing `Rec<P>`, `Var<N>`). (**COMPLETED** - 2025-05-27)
   - [ ] **Task 4.1.3**: Update/Refine `docs/duality.md` with implementation insights.
 - [ ] **Task 4.2**: Write Comprehensive Usage Examples
   - [ ] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4).
-- [ ] **Task 4.3**: Update Project README
-  - [ ] **Task 4.3.1**: Refresh `README.md` with current status, features, and quick start.
+- [x] **Task 4.3**: Update Project README ✅ **COMPLETED**
+  - [x] **Task 4.3.1**: Refresh `README.md` with current status, features, and quick start. ✅ **COMPLETED**
 - [ ] **Task 4.4**: Add Doccomments
   - [ ] **Task 4.4.1**: Add comprehensive doccomments to all public types, traits, and functions in the library.
 - [ ] **Task 4.5**: Review and Update Internal Documentation

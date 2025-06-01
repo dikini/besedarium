@@ -39,6 +39,9 @@ pub mod duality;
 // Projection implementation (Task 1.1.5) - ✅ IMPLEMENTED
 pub mod projection;
 
+// Protocol introspection for diagram generation (Task 3.5.2a) - ✅ IMPLEMENTED
+pub mod introspection;
+
 // Re-exports will be added as modules are implemented
 // pub use foundation::*;
 // pub use global::*;

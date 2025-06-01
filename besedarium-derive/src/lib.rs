@@ -37,6 +37,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
+mod diagram_generation;
 mod dual_generation;
 mod label;
 mod message;
@@ -210,4 +211,23 @@ pub fn endpoint(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn session_type(args: TokenStream, input: TokenStream) -> TokenStream {
     protocol::session_type_attribute_impl(args, input)
+}
+
+/// Derive macro for automatic diagram generation from protocol definitions
+///
+/// This automatically implements the `ProtocolFlow` trait and generates
+/// Mermaid sequence diagrams from protocol structure.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use besedarium_derive::{GlobalProtocol, GenerateDiagram};
+///
+/// #[derive(GlobalProtocol, GenerateDiagram)]
+/// #[protocol(roles = "Client, Server")]
+/// struct SimpleProtocol;
+/// ```
+#[proc_macro_derive(GenerateDiagram, attributes(protocol))]
+pub fn derive_generate_diagram(input: TokenStream) -> TokenStream {
+    protocol::derive_generate_diagram_impl(input)
 }
