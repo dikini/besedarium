@@ -182,6 +182,7 @@ async fn test_session_channel_state_integration() -> Result<(), RuntimeError> {
         .create_session(session_id.clone(), protocol, role, config)
         .await?;
 
+
     // Verify initial session status
     assert_eq!(session.status().await, SessionStatus::Initializing);
 
@@ -217,7 +218,6 @@ async fn test_session_channel_state_integration() -> Result<(), RuntimeError> {
         !leak_report.has_leaks(),
         "No resource leaks should be detected"
     );
-
     Ok(())
 }
 
@@ -248,6 +248,7 @@ async fn test_error_propagation_integration() -> Result<(), RuntimeError> {
     );
 
     let mut state = ProtocolState::new(session_id.0.clone(), Alice, TestProtocol);
+
     let _context = ExecutionContext::new("error-test".to_string(), "alice".to_string());
 
     // Force a timeout error by trying to send without a receiver
@@ -364,7 +365,7 @@ async fn test_error_propagation_integration() -> Result<(), RuntimeError> {
         Err(_) => {
             // External timeout - also valid, demonstrates timeout handling
             println!("External timeout occurred as expected");
-
+          
             // Test timeout state handling with validation
             let validator = Arc::new(StateValidator::new());
             let timeout_role = Alice; // Create fresh role for timeout test
