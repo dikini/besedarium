@@ -1,460 +1,587 @@
-# Protocol Examples: Review and Modeling Analysis
+# Protocol Examples: Modern Rust Implementations
 
 ## Introduction
 
-This document reviews the protocol examples from the classic session types literature, as found in
-`protocol-examples.md`, and analyzes how they can be modeled using the current Besedarium library.
-It also discusses the challenges and limitations encountered, especially around recursion, choices,
-and protocol projection. The aim is to provide a practical, hands-on perspective for protocol
-designers and implementers.
+This document provides up-to-date Rust implementations for protocol examples using the current
+Besedarium library API. These examples demonstrate practical patterns for implementing multi-party
+session types with choices, messaging, and protocol coordination.
+
+All examples use the current API structure with:
+
+- Global protocol types: `TChanSend`, `TChanRecv`, `TChanChoice`, `TChanOffer`, etc.
+- Foundation types: `Role`, `Message`, `GlobalProtocol` traits
+- Channel/Label system: `ChanId`, `MsgLbl` with `DefaultChan`, `RequestLbl`, `ResponseLbl`
+- Action I/O markers: `InputAction`, `OutputAction`, `BiDirectionalAction`
 
 ---
 
-## 1. Customer-Agency Protocols
+## 1. Customer-Agency Simple Protocol
 
-### 1.1. Simple Protocol (No Recursion)
+### Protocol Description
 
-**Protocol Steps:**
+A basic request-response protocol with choice:
 
-1. Customer sends an order to the agency (e.g., a travel destination).
-2. Agency replies with a quote (a price).
-3. Customer decides to accept or reject the offer:
-   - If accepted: Customer sends address, agency sends confirmation date, protocol ends.
-   - If rejected: Protocol ends immediately.
+1. Customer sends an order to the agency
+2. Agency replies with a quote
+3. Customer chooses to accept or reject:
+   - **Accept**: Customer sends address, agency sends confirmation date
+   - **Reject**: Protocol terminates immediately
 
-**Global Protocol (from the paper):**
+### Protocol Diagram
 
-```ignore
-Customer → Agency : order(Hawaii).
-Agency → Customer : quote(nat).
-Customer → Agency : {
-    accept(bool).
-        Customer → Agency : address(nat).
-        Agency → Customer : date(nat).end,
-    reject(bool).end
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant A as Agency
+    
+    C->>A: Order("Hawaii")
+    A-->>C: Quote(500)
+    
+    alt Accept
+        C->>A: Accept(address="123 Main St")
+        A-->>C: Date("2024-07-15")
+        Note over C,A: Protocol Complete
+    else Reject
+        C->>A: Reject()
+        Note over C,A: Protocol Terminated
+    end
+```
+
+### Rust Implementation
+
+```rust
+use besedarium::protocol::foundation::{
+    Role, Message, GlobalProtocol,
+    BiDirectionalAction, DefaultChan, RequestLbl, ResponseLbl
+};
+use besedarium::protocol::global::{TChanSend, TChanRecv, TChanChoice, TChanEnd};
+
+// ============================================================================
+// Roles
+// ============================================================================
+
+/// Customer role in the travel booking protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Customer;
+impl Role for Customer {}
+
+/// Travel agency role in the booking protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Agency;
+impl Role for Agency {}
+
+// ============================================================================
+// Messages
+// ============================================================================
+
+/// Order message with destination
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Order {
+    pub destination: String,
 }
-```
+impl Message for Order {}
 
-**Modeling in Besedarium:**
-
-- This protocol can be modeled using a sequence of `TInteract` (for messages) and `TChoice` (for
-the accept/reject decision).
-- Each branch of the choice is a sequence of further interactions, ending with `TEnd`.
-
-**Global Protocol (Besedarium API):**
-
-```rust
-// Using TStart as the explicit protocol entry point
-type SimpleGlobal = 
-    TStart<
-        Http,
-        ProtocolStartLabel,
-        TInteract<
-            Http,
-            EmptyLabel,
-            Customer,
-            Order<Hawaii>,
-            TInteract<
-                Http,
-                EmptyLabel,
-                Agency,
-                Quote<Nat>,
-                TChoice<
-                    Http,
-                    EmptyLabel,
-                    // accept branch
-                    TInteract<
-                        Http,
-                        EmptyLabel,
-                        Customer,
-                        Accept<Bool>,
-                        TInteract<
-                            Http,
-                            EmptyLabel,
-                            Customer,
-                            Address<Nat>,
-                            TInteract<
-                                Http,
-                                EmptyLabel,
-                                Agency,
-                                Date<Nat>,
-                                TEnd<Http>
-                            >
-                        >
-                    >,
-                    // reject branch
-                    TEnd<Http>
-                >
-            >
-        >
-    >;
-```
-
-**Projection to Local Types:**
-
-- Each role (Customer, Agency) gets a local protocol, where choices and message directions are
-preserved.
-- The choice is made by the Customer, and the Agency offers the corresponding branches.
-
----
-
-### 1.2. Protocol with Recursion (Retry)
-
-**Global Protocol:**
-
-```ignore
-rec {
-    Customer → Agency : order(place).
-    Agency → Customer : quote(nat).
-    Customer → Agency : {
-        accept(bool).
-            Customer → Agency : address(nat).
-            Agency → Customer : date(nat).end,
-        retry.
-            Customer → Agency : retry
-        reject(bool).end
-    }
+/// Quote message with price
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Quote {
+    pub price: u32,
 }
-```
+impl Message for Quote {}
 
-**Key Point:**
+/// Accept message with customer address
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Accept {
+    pub address: String,
+}
+impl Message for Accept {}
 
-- The `retry` branch allows the protocol to loop back and start over.
-- This is a classic use of recursion in session types.
+/// Reject message (empty payload)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reject;
+impl Message for Reject {}
 
-**Modeling in Besedarium:**
+/// Confirmation date message
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfirmationDate {
+    pub date: String,
+}
+impl Message for ConfirmationDate {}
 
-- Recursion is modeled with `TRec` (for the recursive block).
-- The `retry` branch should loop back to the start of the recursion.
-- The current library uses a simple `TRec`, but does not have explicit recursion variables or a way
-to "break out" of recursion in a type-safe way.
+// ============================================================================
+// Protocol Definition
+// ============================================================================
 
-**Global Protocol (Besedarium API):**
-
-```rust
-// Using TStart as the explicit protocol entry point with recursion
-type RetryGlobal =
-    TStart<
-        Http,
-        ProtocolStartLabel,
-        TRec<
-            Http,
-            RecursionLabel<"retry_loop">,
-            TInteract<
-                Http,
-                EmptyLabel,
-                Customer,
-                Order<Place>,
-                TInteract<
-                    Http,
-                    EmptyLabel,
-                    Agency,
-                    Quote<Nat>,
-                    TChoice<
-                        Http,
-                        EmptyLabel,
-                        // accept
-                        TInteract<Http, EmptyLabel, Customer, Accept<Bool>, /*...*/> ,
-                        TChoice<
-                            Http,
-                            EmptyLabel,
-                            // retry branch loops to recursion point
-                            TInteract<Http, EmptyLabel, Customer, Retry, /* loops via TRec */>,
-                            TEnd<Http>
-                        >
-                    >
-                >
-            >
-        >
-    >;
-```
-
-**Projection to Local Types:**
-
-- The Customer and Agency both see the recursion, but the decision to retry is made by the Customer
-and communicated explicitly.
-- This ensures both roles are synchronized and prevents protocol divergence.
-
-**Example Local Projection (Customer):**
-
-```rust
-// Customer sees recursion loop with accept, retry, or reject
-type CustomerLocalRetry =
-    EpSend<
-        Http,
-        Customer,
-        Order<Place>,
-        EpRecv<
-            Http,
-            Customer,
-            Quote<Nat>,
-            EpChoice<
-                Http,
-                Customer,
-                // accept branch
-                EpSend<
-                    Http,
-                    Customer,
-                    Address<Nat>,
-                    EpRecv<
-                        Http,
-                        Customer,
-                        Date<Nat>,
-                        EpEnd<Http, Customer>
-                    >
-                >,
-                // nested choice: retry or reject
-                EpChoice<
-                    Http,
-                    Customer,
-                    // retry: implicit recursion via TRec
-                    EpSend<Http, Customer, Retry, /* loops via TRec */>,
-                    // reject: end
-                    EpEnd<Http, Customer>
-                >
-            >
-        >
-    >;
-```
-
-**Example Local Projection (Agency):**
-
-```rust
-// Agency offers branches under recursion: accept, retry, or reject
-type AgencyLocalRetry =
-    EpRecv<
-        Http,
+/// Customer-Agency Simple Protocol
+///
+/// Flow:
+/// 1. Customer → Agency: Order
+/// 2. Agency → Customer: Quote  
+/// 3. Customer's choice:
+///    - Accept → Customer → Agency: Accept → Agency → Customer: Date → End
+///    - Reject → End
+pub type CustomerAgencySimpleProtocol = TChanSend<
+    Customer,
+    Agency,
+    DefaultChan,
+    RequestLbl,
+    Order,
+    TChanRecv<
         Agency,
-        Order<Place>,
-        EpSend<
-            Http,
-            Agency,
-            Quote<Nat>,
-            EpChoice<
-                Http,
+        Customer,
+        DefaultChan,
+        ResponseLbl,
+        Quote,
+        TChanChoice<
+            Customer,
+            DefaultChan,
+            RequestLbl,
+            // Accept branch: Customer sends address, Agency confirms with date
+            TChanSend<
+                Customer,
                 Agency,
-                // accept branch
-                EpRecv<
-                    Http,
+                DefaultChan,
+                RequestLbl,
+                Accept,
+                TChanRecv<
                     Agency,
-                    Address<Nat>,
-                    EpSend<
-                        Http,
-                        Agency,
-                        Date<Nat>,
-                        EpEnd<Http, Agency>
-                    >
+                    Customer,
+                    DefaultChan,
+                    ResponseLbl,
+                    ConfirmationDate,
+                    TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>,
+                    BiDirectionalAction
                 >,
-                // nested choice: retry or reject
-                EpChoice<
-                    Http,
-                    Agency,
-                    // retry: implicit recursion via TRec
-                    EpRecv<Http, Agency, Retry, /* loops via TRec */>,
-                    EpEnd<Http, Agency>
-                >
-            >
-        >
-    >;
+                BiDirectionalAction
+            >,
+            // Reject branch: Protocol terminates immediately
+            TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+            BiDirectionalAction
+        >,
+        BiDirectionalAction
+    >,
+    BiDirectionalAction
+>;
+
+/// Wrapper struct to implement GlobalProtocol trait
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomerAgencySimple(pub CustomerAgencySimpleProtocol);
+
+impl GlobalProtocol for CustomerAgencySimple {}
 ```
 
 ---
 
-## 2. Web Service with Proxy
+## 2. Customer-Agency Retry Protocol
 
-**Protocol Description:**
+### Protocol Description
 
-- A client, proxy, and web service interact.
-- The client sends a request to the proxy.
-- The proxy chooses to either forward the request or audit it.
-- In the forward case, the web service replies to the client.
-- In the audit case, the web service sends details to the proxy, which then resumes the session,
-and finally the web service replies to the client.
+An extended protocol with retry capability:
 
-**Global Protocol:**
+1. Customer sends an order to the agency
+2. Agency replies with a quote  
+3. Customer chooses between three options:
+   - **Accept**: Customer sends address, agency sends confirmation
+   - **Retry**: Loop back to step 1 with a new order
+   - **Reject**: Protocol terminates
 
-```ignore
-Client → Proxy : request {
-    forward.
-        Proxy → Web Service : forward.
-        Web Service → Client : reply
-    audit.
-        Proxy → Web Service : audit.
-        Web Service → Proxy : details.
-        Proxy → Web Service : resume.
-        Web Service → Client : reply
+### Protocol Diagram
+
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant A as Agency
+    
+    loop Retry Loop
+        C->>A: Order("Destination")
+        A-->>C: Quote(price)
+        
+        alt Accept
+            C->>A: Accept(address)
+            A-->>C: Date("confirmation")
+            Note over C,A: Protocol Complete
+        else Retry
+            C->>A: Retry()
+            Note over C,A: Continue Loop
+        else Reject
+            C->>A: Reject()
+            Note over C,A: Protocol Terminated
+        end
+    end
+```
+
+### Rust Implementation
+
+```rust
+// Additional message for retry functionality
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Retry;
+impl Message for Retry {}
+
+/// Customer-Agency Retry Protocol with recursive retry capability
+///
+/// Note: This example demonstrates the protocol structure. Full recursion
+/// would require TChanRec types when available in the future.
+/// 
+/// For now, we model the protocol as if it can loop through choice branches.
+pub type CustomerAgencyRetryProtocol = TChanSend<
+    Customer,
+    Agency,
+    DefaultChan,
+    RequestLbl,
+    Order,
+    TChanRecv<
+        Agency,
+        Customer,
+        DefaultChan,
+        ResponseLbl,
+        Quote,
+        TChanChoice<
+            Customer,
+            DefaultChan,
+            RequestLbl,
+            // Accept branch: Complete the booking
+            TChanSend<
+                Customer,
+                Agency,
+                DefaultChan,
+                RequestLbl,
+                Accept,
+                TChanRecv<
+                    Agency,
+                    Customer,
+                    DefaultChan,
+                    ResponseLbl,
+                    ConfirmationDate,
+                    TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>,
+                    BiDirectionalAction
+                >,
+                BiDirectionalAction
+            >,
+            // Choice between retry and reject
+            TChanChoice<
+                Customer,
+                DefaultChan,
+                RequestLbl,
+                // Retry branch: Signal retry (would loop back in full implementation)
+                TChanSend<
+                    Customer,
+                    Agency,
+                    DefaultChan,
+                    RequestLbl,
+                    Retry,
+                    TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+                    BiDirectionalAction
+                >,
+                // Reject branch: Terminate protocol
+                TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>,
+                BiDirectionalAction
+            >,
+            BiDirectionalAction
+        >,
+        BiDirectionalAction
+    >,
+    BiDirectionalAction
+>;
+
+/// Wrapper struct for retry protocol
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomerAgencyRetry(pub CustomerAgencyRetryProtocol);
+
+impl GlobalProtocol for CustomerAgencyRetry {}
+```
+
+---
+
+## 3. Web Service with Proxy Protocol
+
+### Protocol Description
+
+A three-party protocol involving client, proxy, and web service:
+
+1. Client sends a request to the proxy
+2. Proxy chooses to either forward or audit the request:
+   - **Forward**: Proxy forwards to web service, web service replies to client
+   - **Audit**: Proxy audits with web service, gets details, resumes, then web service replies to client
+
+### Protocol Diagram
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Proxy  
+    participant W as WebService
+    
+    C->>P: Request("data")
+    
+    alt Forward
+        P->>W: Forward(request)
+        W-->>C: Reply("result")
+        Note over C,P,W: Protocol Complete
+    else Audit
+        P->>W: Audit(request)
+        W-->>P: AuditDetails("log info")
+        P->>W: Resume()
+        W-->>C: Reply("result")
+        Note over C,P,W: Protocol Complete
+    end
+```
+
+### Rust Implementation
+
+```rust
+// ============================================================================
+// Additional Roles
+// ============================================================================
+
+/// Client role in the web service protocol
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Client;
+impl Role for Client {}
+
+/// Proxy role that mediates between client and web service
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Proxy;
+impl Role for Proxy {}
+
+/// Web service role that processes requests
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WebService;
+impl Role for WebService {}
+
+// ============================================================================
+// Additional Messages
+// ============================================================================
+
+/// Client request message
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Request {
+    pub data: String,
+}
+impl Message for Request {}
+
+/// Forward message from proxy to web service
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Forward {
+    pub request: Request,
+}
+impl Message for Forward {}
+
+/// Audit message from proxy to web service
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Audit {
+    pub request: Request,
+}
+impl Message for Audit {}
+
+/// Audit details from web service to proxy
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuditDetails {
+    pub log_info: String,
+}
+impl Message for AuditDetails {}
+
+/// Resume message from proxy to web service
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Resume;
+impl Message for Resume {}
+
+/// Reply message from web service to client
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reply {
+    pub result: String,
+}
+impl Message for Reply {}
+
+// ============================================================================
+// Protocol Definition
+// ============================================================================
+
+/// Web Service with Proxy Protocol
+///
+/// Flow:
+/// 1. Client → Proxy: Request
+/// 2. Proxy's choice:
+///    - Forward → Proxy → WebService: Forward → WebService → Client: Reply → End
+///    - Audit → Proxy → WebService: Audit → WebService → Proxy: AuditDetails 
+///             → Proxy → WebService: Resume → WebService → Client: Reply → End
+pub type WebServiceProxyProtocol = TChanSend<
+    Client,
+    Proxy,
+    DefaultChan,
+    RequestLbl,
+    Request,
+    TChanChoice<
+        Proxy,
+        DefaultChan,
+        RequestLbl,
+        // Forward branch: Simple forwarding
+        TChanSend<
+            Proxy,
+            WebService,
+            DefaultChan,
+            RequestLbl,
+            Forward,
+            TChanSend<
+                WebService,
+                Client,
+                DefaultChan,
+                ResponseLbl,
+                Reply,
+                TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>,
+                BiDirectionalAction
+            >,
+            BiDirectionalAction
+        >,
+        // Audit branch: Complex audit flow
+        TChanSend<
+            Proxy,
+            WebService,
+            DefaultChan,
+            RequestLbl,
+            Audit,
+            TChanRecv<
+                WebService,
+                Proxy,
+                DefaultChan,
+                ResponseLbl,
+                AuditDetails,
+                TChanSend<
+                    Proxy,
+                    WebService,
+                    DefaultChan,
+                    RequestLbl,
+                    Resume,
+                    TChanSend<
+                        WebService,
+                        Client,
+                        DefaultChan,
+                        ResponseLbl,
+                        Reply,
+                        TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>,
+                        BiDirectionalAction
+                    >,
+                    BiDirectionalAction
+                >,
+                BiDirectionalAction
+            >,
+            BiDirectionalAction
+        >,
+        BiDirectionalAction
+    >,
+    BiDirectionalAction
+>;
+
+/// Wrapper struct for web service proxy protocol
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebServiceProxy(pub WebServiceProxyProtocol);
+
+impl GlobalProtocol for WebServiceProxy {}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/// Export Customer-Agency Simple protocol diagram
+pub fn export_customer_agency_simple_diagram() -> String {
+    r#"sequenceDiagram
+    participant C as Customer
+    participant A as Agency
+    
+    C->>A: Order("Hawaii")
+    A-->>C: Quote(500)
+    
+    alt Accept
+        C->>A: Accept(address="123 Main St")
+        A-->>C: Date("2024-07-15")
+        Note over C,A: Protocol Complete
+    else Reject
+        C->>A: Reject()
+        Note over C,A: Protocol Terminated
+    end"#.to_string()
+}
+
+/// Export Customer-Agency Retry protocol diagram
+pub fn export_customer_agency_retry_diagram() -> String {
+    r#"sequenceDiagram
+    participant C as Customer
+    participant A as Agency
+    
+    loop Retry Loop
+        C->>A: Order("Destination")
+        A-->>C: Quote(price)
+        
+        alt Accept
+            C->>A: Accept(address)
+            A-->>C: Date("confirmation")
+            Note over C,A: Protocol Complete
+        else Retry
+            C->>A: Retry()
+            Note over C,A: Continue Loop
+        else Reject
+            C->>A: Reject()
+            Note over C,A: Protocol Terminated
+        end
+    end"#.to_string()
+}
+
+/// Export Web Service Proxy protocol diagram
+pub fn export_web_service_proxy_diagram() -> String {
+    r#"sequenceDiagram
+    participant C as Client
+    participant P as Proxy  
+    participant W as WebService
+    
+    C->>P: Request("data")
+    
+    alt Forward
+        P->>W: Forward(request)
+        W-->>C: Reply("result")
+        Note over C,P,W: Protocol Complete
+    else Audit
+        P->>W: Audit(request)
+        W-->>P: AuditDetails("log info")
+        P->>W: Resume()
+        W-->>C: Reply("result")
+        Note over C,P,W: Protocol Complete
+    end"#.to_string()
 }
 ```
 
-**Modeling in Besedarium:**
+---
 
-- The protocol is modeled as a sequence of `TInteract` and a `TChoice` (for the proxy's decision).
-- Each branch is a sequence of further interactions, ending with `TEnd`.
+## 4. Key Patterns and Insights
 
-**Projection to Local Types:**
+### Protocol Construction Patterns
 
-- Each role gets a local protocol, with the proxy making the choice and the others offering the
-corresponding branches.
+1. **Role Definition**: Each participant is a unit struct implementing the `Role` trait
+2. **Message Definition**: Protocol payloads are structs implementing the `Message` trait  
+3. **Protocol Wrapping**: Global protocols must be wrapped in structs implementing `GlobalProtocol`
+4. **Channel Parameters**: All protocol types use 7 parameters including channel, label, and action I/O markers
 
-### Example Local Projection (Client)
+### Choice vs. Offer
 
-```rust
-// Client sends request then offers two symmetric reply branches
-type ClientLocal =
-    EpSend<
-        Http,
-        Client,
-        Request,
-        EpChoice<
-            Http,
-            Client,
-            EpRecv<Http, Client, Reply, EpEnd<Http, Client>>,
-            EpRecv<Http, Client, Reply, EpEnd<Http, Client>>
-        >
-    >;
-```
+- **TChanChoice**: Represents a role making a choice between protocol branches
+- **TChanOffer**: Represents a role offering/handling choices made by others
+- Choices project to local `EpChanChoice` for the chooser and `EpChanOffer` for others
 
-### Example Local Projection (Proxy)
+### Type Aliases
 
-```rust
-// Proxy receives request, chooses forward or audit, then dispatches messages
-type ProxyLocal =
-    EpRecv<
-        Http,
-        Proxy,
-        Request,
-        EpChoice<
-            Http,
-            Proxy,
-            // forward branch
-            EpSend<
-                Http,
-                Proxy,
-                Forward,
-                EpRecv<
-                    Http,
-                    Proxy,
-                    Reply,
-                    EpSend<Http, Proxy, Reply, EpEnd<Http, Proxy>>
-                >
-            >,
-            // audit branch
-            EpSend<
-                Http,
-                Proxy,
-                Audit,
-                EpRecv<
-                    Http,
-                    Proxy,
-                    Details,
-                    EpSend<
-                        Http,
-                        Proxy,
-                        Resume,
-                        EpRecv<
-                            Http,
-                            Proxy,
-                            Reply,
-                            EpSend<Http, Proxy, Reply, EpEnd<Http, Proxy>>
-                        >
-                    >
-                >
-            >
-        >
-    >;
-```
+The library provides convenient type aliases for common patterns:
 
-### Example Local Projection (Web Service)
+- `SimpleChannelSend<S, R, Msg, P>` for basic sending
+- `SimpleChannelRecv<R, S, Msg, P>` for basic receiving  
+- `SimpleChannelChoice<R, Left, Right>` for basic choices
 
-```rust
-// Web Service offers forward or audit handling
-type WebServiceLocal =
-    EpChoice<
-        Http,
-        WebService,
-        // forward branch
-        EpRecv<
-            Http,
-            WebService,
-            Forward,
-            EpSend<Http, WebService, Reply, EpEnd<Http, WebService>>
-        >,
-        // audit branch
-        EpRecv<
-            Http,
-            WebService,
-            Audit,
-            EpSend<
-                Http,
-                WebService,
-                Details,
-                EpRecv<
-                    Http,
-                    WebService,
-                    Resume,
-                    EpSend<Http, WebService, Reply, EpEnd<Http, WebService>>
-                >
-            >
-        >
-    >;
-```
+### Future Extensions
+
+- **Recursion**: Full recursion support would use `TChanRec` types when available
+- **N-ary Choice**: Multiple branches can be modeled with nested binary choices
+- **Parallel Composition**: `TChanPar` enables concurrent protocol branches
+- **Local Projection**: Automatic projection from global to local protocols
 
 ---
 
-## 3. Modeling Challenges and Limitations
-
-### 3.1. Recursion and Control Flow
-
-- The current Besedarium library models recursion with `TRec`, but lacks explicit recursion
-variables (like Mu/De Bruijn indices).
-- This means you cannot precisely control where to break out of recursion or refer to a specific
-recursion point.
-- Infinite loops are possible if recursion is not properly controlled by explicit protocol actions.
-
-### 3.2. Synchronization of Recursion
-
-- Recursion control (break/continue) must always be driven by explicit protocol messages or
-choices, not by local-only control flow.
-- If one role decides to break/continue locally, but the others do not, the protocol can diverge or
-deadlock.
-- The recommended approach is to always synchronize recursion control via explicit messages, as
-shown in the examples above.
-
-### 3.3. Labels and Choices
-
-- Adding labels to choices, recursion, and ends improves clarity and helps with code generation and
-projection.
-- However, labels alone do not synchronize protocol control flow; explicit messages are still
-required.
-
-### 3.4. Projection Safety
-
-- The projection algorithm must ensure that all roles are synchronized, especially around choices
-and recursion.
-- All break/continue decisions must be protocol-driven, not local-only.
-
----
-
-## 4. References
-
-- [A Very Gentle Introduction to Multiparty Session
-Types][msession-types-intro]
-- [Comprehensive Multiparty Session Types](https://arxiv.org/pdf/1902.00544)
-
-[msession-types-intro]: http://mrg.doc.ic.ac.uk/publications/a-very-gentle-introduction-to-multiparty-session-types/main.pdf
-
----
-
-## 5. Discussion: Recursion, Labels, and Scoping
-
-### 5.1. Mu/Var vs. Labelled Rec/Break
-
-A key insight from session type theory is that labelled recursion (e.g., `Rec<"loop"> ...
-Break<"loop">`) is functionally equivalent to the classic `Mu(X) ... Var(X)` approach, as long as
-labels (or variables) are unique and in scope. Both allow you to define a recursion point and refer
-back to it, enabling looping and structured control flow in protocols.
-
-#### Example: Ping-Pong with Flat Labels
+## 5. Complete Example Usage
 
 ```rust
 Rec<"main_loop",

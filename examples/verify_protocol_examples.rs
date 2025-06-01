@@ -27,6 +27,7 @@ use besedarium::protocol::foundation::{
 };
 use besedarium::protocol::global::{TChanChoice, TChanEnd, TChanRecv, TChanSend};
 
+
 // Import the derive macro for automatic diagram generation
 #[cfg(feature = "derive")]
 use besedarium_derive::GenerateDiagram;
