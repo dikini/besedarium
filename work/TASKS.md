@@ -239,6 +239,11 @@ developer experience.
       - All 48 derive crate tests passing, including dual generation functionality
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
 - [ ] **Task 3.5**: Develop Visualization Tools for Protocols (Optional/Future)
+  - [ ] **Task 3.5.1**: Phase 1 - Basic Diagram Rendering & Integration
+    - [ ] Add `simple-mermaid` dependency to workspace `Cargo.toml`
+    - [ ] Create `examples/protocol_viz.rs` demonstrating `#[doc = mermaid!(…)]` integration
+    - [ ] Configure mdBook with `[preprocessor.mermaid]` in `docs/book.toml`
+    - [ ] Write user guide `docs/protocol-viz.md` covering both rustdoc and mdBook workflows
 
 ## Phase 4: Comprehensive Documentation
 
