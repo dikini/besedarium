@@ -257,39 +257,49 @@ mod tests {
     fn test_mermaid_syntax_validation() {
         // Test that generated diagrams follow proper Mermaid syntax
         let diagram = DiagramTestProtocol::generate_diagram();
-        
+
         // Must start with sequenceDiagram declaration
-        assert!(diagram.starts_with("sequenceDiagram"), "Must start with 'sequenceDiagram'");
-        
+        assert!(
+            diagram.starts_with("sequenceDiagram"),
+            "Must start with 'sequenceDiagram'"
+        );
+
         // Should not contain syntax errors common in generated code
         assert!(!diagram.contains(";;"), "Should not have double semicolons");
-        assert!(!diagram.contains("participant ;"), "Should not have malformed participants");
-        
+        assert!(
+            !diagram.contains("participant ;"),
+            "Should not have malformed participants"
+        );
+
         // Check for proper line structure
         let lines: Vec<&str> = diagram.lines().collect();
         for (i, line) in lines.iter().enumerate() {
             if i == 0 {
-                assert_eq!(*line, "sequenceDiagram", "First line must be 'sequenceDiagram'");
+                assert_eq!(
+                    *line, "sequenceDiagram",
+                    "First line must be 'sequenceDiagram'"
+                );
             } else if !line.trim().is_empty() {
                 // Non-empty lines should be valid Mermaid syntax
                 let trimmed = line.trim();
                 assert!(
-                    trimmed.starts_with("participant ") || 
-                    trimmed.contains("->>") || 
-                    trimmed.starts_with("note ") ||
-                    trimmed.starts_with("alt ") ||
-                    trimmed.starts_with("end") ||
-                    trimmed.starts_with("loop ") ||
-                    trimmed.starts_with("opt ") ||
-                    trimmed.starts_with("par ") ||
-                    trimmed.starts_with("%% "), // Comments
-                    "Line '{}' should be valid Mermaid syntax", trimmed
+                    trimmed.starts_with("participant ")
+                        || trimmed.contains("->>")
+                        || trimmed.starts_with("note ")
+                        || trimmed.starts_with("alt ")
+                        || trimmed.starts_with("end")
+                        || trimmed.starts_with("loop ")
+                        || trimmed.starts_with("opt ")
+                        || trimmed.starts_with("par ")
+                        || trimmed.starts_with("%% "), // Comments
+                    "Line '{}' should be valid Mermaid syntax",
+                    trimmed
                 );
             }
         }
     }
 
-    #[test] 
+    #[test]
     fn test_protocol_flow_trait_implementation() {
         use besedarium::protocol::introspection::ProtocolFlow;
 
@@ -299,12 +309,23 @@ mod tests {
 
         let roles = DiagramTestProtocol::get_roles();
         assert!(!roles.is_empty(), "Protocol should have at least one role");
-        assert_eq!(roles.len(), 2, "DiagramTestProtocol should have exactly 2 roles");
+        assert_eq!(
+            roles.len(),
+            2,
+            "DiagramTestProtocol should have exactly 2 roles"
+        );
         assert_eq!(roles, vec!["Role1", "Role2"]);
 
         let steps = DiagramTestProtocol::generate_sequence_steps();
-        assert!(!steps.is_empty(), "Protocol should have at least one sequence step");
-        assert_eq!(steps.len(), 2, "DiagramTestProtocol should have exactly 2 steps");
+        assert!(
+            !steps.is_empty(),
+            "Protocol should have at least one sequence step"
+        );
+        assert_eq!(
+            steps.len(),
+            2,
+            "DiagramTestProtocol should have exactly 2 steps"
+        );
 
         // Test diagram configuration
         let config = DiagramTestProtocol::get_diagram_config();
@@ -327,17 +348,27 @@ mod tests {
     fn test_diagram_content_accuracy() {
         // Test that diagram content accurately reflects protocol structure
         let diagram = CustomerAgencyProtocol::generate_diagram();
-        
+
         // Should contain protocol name in diagram
-        assert!(diagram.contains("CustomerAgencyProtocol"), "Should contain protocol name as comment or title");
-        
+        assert!(
+            diagram.contains("CustomerAgencyProtocol"),
+            "Should contain protocol name as comment or title"
+        );
+
         // Verify basic diagram structure is present
         let lines: Vec<&str> = diagram.lines().collect();
         assert!(lines.len() >= 3, "Should have header plus content lines");
-        
+
         // Should not be just a placeholder
-        let content_lines = lines.iter().skip(1).filter(|l| !l.trim().is_empty()).count();
-        assert!(content_lines > 0, "Should have actual content beyond header");
+        let content_lines = lines
+            .iter()
+            .skip(1)
+            .filter(|l| !l.trim().is_empty())
+            .count();
+        assert!(
+            content_lines > 0,
+            "Should have actual content beyond header"
+        );
     }
 
     #[test]
@@ -345,18 +376,21 @@ mod tests {
         // Test that repeated calls generate identical diagrams (deterministic)
         let diagram1 = DiagramTestProtocol::generate_diagram();
         let diagram2 = DiagramTestProtocol::generate_diagram();
-        
-        assert_eq!(diagram1, diagram2, "Diagram generation should be deterministic");
+
+        assert_eq!(
+            diagram1, diagram2,
+            "Diagram generation should be deterministic"
+        );
     }
 
     #[test]
     fn test_error_handling_in_diagram_generation() {
         // Test that diagram generation doesn't panic on edge cases
-        
+
         // These should all complete without panicking
         let _ = DiagramTestProtocol::generate_diagram();
         let _ = CustomerAgencyProtocol::generate_diagram();
-        
+
         // Test multiple rapid generations
         for _ in 0..10 {
             let _ = DiagramTestProtocol::generate_diagram();
@@ -366,18 +400,21 @@ mod tests {
     #[test]
     fn test_diagram_feature_integration() {
         // Test integration with the derive feature system
-        
+
         // This test verifies that the GenerateDiagram derive macro
         // properly integrates with the protocol derive system
         let diagram = DiagramTestProtocol::generate_diagram();
-        
+
         // Basic sanity checks that derive integration worked
         assert!(!diagram.is_empty(), "Generated diagram should not be empty");
-        assert!(diagram.len() > 20, "Generated diagram should have reasonable content");
-        
+        assert!(
+            diagram.len() > 20,
+            "Generated diagram should have reasonable content"
+        );
+
         // Verify that trait bounds are properly enforced (excluding generated methods)
         fn check_core_traits<T>()
-        where 
+        where
             T: besedarium::protocol::foundation::GlobalProtocol,
             T: besedarium::protocol::introspection::ProtocolFlow,
             T: besedarium::protocol::introspection::GeneratesDiagram,
@@ -387,10 +424,10 @@ mod tests {
             let _ = T::generate_sequence_steps();
             let _ = T::generate_mermaid_diagram(); // This is from the trait
         }
-        
+
         check_core_traits::<DiagramTestProtocol>();
         check_core_traits::<CustomerAgencyProtocol>();
-        
+
         // Test the generated method directly (not through generic bounds)
         let _ = DiagramTestProtocol::generate_diagram();
         let _ = CustomerAgencyProtocol::generate_diagram();
