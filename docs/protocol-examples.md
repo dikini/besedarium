@@ -2,9 +2,12 @@
 
 ## Introduction
 
-This document provides up-to-date Rust implementations for protocol examples using the current
-Besedarium library API. These examples demonstrate practical patterns for implementing multi-party
-session types with choices, messaging, and protocol coordination.
+This document provides comprehensive, real-world protocol examples for the Besedarium library, featuring both theoretical examples and **real working code extracted from the extensive integration test suite** (Task 2.4). These examples bridge the gap between protocol theory and practical implementation, helping developers understand how to effectively use the library.
+
+### Two Categories of Examples
+
+1. **Integration Test Examples** (Section 7): Real working code from `tests/client_server_integration.rs` and `tests/integration_common.rs`
+2. **Theoretical Examples** (Sections 1-6): Educational examples demonstrating protocol patterns
 
 All examples use the current API structure with:
 
@@ -12,6 +15,65 @@ All examples use the current API structure with:
 - Foundation types: `Role`, `Message`, `GlobalProtocol` traits
 - Channel/Label system: `ChanId`, `MsgLbl` with `DefaultChan`, `RequestLbl`, `ResponseLbl`
 - Action I/O markers: `InputAction`, `OutputAction`, `BiDirectionalAction`
+
+### Quick Start
+
+For immediate practical guidance, jump to **Section 7: Integration Tests - Real Working Examples** which contains verified, compilable code patterns extracted from the comprehensive test suite.
+
+### Automatic Diagram Generation
+
+**New in Besedarium**: Protocols can now automatically generate Mermaid sequence diagrams using the `#[derive(GenerateDiagram)]` macro:
+
+```rust
+use besedarium_derive::GenerateDiagram;
+
+#[derive(Protocol, GenerateDiagram)]
+struct CustomerAgencyProtocol;
+
+// Automatically generates both protocol implementation and diagram capability
+impl CustomerAgencyProtocol {
+    fn demo() {
+        // Generate a Mermaid sequence diagram automatically
+        let diagram = CustomerAgencyProtocol::generate_diagram();
+        println!("{}", diagram);
+        
+        // Output:
+        // sequenceDiagram
+        //     Customer->>Agency: Order
+        //     Agency-->>Customer: Quote
+        //     alt Accept
+        //         Customer->>Agency: Accept
+        //         Agency-->>Customer: Date
+        //     else Reject
+        //         Customer->>Agency: Reject
+        //     end
+    }
+}
+```
+
+**Features:**
+
+- **Zero-effort visualization**: Diagrams are generated directly from protocol types
+- **Mermaid compatibility**: Output works with GitHub, documentation tools, and IDEs
+- **Automatic documentation**: Can be embedded in doc comments using `#[doc = mermaid!(...)]`
+- **Live examples**: See `examples/verify_protocol_examples.rs` for working demonstrations
+
+**Integration with Documentation:**
+The generated diagrams integrate seamlessly with Rust documentation:
+
+```rust
+#[derive(Protocol, GenerateDiagram)]
+/// Customer-Agency Protocol
+/// 
+#[doc = mermaid!(
+    r#"sequenceDiagram
+        Customer->>Agency: Order
+        Agency-->>Customer: Quote"#
+)]
+struct DocumentedProtocol;
+```
+
+For complete examples of automatic diagram generation, see Section 7 and `examples/verify_protocol_examples.rs`.
 
 ---
 
@@ -787,30 +849,18 @@ Rec, to guide protocol designers in making informed, safe choices.*
 
 ---
 
-# Protocol Examples: Modern Rust Implementations
-
-## Introduction
-
-This document provides up-to-date Rust implementations for protocol examples using the current
-Besedarium library API. These examples demonstrate practical patterns for implementing multi-party
-session types with choices, messaging, and protocol coordination.
-
-All examples use the current API structure with:
-
-- Global protocol types: `TChanSend`, `TChanRecv`, `TChanChoice`, `TChanOffer`, etc.
-- Foundation types: `Role`, `Message`, `GlobalProtocol` traits
-- Channel/Label system: `ChanId`, `MsgLbl` with `DefaultChan`, `RequestLbl`, `ResponseLbl`
-- Action I/O markers: `InputAction`, `OutputAction`, `BiDirectionalAction`
-
----
-
-## Integration Tests: Real Working Examples
+## 7. Integration Tests: Real Working Examples
 
 This section leverages the actual integration tests from Task 2.4, providing real working code examples that compile and run successfully with the current Besedarium API. These examples bridge the gap between theoretical concepts and practical implementation.
 
-### 1. Simple Login Protocol (From Integration Tests)
+**Source Files:**
 
-**File:** `tests/client_server_integration.rs`
+- `tests/client_server_integration.rs` (533+ lines): Complete working protocol examples
+- `tests/integration_common.rs` (651+ lines): Comprehensive test infrastructure with roles, messages, channels, and complex data types
+
+### 7.1. Simple Login Protocol (From Integration Tests)
+
+**Source:** `test_login_protocol_compilation` from `tests/client_server_integration.rs`
 
 This is a real working example that demonstrates the fundamental patterns:
 
@@ -818,7 +868,45 @@ This is a real working example that demonstrates the fundamental patterns:
 use besedarium::protocol::foundation::*;
 use besedarium::protocol::global::*;
 
-// Simple Login Protocol: Client → Server (login) → Client (ack) → End
+// From integration_common.rs - Standard roles
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Alice;
+impl Role for Alice {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Bob;
+impl Role for Bob {}
+
+// From integration_common.rs - Channel definitions
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AuthChan;
+impl ChanId for AuthChan {}
+
+// From integration_common.rs - Message labels
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LoginLbl;
+impl MsgLbl for LoginLbl {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AckLbl;
+impl MsgLbl for AckLbl {}
+
+// From integration_common.rs - Message types
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoginMsg {
+    pub username: String,
+    pub password: String,
+}
+impl Message for LoginMsg {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AckMsg {
+    pub success: bool,
+    pub message: String,
+}
+impl Message for AckMsg {}
+
+// Complete working protocol from integration tests
 type LoginProtocol = TChanSend<
     Alice,    // Sender: Client (Alice)
     Bob,      // Receiver: Server (Bob)
@@ -837,62 +925,102 @@ type LoginProtocol = TChanSend<
     >,
     BiDirectionalAction,
 >;
+
+#[test]
+fn test_login_protocol_compilation() {
+    // Test that our login protocol compiles correctly
+    fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+    requires_global_protocol(std::marker::PhantomData::<LoginProtocol>);
+}
 ```
 
-**Message Types (From `tests/integration_common.rs`):**
+**Key Pattern**: This demonstrates the foundational pattern of:
+
+1. **Role Definition**: Clear sender/receiver roles (Alice as Client, Bob as Server)
+2. **Channel Usage**: Single channel (`AuthChan`) for authentication flow
+3. **Message Flow**: Request (`LoginMsg`) → Response (`AckMsg`) → End
+4. **Compilation Verification**: Using `GlobalProtocol` trait bound to verify protocol validity
+
+### 7.2. Multi-Party Protocol (From Integration Tests)
+
+**Source:** `test_multi_party_protocol` and `test_comprehensive_protocol_system`
 
 ```rust
-// Login message with username and password
-#[derive(Debug, Clone)]
-pub struct LoginMsg(pub String, pub String);
-impl Message for LoginMsg {}
+// Additional roles for multi-party scenarios
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Charlie;
+impl Role for Charlie {}
 
-// Acknowledgment message with success flag and optional token
-#[derive(Debug, Clone)]
-pub struct AckMsg(pub bool, pub Option<String>);
-impl Message for AckMsg {}
-```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Client;
+impl Role for Client {}
 
-**Key Features Demonstrated:**
-- Sequential message exchange between two roles
-- Proper channel and label usage
-- Message type integration with foundation traits
-- Protocol termination with `TChanEnd`
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Service;
+impl Role for Service {}
 
-### 2. Multi-Party Protocol (Three Roles)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Database;
+impl Role for Database {}
 
-**Real Working Example from Integration Tests:**
+// Additional channels for multi-party communication
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServiceChan;
+impl ChanId for ServiceChan {}
 
-```rust
-// Three-party protocol: Client → Server → Database → Server → Client
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DbChan;
+impl ChanId for DbChan {}
+
+// Query flow messages
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QueryLbl;
+impl MsgLbl for QueryLbl {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResultLbl;
+impl MsgLbl for ResultLbl {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct QueryMsg {
+    pub query: String,
+    pub parameters: std::collections::HashMap<String, String>,
+}
+impl Message for QueryMsg {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResultMsg {
+    pub data: Vec<String>,
+    pub status: String,
+}
+impl Message for ResultMsg {}
+
+// Three-party protocol: Client → Service → Database → Service → Client
 type ThreePartyProtocol = TChanSend<
-    Alice, // Client sends to Server
-    Bob,
-    AuthChan,
-    LoginLbl,
-    LoginMsg,
+    Client,      // Client sends query
+    Service,     // to Service
+    ServiceChan, // via ServiceChan
+    QueryLbl,    // Query label
+    QueryMsg,    // Query message
     TChanSend<
-        // Server forwards to Database
-        Bob,
-        Charlie,
-        DataChan,
-        DataLbl,
-        DataMsg,
-        TChanRecv<
-            // Database responds to Server
-            Charlie,
-            Bob,
-            DataChan,
-            ResultLbl,
-            ResultMsg,
+        Service,  // Service forwards query  
+        Database, // to Database
+        DbChan,   // via DbChan
+        QueryLbl, // Same query label
+        QueryMsg, // Same query message
+        TChanSend<
+            Database,    // Database responds
+            Service,     // to Service
+            DbChan,      // via DbChan
+            ResultLbl,   // Result label
+            ResultMsg,   // Result message
             TChanSend<
-                // Server responds to Client
-                Bob,
-                Alice,
-                AuthChan,
-                AckLbl,
-                AckMsg,
-                TChanEnd<AuthChan, AckLbl, BiDirectionalAction>,
+                Service,     // Service responds
+                Client,      // to Client
+                ServiceChan, // via ServiceChan
+                ResultLbl,   // Result label
+                ResultMsg,   // Result message
+                TChanEnd<ServiceChan, ResultLbl, BiDirectionalAction>, // End protocol
                 BiDirectionalAction,
             >,
             BiDirectionalAction,
@@ -903,125 +1031,419 @@ type ThreePartyProtocol = TChanSend<
 >;
 ```
 
-**Key Features:**
-- Three distinct roles: Client (Alice), Server (Bob), Database (Charlie)
-- Message forwarding pattern
-- Multiple channel usage (`AuthChan`, `DataChan`)
-- Real working message types from integration tests
+**Key Pattern**: This demonstrates:
 
-### 3. Complex Data Serialization
+1. **Multi-Role Coordination**: Three distinct roles with clear responsibilities
+2. **Channel Separation**: Different channels for different communication paths
+3. **Message Forwarding**: Service acts as intermediary between Client and Database
+4. **Complex Interaction**: Query flows through multiple hops with consistent message types
 
-**Working Example with Complex Message Types:**
+### 7.3. Complex Data Exchange (From Integration Tests)
+
+**Source:** `test_complex_data_exchange_user_profile` and `test_complex_data_exchange_server_command`
 
 ```rust
-// Complex user profile data structure
+// Complex data structures from integration tests
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserProfile {
     pub user_id: u64,
     pub username: String,
-    pub email: Option<String>,
-    pub preferences: Vec<(String, String)>,
-    pub aliases: Vec<String>,
+    pub email: String,
+    pub metadata: std::collections::HashMap<String, String>,
+    pub tags: Vec<String>,
 }
+impl Message for UserProfile {}
 
-// Server command enum with multiple variants
 #[derive(Debug, Clone, PartialEq)]
-pub enum ServerCommand {
-    StoreProfile(UserProfile),
-    ProcessOrder(OrderDetails),
-    GetStatus,
+pub struct OrderDetails {
+    pub order_id: u64,
+    pub customer_name: String,
+    pub items: Vec<String>,
+    pub total_amount: f64,
+    pub shipping_address: String,
 }
+impl Message for OrderDetails {}
 
-// Protocol using complex data types
+#[derive(Debug, Clone, PartialEq)]
+pub struct ServerCommand {
+    pub command_type: String,
+    pub parameters: std::collections::HashMap<String, String>,
+    pub metadata: Option<OrderDetails>,
+}
+impl Message for ServerCommand {}
+
+// Complex message labels
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UserProfileLbl;
+impl MsgLbl for UserProfileLbl {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServerCommandLbl;
+impl MsgLbl for ServerCommandLbl {}
+
+// Protocol handling complex data types
 type UserProfileExchangeProtocol = TChanSend<
-    Alice,          // Sender
-    Bob,            // Receiver
-    DataChan,       // Channel
-    UserProfileLbl, // Message Label
-    UserProfileMsg, // Message Type
+    Alice,           // Client (Alice)
+    Bob,             // Server (Bob)
+    DataChan,        // Data channel
+    UserProfileLbl,  // User profile label
+    UserProfile,     // Complex user profile message
     TChanSend<
-        Bob,      // Sender
-        Alice,    // Receiver
-        DataChan, // Channel
-        AckLbl,   // Message Label
-        AckMsg,   // Message Type
-        TChanEnd<DataChan, AckLbl, BiDirectionalAction>,
+        Bob,                                               // Server responds
+        Alice,                                             // to Client
+        DataChan,                                          // via DataChan
+        ServerCommandLbl,                                  // Server command label
+        ServerCommand,                                     // Complex server command
+        TChanEnd<DataChan, ServerCommandLbl, BiDirectionalAction>, // End
         BiDirectionalAction,
     >,
     BiDirectionalAction,
 >;
-```
 
-**Key Features:**
-- Complex nested data structures
-- Optional fields and collections
-- Enum variants with associated data
-- Full integration with Message trait system
-
-### 4. Protocol Duality Verification
-
-**Real Working Duality Example:**
-
-```rust
-// Client perspective protocol
-type ClientProtocol = TChanSend</* ... */>;
-
-// Server perspective protocol (dual)
-type ServerProtocol = TChanRecv<
-    Alice,    // Receiver: Server receives from Client
-    Bob,      // Sender: (from server perspective)
-    AuthChan, // Channel: Auth channel
-    LoginLbl, // Message label: Login
-    LoginMsg, // Message: Login credentials
-    TChanRecv<
-        // Continuation: Server sends response
-        Bob,      // Receiver: (from server perspective)
-        Alice,    // Sender: Server sends to Client
-        AuthChan, // Channel: Auth channel
-        AckLbl,   // Message label: Ack
-        AckMsg,   // Message: Acknowledgment
-        TChanEnd<AuthChan, AckLbl, BiDirectionalAction>, // End protocol
-        BiDirectionalAction,
-    >,
+type ServerCommandExchangeProtocol = TChanSend<
+    Bob,             // Server (Bob)
+    Alice,           // Client (Alice)
+    DataChan,        // Data channel
+    ServerCommandLbl, // Server command label
+    ServerCommand,   // Complex server command with nested OrderDetails
+    TChanEnd<DataChan, ServerCommandLbl, BiDirectionalAction>, // End protocol
     BiDirectionalAction,
 >;
 ```
 
-**Verification Pattern:**
+**Key Pattern**: This demonstrates:
+
+1. **Complex Message Types**: Structs with nested `HashMap`, `Vec`, and optional fields
+2. **Data Serialization**: Real data structures that can be serialized/deserialized
+3. **Type Safety**: Complex types still maintain compile-time protocol verification
+4. **Practical Applications**: Realistic data exchange patterns for web services
+
+### 7.4. Protocol Verification Patterns (From Integration Tests)
+
+**Source:** `test_protocol_duality` and `test_protocol_projection`
 
 ```rust
+use besedarium::protocol::projection::*;
+
 #[test]
 fn test_protocol_duality() {
-    // Verify both protocols are valid
+    // Test protocol duality verification from integration tests
     fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
-    requires_global_protocol(std::marker::PhantomData::<ClientProtocol>);
-    requires_global_protocol(std::marker::PhantomData::<ServerProtocol>);
     
-    // TODO: When IsDual implementations are complete, add duality verification
+    // Original protocol
+    requires_global_protocol(std::marker::PhantomData::<LoginProtocol>);
+    
+    // Dual verification would go here (when dual generation is implemented)
+    // This pattern ensures that protocols can be verified for duality
+}
+
+#[test]
+fn test_protocol_projection() {
+    // Test that protocols can be projected to local types for each role
+    fn requires_local_protocol<T>(_: std::marker::PhantomData<T>) {}
+    
+    // Project protocol for Alice (Client role)
+    requires_local_protocol(std::marker::PhantomData::<
+        ProjectToRole<LoginProtocol, Alice>
+    >);
+    
+    // Project protocol for Bob (Server role)  
+    requires_local_protocol(std::marker::PhantomData::<
+        ProjectToRole<LoginProtocol, Bob>
+    >);
+}
+
+#[test]
+fn test_simple_protocol_structures() {
+    // Test basic protocol building blocks
+    fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+    
+    // Simple send-end protocol
+    type SimpleProtocol = TChanSend<
+        Alice,
+        Bob,
+        AuthChan,
+        LoginLbl,
+        LoginMsg,
+        TChanEnd<AuthChan, LoginLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >;
+    
+    requires_global_protocol(std::marker::PhantomData::<SimpleProtocol>);
 }
 ```
 
-### 5. Protocol Projection Testing
+**Key Pattern**: This demonstrates:
 
-**Real Working Projection Examples:**
+1. **Compilation Verification**: Using trait bounds to verify protocol validity
+2. **Projection Testing**: Ensuring protocols can be projected to individual roles
+3. **Duality Preparation**: Structure for future duality verification
+4. **Building Block Testing**: Verifying fundamental protocol components
+
+## 7.5. Automatic Diagram Generation Examples
+
+The following examples demonstrate automatic diagram generation for protocol visualization:
+
+### Example 1: Customer-Agency Protocol Diagram
+
+```rust
+use besedarium_derive::GenerateDiagram;
+use besedarium::protocol::foundation::*;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct CustomerAgencyProtocol;
+
+fn demonstrate_diagram_generation() {
+    #[cfg(feature = "derive")]
+    {
+        let diagram = CustomerAgencyProtocol::generate_diagram();
+        println!("Generated diagram:\n{}", diagram);
+    }
+    #[cfg(not(feature = "derive"))]
+    {
+        println!("Diagram generation requires the 'derive' feature");
+    }
+}
+```
+
+### Example 2: Multi-Party Protocol Diagrams
+
+```rust
+use besedarium_derive::GenerateDiagram;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct WebServiceProxyProtocol;
+
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+struct CustomerExtendedChoice;
+
+fn demonstrate_multi_protocol_diagrams() {
+    #[cfg(feature = "derive")]
+    {
+        // Generate diagrams for multiple protocols
+        let proxy_diagram = WebServiceProxyProtocol::generate_diagram();
+        let choice_diagram = CustomerExtendedChoice::generate_diagram();
+        
+        println!("Proxy Protocol:\n{}\n", proxy_diagram);
+        println!("Extended Choice Protocol:\n{}\n", choice_diagram);
+    }
+}
+```
+
+### Example 3: Integration with Documentation
+
+The generated diagrams can be embedded directly in documentation:
+
+```rust
+#[cfg_attr(feature = "derive", derive(GenerateDiagram))]
+/// # Customer-Agency Protocol
+///
+/// This protocol demonstrates a simple request-response pattern with choice.
+/// 
+/// ## Protocol Flow
+/// 
+/// The protocol follows this sequence:
+/// 1. Customer sends order to agency
+/// 2. Agency responds with quote  
+/// 3. Customer chooses to accept or reject
+///
+/// ## Generated Diagram
+///
+/// When the `derive` feature is enabled, this protocol automatically generates
+/// a Mermaid sequence diagram that can be visualized in documentation tools.
+///
+/// ```rust
+/// let diagram = CustomerAgencyProtocol::generate_diagram();
+/// ```
+struct DocumentedProtocol;
+```
+
+### Example 4: Runtime Diagram Generation
+
+```rust
+use std::fs::File;
+use std::io::Write;
+
+fn save_protocol_diagrams() -> std::io::Result<()> {
+    #[cfg(feature = "derive")]
+    {
+        // Generate diagrams at runtime
+        let customer_diagram = CustomerAgencyProtocol::generate_diagram();
+        let proxy_diagram = WebServiceProxyProtocol::generate_diagram();
+        
+        // Save to files for documentation or debugging
+        let mut file = File::create("customer_agency.mmd")?;
+        file.write_all(customer_diagram.as_bytes())?;
+        
+        let mut file = File::create("web_service_proxy.mmd")?;
+        file.write_all(proxy_diagram.as_bytes())?;
+        
+        println!("Diagrams saved to .mmd files");
+    }
+    
+    Ok(())
+}
+```
+
+### Running the Examples
+
+All examples above are available in `examples/verify_protocol_examples.rs`:
+
+```bash
+# Run with diagram generation enabled
+cargo run --example verify_protocol_examples --features derive
+
+# View generated diagrams  
+cargo run --example verify_protocol_examples --features derive | grep -A20 "sequenceDiagram"
+```
+
+### Testing Diagram Generation
+
+Comprehensive tests for diagram generation are in `tests/derive_macros.rs`:
+
+```bash
+# Run diagram generation tests
+cargo test --features derive test_diagram
+
+# Run all derive macro tests  
+cargo test --features derive derive_macros
+```
+
+## 7.6. Integration Test Infrastructure
+
+The integration tests provide a comprehensive infrastructure that can be reused for protocol development:
+
+### Standard Roles
+
+- **Alice**: Typically represents client/user role
+- **Bob**: Typically represents server/service role  
+- **Charlie**: Used for three-party protocols
+- **Client**: Explicit client role for service architectures
+- **Service**: Middleware/service layer role
+- **Database**: Data storage layer role
+
+### Standard Channels
+
+- **AuthChan**: Authentication and authorization communication
+- **DataChan**: General data exchange
+- **ServiceChan**: Client-service communication
+- **DbChan**: Service-database communication
+
+### Standard Message Labels
+
+- **LoginLbl**: Login/authentication requests
+- **AckLbl**: Acknowledgment responses
+- **DataLbl**: General data messages
+- **QueryLbl**: Database/service queries
+- **ResultLbl**: Query results and responses
+- **UserProfileLbl**: User profile data exchange
+- **ServerCommandLbl**: Server command messages
+
+### Standard Message Types
+
+- **LoginMsg**: Username/password authentication
+- **AckMsg**: Success/failure acknowledgments
+- **DataMsg**: Generic data payload
+- **QueryMsg**: Parameterized queries
+- **ResultMsg**: Query results with status
+- **UserProfile**: Complex user data with metadata and tags
+- **ServerCommand**: Commands with parameters and optional nested data
+
+## 7.7. Common Implementation Patterns
+
+### 1. Request-Response Pattern
+
+```rust
+type RequestResponseProtocol<Req, Resp> = TChanSend<
+    Sender,
+    Receiver,
+    Channel,
+    RequestLbl,
+    Req,
+    TChanSend<
+        Receiver,
+        Sender,
+        Channel,
+        ResponseLbl,
+        Resp,
+        TChanEnd<Channel, ResponseLbl, BiDirectionalAction>,
+        BiDirectionalAction,
+    >,
+    BiDirectionalAction,
+>;
+```
+
+### 2. Multi-Hop Forwarding Pattern
+
+```rust
+type ForwardingProtocol<Msg> = TChanSend<
+    Client,
+    Service,
+    ServiceChan,
+    QueryLbl,
+    Msg,
+    TChanSend<
+        Service,
+        Database,
+        DbChan,
+        QueryLbl,
+        Msg,
+        // ... continue with response flow
+        // ... (database response back through service to client)
+    >,
+>;
+```
+
+### 3. Complex Data Exchange Pattern
+
+```rust
+type ComplexDataProtocol = TChanSend<
+    Sender,
+    Receiver,
+    DataChan,
+    DataLbl,
+    ComplexDataType, // Can include nested HashMap, Vec, Option fields
+    TChanEnd<DataChan, DataLbl, BiDirectionalAction>,
+    BiDirectionalAction,
+>;
+```
+
+## 7.8. Testing and Verification
+
+### Compilation Testing Pattern
 
 ```rust
 #[test]
-fn test_protocol_projection() {
-    // Test that protocols can be projected to local endpoints
-    type AliceEndpoint = <() as Project<LoginProtocol, Alice>>::Output;
-    type BobEndpoint = <() as Project<LoginProtocol, Bob>>::Output;
-
-    // Verify projections are valid local protocols
-    fn requires_local_protocol<T: LocalProtocol>(_: std::marker::PhantomData<T>) {}
-    requires_local_protocol(std::marker::PhantomData::<AliceEndpoint>);
-    requires_local_protocol(std::marker::PhantomData::<BobEndpoint>);
+fn test_protocol_compiles() {
+    fn requires_global_protocol<T: GlobalProtocol>(_: std::marker::PhantomData<T>) {}
+    requires_global_protocol(std::marker::PhantomData::<YourProtocol>);
 }
 ```
 
-## Running and Verifying Integration Examples
+### Foundation Type Testing Pattern
 
-### Test Execution
+```rust
+#[test]
+fn test_types_implement_required_traits() {
+    fn requires_role<T: Role>(_: std::marker::PhantomData<T>) {}
+    fn requires_message<T: Message>(_: std::marker::PhantomData<T>) {}
+    fn requires_chan_id<T: ChanId>(_: std::marker::PhantomData<T>) {}
+    fn requires_msg_lbl<T: MsgLbl>(_: std::marker::PhantomData<T>) {}
+    
+    requires_role(std::marker::PhantomData::<YourRole>);
+    requires_message(std::marker::PhantomData::<YourMessage>);
+    // ... etc
+}
+```
+
+## 7.9. Cross-References to Integration Tests
+
+All examples in this section are extracted from and verified against:
+
+- **`tests/client_server_integration.rs`**: Main integration test file with complete working protocols
+- **`tests/integration_common.rs`**: Common infrastructure (roles, messages, channels, labels)
+
+### Running the Integration Examples
 
 To run the real working examples from integration tests:
 
@@ -1038,16 +1460,16 @@ cargo test --test client_server_integration test_complex_data_exchange
 cargo test --test client_server_integration -- --nocapture
 ```
 
-### Verification Examples
+### Verification Commands
 
-You can also run the verification examples:
+To verify specific protocol patterns:
 
 ```bash
-# Run the protocol verification examples
-cargo run --example verify_protocol_examples
-
-# Run all examples
-cargo run --example verify_protocol_examples --features all-examples
+cargo test test_login_protocol_compilation
+cargo test test_multi_party_protocol  
+cargo test test_complex_data_exchange
+cargo test test_protocol_duality
+cargo test test_protocol_projection
 ```
 
 ### Development Workflow
