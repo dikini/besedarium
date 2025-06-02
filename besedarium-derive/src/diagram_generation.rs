@@ -6,9 +6,9 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::DeriveInput;
 use std::fs;
 use std::path::Path;
+use syn::DeriveInput;
 
 /// Advanced protocol diagram generator for automatic documentation integration.
 ///
@@ -53,15 +53,21 @@ impl ProtocolDiagramGenerator {
         let protocol_name = &self.protocol_name;
 
         // Generate the diagram file path relative to the workspace root
-        let diagram_file_path = format!("generated_diagrams/{}.mermaid", protocol_name.to_lowercase());
-        
+        let diagram_file_path = format!(
+            "generated_diagrams/{}.mermaid",
+            protocol_name.to_lowercase()
+        );
+
         // Generate the actual diagram content at compile time
         let diagram_content = self.generate_compile_time_diagram_content();
 
         // Ensure the generated_diagrams directory exists and write the diagram file
         if let Err(e) = self.write_diagram_file(&diagram_file_path, &diagram_content) {
             // If file creation fails, fall back to code block approach
-            eprintln!("Warning: Could not create diagram file {}: {}", diagram_file_path, e);
+            eprintln!(
+                "Warning: Could not create diagram file {}: {}",
+                diagram_file_path, e
+            );
             return quote! {
                 #[doc = concat!(
                     "# ", #protocol_name, " Protocol\n\n",
@@ -111,7 +117,7 @@ impl ProtocolDiagramGenerator {
     /// A string literal containing the complete Mermaid diagram
     fn generate_compile_time_diagram_content(&self) -> String {
         let protocol_name = &self.protocol_name;
-        
+
         // For now, generate a basic sequence diagram that protocols can enhance
         // This will be extended to analyze actual protocol structure in future phases
         format!(
@@ -260,7 +266,11 @@ impl ProtocolDiagramGenerator {
     ///
     /// # Returns
     /// Result indicating success or failure of file operations
-    fn write_diagram_file(&self, file_path: &str, content: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn write_diagram_file(
+        &self,
+        file_path: &str,
+        content: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Create the directory if it doesn't exist
         if let Some(parent) = Path::new(file_path).parent() {
             fs::create_dir_all(parent)?;
@@ -268,7 +278,7 @@ impl ProtocolDiagramGenerator {
 
         // Write the diagram content
         fs::write(file_path, content)?;
-        
+
         Ok(())
     }
 }

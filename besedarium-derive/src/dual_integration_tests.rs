@@ -9,8 +9,8 @@ mod tests {
 
     use crate::dual_generation::DualGenerator;
     use crate::protocol::{
-        generate_protocol_implementation, MessageFlow, MessageProperties,
-        MessageSpec, ProtocolAttributes, ProtocolFlow, ProtocolSpec,
+        generate_protocol_implementation, MessageFlow, MessageProperties, MessageSpec,
+        ProtocolAttributes, ProtocolFlow, ProtocolSpec,
     };
 
     /// Helper to create a minimal protocol spec for testing

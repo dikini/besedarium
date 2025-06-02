@@ -6,7 +6,7 @@
 use besedarium::protocol::foundation::GlobalProtocol;
 
 /// A protocol that demonstrates simple-mermaid integration
-/// 
+///
 /// This protocol uses a pre-generated Mermaid diagram file that is embedded
 /// in the documentation using the `simple-mermaid` crate. The diagram will
 /// be properly rendered in the generated rustdoc output.

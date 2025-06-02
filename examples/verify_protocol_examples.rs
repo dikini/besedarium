@@ -405,14 +405,16 @@ fn main() {
 
         println!("\n✓ All protocols successfully generated Mermaid sequence diagrams!");
         println!("✓ Documentation is automatically generated via #[derive(GenerateDiagram)]");
-        
+
         println!("\n=== Embedded Documentation Demo ===");
-        println!("Each protocol struct now has comprehensive documentation with embedded diagrams:");
+        println!(
+            "Each protocol struct now has comprehensive documentation with embedded diagrams:"
+        );
         println!("- Protocol descriptions are enhanced with diagram explanations");
         println!("- Mermaid diagrams are embedded directly in doc comments at compile time");
         println!("- Runtime diagram generation is available via generate_diagram() method");
         println!("- Use `cargo doc --open --features derive` to view the embedded documentation");
-        
+
         println!("\n✨ Key Benefits:");
         println!("📋 Documentation and diagrams are always synchronized");
         println!("⚡ Diagrams generated at compile time for zero runtime cost");
