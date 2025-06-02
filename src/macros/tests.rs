@@ -65,7 +65,7 @@ mod role_tests {
         assert_eq!(format!("{:?}", role), "TestRole");
 
         // Test default implementation
-        let default_role = TestRole::default();
+        let default_role = TestRole;
         assert_eq!(role, default_role);
     }
 
@@ -121,7 +121,7 @@ mod message_tests {
         assert_eq!(format!("{:?}", ping), "Ping");
 
         // Test default implementation
-        let default_ping = Ping::default();
+        let default_ping = Ping;
         assert_eq!(ping, default_ping);
     }
 

@@ -26,6 +26,7 @@ use crate::utils::{basic_trait_impl, get_type_name, handle_result, is_enum, is_s
 #[derive(Clone)]
 pub struct ProtocolSpec {
     pub name: Ident,
+    #[allow(dead_code)] // Reserved for future protocol attribute processing
     pub attributes: ProtocolAttributes,
     pub roles: Vec<Ident>,
     // Replaced messages with flows to support advanced constructs
@@ -62,6 +63,7 @@ pub struct ChoiceFlow {
 
 /// Choice message with multiple variants
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Reserved for future choice message DSL features
 pub struct ChoiceMessage {
     pub name: Ident,
     pub variants: Vec<ChoiceVariant>,
@@ -69,6 +71,7 @@ pub struct ChoiceMessage {
 
 /// Individual choice variant
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Reserved for future choice variant DSL features
 pub struct ChoiceVariant {
     pub name: Ident,
     pub fields: Vec<MessageField>,
@@ -128,15 +131,19 @@ pub struct MessageFlow {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Reserved for future message specification DSL features
 pub enum MessageSpec {
     Simple {
+        #[allow(dead_code)] // Reserved for future message field processing
         name: Ident,
+        #[allow(dead_code)] // Reserved for future message field processing
         fields: Vec<MessageField>,
     },
     Choice(ChoiceMessage),
 }
 
 impl MessageSpec {
+    #[allow(dead_code)] // Reserved for future message name extraction
     pub fn name(&self) -> &Ident {
         match self {
             MessageSpec::Simple { name, .. } => name,
@@ -144,6 +151,7 @@ impl MessageSpec {
         }
     }
 
+    #[allow(dead_code)] // Reserved for future message field extraction
     pub fn fields(&self) -> Vec<MessageField> {
         match self {
             MessageSpec::Simple { fields, .. } => fields.clone(),
@@ -157,8 +165,10 @@ impl MessageSpec {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)] // Reserved for future message field processing
 pub struct MessageField {
     pub name: Ident,
+    #[allow(dead_code)] // Reserved for future type processing
     pub field_type: Type,
 }
 
@@ -172,12 +182,19 @@ impl std::fmt::Debug for MessageField {
 }
 
 #[derive(Debug, Default, Clone)]
+#[allow(dead_code)] // Reserved for future message property processing
 pub struct MessageProperties {
+    #[allow(dead_code)] // Reserved for future timeout handling
     pub timeout: Option<String>,
+    #[allow(dead_code)] // Reserved for future priority handling
     pub priority: Option<u8>,
+    #[allow(dead_code)] // Reserved for future retry handling
     pub retry_count: Option<u32>,
+    #[allow(dead_code)] // Reserved for future reliability handling
     pub reliable: Option<bool>,
+    #[allow(dead_code)] // Reserved for future ordering handling
     pub ordered: Option<bool>,
+    #[allow(dead_code)] // Reserved for future duplicate detection
     pub duplicate_detection: Option<bool>,
 }
 
@@ -738,7 +755,7 @@ fn parse_simple_protocol_syntax(content: &str, struct_name: &syn::Ident) -> Resu
                 j += 1;
             }
 
-            if let Ok(message_flow) = parse_message_flow_from_text(&complete_flow.trim()) {
+            if let Ok(message_flow) = parse_message_flow_from_text(complete_flow.trim()) {
                 // Check if this is a choice message and if the next non-empty line is a match statement
                 let is_choice_message = matches!(message_flow.message, MessageSpec::Choice(_));
 

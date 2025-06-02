@@ -5,12 +5,11 @@
 
 #[cfg(test)]
 mod tests {
-    use quote::quote;
     use syn::parse_quote;
 
     use crate::dual_generation::DualGenerator;
     use crate::protocol::{
-        generate_protocol_implementation, parse_protocol_args, MessageFlow, MessageProperties,
+        generate_protocol_implementation, MessageFlow, MessageProperties,
         MessageSpec, ProtocolAttributes, ProtocolFlow, ProtocolSpec,
     };
 
@@ -124,10 +123,10 @@ mod tests {
         attrs.dual_documentation = false;
 
         // Verify the attributes were set correctly
-        assert_eq!(attrs.generate_dual, true);
+        assert!(attrs.generate_dual);
         assert_eq!(attrs.dual_name, Some("MyDual".to_string()));
-        assert_eq!(attrs.verify_duality, true);
-        assert_eq!(attrs.dual_documentation, false);
+        assert!(attrs.verify_duality);
+        assert!(!attrs.dual_documentation);
     }
 
     #[test]

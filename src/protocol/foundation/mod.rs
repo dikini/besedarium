@@ -976,7 +976,6 @@ pub trait ActionIOTMarker: Send + Sync + 'static + Debug + Clone + PartialEq + E
 /// Standard Action I/O Types
 ///
 /// These types represent the three fundamental I/O patterns in communication protocols.
-
 /// Marker type for input (receive-only) actions.
 ///
 /// `InputAction` represents operations that only receive data without sending any

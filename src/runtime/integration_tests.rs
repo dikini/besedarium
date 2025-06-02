@@ -3,8 +3,6 @@
 //! This module provides comprehensive integration tests that validate
 //! between state machine, channel communication, session management, and error handling.
 
-#![cfg(test)]
-
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::{sleep, timeout};
@@ -677,7 +675,7 @@ async fn test_concurrent_state_channel_integration() -> Result<(), RuntimeError>
 
                 // Create a new validated state for testing (separate from shared state)
                 let validated_state = ProtocolState::with_validation(
-                    &format!("concurrent_state_{}", i),
+                    format!("concurrent_state_{}", i),
                     Alice,
                     TestProtocol,
                     validator,

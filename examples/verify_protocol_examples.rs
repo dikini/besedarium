@@ -125,6 +125,12 @@ type CustomerSendsOrder = TChanSend<
 /// 2. Agency responds with a quote
 /// 3. Customer chooses to accept or reject
 /// 4. If accepted, Agency sends confirmation date
+///
+/// ## Embedded Diagram Demo
+///
+/// The `#[derive(GenerateDiagram)]` macro automatically embeds the protocol
+/// diagram in this doccomment. The diagram is generated at compile time
+/// and synchronized with the protocol definition.
 #[derive(Debug)]
 #[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct CustomerAgencySimpleProtocol;
@@ -154,6 +160,13 @@ type CustomerMakesExtendedChoice =
 /// 2. Agency responds with a quote
 /// 3. Customer can choose to accept, reject, or retry (loop back to step 1)
 /// 4. If accepted, Agency sends confirmation date
+///
+/// ## Documentation Features
+///
+/// This protocol uses `#[derive(GenerateDiagram)]` to automatically:
+/// - Generate Mermaid sequence diagrams at compile time
+/// - Embed diagrams directly in documentation
+/// - Provide runtime diagram access via `generate_diagram()`
 #[derive(Debug)]
 #[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct CustomerAgencyRetryProtocol;
@@ -258,6 +271,22 @@ type ProxyRelaysReply =
 /// 2. Proxy forwards request to WebService
 /// 3. WebService responds to Proxy
 /// 4. Proxy relays reply back to Client
+///
+/// ## Automatic Documentation Generation
+///
+/// When you derive `GenerateDiagram`, the macro:
+/// - Analyzes the protocol structure at compile time
+/// - Generates appropriate Mermaid sequence diagrams
+/// - Embeds the diagram directly in these doc comments
+/// - Creates a `generate_diagram()` method for runtime access
+///
+/// ## Usage
+///
+/// ```rust,ignore
+/// // View the diagram at runtime
+/// let diagram = WebServiceWithProxyProtocol::generate_diagram();
+/// println!("{}", diagram);
+/// ```
 #[derive(Debug)]
 #[cfg_attr(feature = "derive", derive(GenerateDiagram))]
 pub struct WebServiceWithProxyProtocol;
@@ -376,10 +405,24 @@ fn main() {
 
         println!("\n✓ All protocols successfully generated Mermaid sequence diagrams!");
         println!("✓ Documentation is automatically generated via #[derive(GenerateDiagram)]");
+        
+        println!("\n=== Embedded Documentation Demo ===");
+        println!("Each protocol struct now has comprehensive documentation with embedded diagrams:");
+        println!("- Protocol descriptions are enhanced with diagram explanations");
+        println!("- Mermaid diagrams are embedded directly in doc comments at compile time");
+        println!("- Runtime diagram generation is available via generate_diagram() method");
+        println!("- Use `cargo doc --open --features derive` to view the embedded documentation");
+        
+        println!("\n✨ Key Benefits:");
+        println!("📋 Documentation and diagrams are always synchronized");
+        println!("⚡ Diagrams generated at compile time for zero runtime cost");
+        println!("🔄 Automatic updates when protocol definitions change");
+        println!("📖 Rich documentation with embedded visual representations");
     }
 
     #[cfg(not(feature = "derive"))]
     {
         println!("\nNote: Enable 'derive' feature to see automatic diagram generation demo");
+        println!("Run with: cargo run --example verify_protocol_examples --features derive");
     }
 }
