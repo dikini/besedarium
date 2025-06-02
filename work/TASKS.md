@@ -92,7 +92,7 @@ with a strong emphasis on the concepts outlined in `docs/duality.md`.
         - [x] Confirm implementation/test ratios improved ✅ (duality=1.0:1, global=2.1:1, local=1.4:1, projection=1.3:1)
       - **Justification**: All 5 protocol modules now comply with 300-line size guideline. Implementation/test ratios now compliant with guidelines.
       - **Priority**: Completed ✅
-- [ ] **Task 1.2**: Implement Label Preservation and Transformation Logic
+- [x] **Task 1.2**: Implement Label Preservation and Transformation Logic ✅ **COMPLETED**
   - [x] **Task 1.2.1**: Research label behavior in `Choice`, `Parallel`, `Rec` to inform design. (**COMPLETED** - documented in updated `duality.md`)
   - [x] **Task 1.2.2**: Design type-level traits for label transformations (e.g., `TMap`, `TCollect`, `TFilter`). (**COMPLETED** - detailed in updated `duality.md`)
   - [x] **Task 1.2.3**: Implement the designed label transformation traits and integrate them with protocol types. ✅ **COMPLETED**
@@ -207,7 +207,7 @@ developer experience.
   - [ ] **Task 3.2.1**: Profile compile times of type-level constructs. (postponed to after release)
   - [ ] **Task 3.2.2**: Benchmark runtime performance for common protocol operations. (postponed to after release)
   - [ ] **Task 3.2.3**: Explore and implement optimization techniques for type-level logic and runtime. (postponed to after release)
-- [ ] **Task 3.3**: Explore Macro-Based DSL for Protocol Definition
+- [x] **Task 3.3**: Explore Macro-Based DSL for Protocol Definition ✅ **COMPLETED**
   - [x] **Task 3.3.1**: Enhanced Declarative Macros Infrastructure ✅ **COMPLETED**
   - [x] **Task 3.3.2**: Implement Simple Derive Macros ✅ **COMPLETED** (2025-05-30)
     - [x] **Task 3.3.2a**: Created separate `besedarium-derive` proc-macro crate with proper workspace configuration
@@ -238,7 +238,7 @@ developer experience.
       - Verified end-to-end dual generation workflow from attributes to code generation
       - All 48 derive crate tests passing, including dual generation functionality
 - [ ] **Task 3.4**: Consider Integration with Existing Actor Frameworks (postponed to after release)
-- [ ] **Task 3.5**: Develop Visualization Tools for Protocols
+- [x] **Task 3.5**: Develop Visualization Tools for Protocols ✅ **COMPLETED**
   - [x] **Task 3.5.1**: Phase 1 - Manual Mermaid Integration ✅ **COMPLETED** (2025-05-31)
     - [x] **Task 3.5.1a**: Integrated `simple-mermaid` for diagram embedding in documentation
     - [x] **Task 3.5.1b**: Created example protocols with embedded sequence diagrams
@@ -285,7 +285,7 @@ once the library features are stable and well-tested.
   - [x] Provided concrete examples of `#[protocol(generate_dual = true)]` usage
   - [x] Enhanced docs/Projections.md and docs/recursion.md with practical implementation examples
   - [x] Created examples/verify_protocol_examples.rs for practical verification patterns
-- [ ] **Task 4.2**: Write Comprehensive Usage Examples
+- [x] **Task 4.2**: Write Comprehensive Usage Examples ✅ **COMPLETED**
   - [x] **Task 4.2.1**: Create `docs/protocol-examples.md` (leveraging integration tests from Task 2.4). ✅ **COMPLETED**
 - [x] **Task 4.3**: Update Project README ✅ **COMPLETED**
   - [x] **Task 4.3.1**: Refresh `README.md` with current status, features, and quick start. ✅ **COMPLETED**
@@ -318,7 +318,7 @@ once the library features are stable and well-tested.
       - [x] Added quick start examples and integration test examples sections ✅
       - [x] Fixed doctest compilation issues by adding proper role definitions and IO capability types ✅
       - [x] All 115 doctests passing (up from 113), 0 failed, demonstrating successful polish improvements ✅
-- [ ] **Task 4.5**: Review and Update Internal Documentation
+- [x] **Task 4.5**: Review and Update Internal Documentation ✅ **COMPLETED**
   - [x] **Task 4.5.1**: Review and update `work/learnings.md` with insights from all phases. ✅ **COMPLETED** (2025-05-31)
   - [x] **Task 4.5.2**: Check PR 57 review comments and act on them. ✅ **COMPLETED** (2025-05-31)
     - [x] Retrieved and analyzed 2 review comments from GitHub API

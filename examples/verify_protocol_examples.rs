@@ -74,7 +74,9 @@ pub struct ConfirmationDate {
 impl Message for ConfirmationDate {}
 
 // Protocol type aliases for the simple protocol
+#[allow(dead_code)]
 type SimpleEnd = TChanEnd<DefaultChan, RequestLbl, BiDirectionalAction>;
+#[allow(dead_code)]
 type CustomerReceivesConfirmation = TChanRecv<
     Customer,
     Agency,
@@ -86,11 +88,15 @@ type CustomerReceivesConfirmation = TChanRecv<
 >;
 
 // Choice branches
+#[allow(dead_code)]
 type AcceptBranch = CustomerReceivesConfirmation;
+#[allow(dead_code)]
 type RejectBranch = SimpleEnd;
+#[allow(dead_code)]
 type CustomerMakesChoice =
     TChanChoice<Customer, DefaultChan, RequestLbl, AcceptBranch, RejectBranch, BiDirectionalAction>;
 
+#[allow(dead_code)]
 type CustomerReceivesQuote = TChanRecv<
     Customer,
     Agency,
@@ -100,6 +106,7 @@ type CustomerReceivesQuote = TChanRecv<
     CustomerMakesChoice,
     BiDirectionalAction,
 >;
+#[allow(dead_code)]
 type CustomerSendsOrder = TChanSend<
     Customer,
     Agency,
@@ -133,7 +140,9 @@ pub struct Retry;
 impl Message for Retry {}
 
 // Extended choice for retry protocol
+#[allow(dead_code)]
 type RetryBranch = CustomerSendsOrder; // This creates a cycle that may need special handling in practice
+#[allow(dead_code)]
 type CustomerMakesExtendedChoice =
     TChanChoice<Customer, DefaultChan, RequestLbl, AcceptBranch, RetryBranch, BiDirectionalAction>;
 
@@ -205,7 +214,9 @@ pub struct Reply {
 impl Message for Reply {}
 
 // Web service protocol - simplified version for compilation test
+#[allow(dead_code)]
 type WebServiceEnd = TChanEnd<DefaultChan, ResponseLbl, BiDirectionalAction>;
+#[allow(dead_code)]
 type ClientSendsRequest = TChanSend<
     Client,
     Proxy,
@@ -215,6 +226,7 @@ type ClientSendsRequest = TChanSend<
     ProxyForwardsRequest,
     BiDirectionalAction,
 >;
+#[allow(dead_code)]
 type ProxyForwardsRequest = TChanSend<
     Proxy,
     WebService,
@@ -224,6 +236,7 @@ type ProxyForwardsRequest = TChanSend<
     WebServiceResponds,
     BiDirectionalAction,
 >;
+#[allow(dead_code)]
 type WebServiceResponds = TChanSend<
     WebService,
     Proxy,
@@ -233,6 +246,7 @@ type WebServiceResponds = TChanSend<
     ProxyRelaysReply,
     BiDirectionalAction,
 >;
+#[allow(dead_code)]
 type ProxyRelaysReply =
     TChanSend<Proxy, Client, DefaultChan, ResponseLbl, Reply, WebServiceEnd, BiDirectionalAction>;
 
